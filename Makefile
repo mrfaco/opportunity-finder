@@ -1,7 +1,22 @@
-.PHONY: help up down build migrate makemigrations shell test coverage coverage-ratchet lint format typecheck validate-prompts check-migrations hooks-install hooks-run discipline createsuperuser logs ps clean
+.PHONY: help up down build migrate makemigrations shell test coverage coverage-ratchet lint format typecheck validate-prompts check-migrations hooks-install hooks-run discipline dev-install createsuperuser logs ps clean
 
 # Override with `make COMPOSE=docker-compose up` if you prefer the legacy binary.
 COMPOSE ?= docker compose
+
+# Run the docker containers as the host user so anything they write to the
+# bind-mounted /app (migrations, caches, coverage.xml, …) lands owned by
+# *you*, not root. Exported so docker-compose.yml's ${HOST_UID}/${HOST_GID}
+# interpolation picks them up.
+export HOST_UID := $(shell id -u)
+export HOST_GID := $(shell id -g)
+
+# Host-side tooling — picks up ./venv/bin/* when a project venv exists,
+# falls back to whatever's on PATH. Lint / format / pre-commit run against
+# the host interpreter so they don't pollute the bind-mount with
+# root-owned files from the docker container.
+PYTHON ?= $(shell test -x venv/bin/python && echo venv/bin/python || command -v python3 || echo python)
+PRECOMMIT ?= $(shell test -x venv/bin/pre-commit && echo venv/bin/pre-commit || echo pre-commit)
+RUFF ?= $(shell test -x venv/bin/ruff && echo venv/bin/ruff || command -v ruff || echo ruff)
 
 help:
 	@echo "Common targets:"
@@ -20,6 +35,7 @@ help:
 	@echo "  discipline      Run the exception-discipline checker"
 	@echo "  validate-prompts Validate every prompts/**/*.md file"
 	@echo "  check-migrations Verify models are in sync with migration files"
+	@echo "  dev-install     Install dev dependencies (ruff, mypy, pytest...) into ./venv"
 	@echo "  hooks-install   Install pre-commit + pre-push hooks (once per clone)"
 	@echo "  hooks-run       Run all configured hooks against every file"
 	@echo "  createsuperuser Create an admin user"
@@ -55,11 +71,11 @@ coverage-ratchet: coverage
 	python3 scripts/coverage_ratchet.py
 
 lint:
-	$(COMPOSE) run --rm web ruff check .
+	$(RUFF) check .
 
 format:
-	$(COMPOSE) run --rm web ruff format .
-	$(COMPOSE) run --rm web ruff check --fix .
+	$(RUFF) format .
+	$(RUFF) check --fix .
 
 discipline:
 	python3 scripts/check_exception_discipline.py
@@ -73,13 +89,8 @@ validate-prompts:
 check-migrations:
 	$(COMPOSE) run --rm web python manage.py makemigrations --check --dry-run
 
-# Pre-commit and the hook runners use the host interpreter — they don't run
-# inside the docker container. If a project venv exists at ./venv, use it;
-# otherwise use whatever python is on PATH (assume the user has activated
-# their own env). `--break-system-packages` keeps this working on PEP 668
-# distros where bare `pip install` is blocked.
-PYTHON ?= $(shell test -x venv/bin/python && echo venv/bin/python || command -v python3 || echo python)
-PRECOMMIT ?= $(shell test -x venv/bin/pre-commit && echo venv/bin/pre-commit || echo pre-commit)
+dev-install:
+	$(PYTHON) -m pip install --upgrade -e ".[dev]"
 
 hooks-install:
 	$(PYTHON) -m pip install --upgrade pre-commit

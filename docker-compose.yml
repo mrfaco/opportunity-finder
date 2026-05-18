@@ -25,8 +25,15 @@ services:
       timeout: 5s
       retries: 10
 
+  # ``user:`` runs the container as the host UID/GID so any file the
+  # container writes back into the bind-mounted /app (migrations,
+  # __pycache__, .ruff_cache, .mypy_cache, .pytest_cache, coverage.xml…)
+  # lands owned by *you*, not root. The Makefile exports HOST_UID/HOST_GID
+  # automatically; running ``docker compose`` directly without those set
+  # falls back to root (the legacy behavior).
   web:
     build: .
+    user: "${HOST_UID:-0}:${HOST_GID:-0}"
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py runserver 0.0.0.0:8000"
@@ -43,6 +50,7 @@ services:
 
   celery_worker:
     build: .
+    user: "${HOST_UID:-0}:${HOST_GID:-0}"
     command: celery -A config worker -l info
     volumes:
       - .:/app
@@ -55,6 +63,7 @@ services:
 
   celery_beat:
     build: .
+    user: "${HOST_UID:-0}:${HOST_GID:-0}"
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app
