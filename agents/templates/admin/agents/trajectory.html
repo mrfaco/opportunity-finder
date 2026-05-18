@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Trajectory · run {{ run.id|slice:":8" }}</h1>
+<p>Status: <strong>{{ run.status }}</strong> · Termination: <code>{{ run.termination_reason|default:"-" }}</code></p>
+<p>Steps used: {{ run.steps_used }} / {{ run.budget_max_steps }} · Cost: ${{ run.cost_used_usd }} / ${{ run.budget_max_cost_usd }} · Duration: {{ run.duration_used_s }}s / {{ run.budget_max_duration_s }}s</p>
+
+<p style="background:#fffbe6;padding:1em;border:1px solid #f0c000">{{ note }}</p>
+
+<h2>Steps</h2>
+<ol>
+  {% for step in steps %}
+    <li style="margin:0.75em 0">
+      <details>
+        <summary>
+          <strong>#{{ step.step_number }}</strong> · {{ step.step_type }}
+          {% if step.tool_name %} · <code>{{ step.tool_name }}</code>{% endif %}
+          {% if step.tool_status %} · {{ step.tool_status }}{% endif %}
+          · ${{ step.cost_usd }} · {{ step.input_tokens }}+{{ step.output_tokens }} tok
+          {% if step.was_cached %} · <em>cached</em>{% endif %}
+        </summary>
+        {% if step.tool_input %}<h4>Input</h4><pre>{{ step.tool_input }}</pre>{% endif %}
+        {% if step.tool_output_summary %}<h4>Output summary</h4><pre>{{ step.tool_output_summary }}</pre>{% endif %}
+      </details>
+    </li>
+  {% empty %}
+    <li>No steps recorded yet.</li>
+  {% endfor %}
+</ol>
+
+<h2>Events (raw)</h2>
+<details>
+  <summary>{{ events.count }} event{{ events.count|pluralize }}</summary>
+  <ol>
+    {% for ev in events %}
+      <li><code>{{ ev.event_type }}</code> @ {{ ev.recorded_at }}{% if ev.tool_name %} · {{ ev.tool_name }}{% endif %}</li>
+    {% endfor %}
+  </ol>
+</details>
+{% endblock %}

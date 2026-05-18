@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Prompts (read-only)</h1>
+<p style="background:#fffbe6;padding:1em;border:1px solid #f0c000">{{ note }}</p>
+
+{% for entry in prompts %}
+  <section style="margin:1.5em 0;padding:1em;border:1px solid #ddd">
+    <h2>{{ entry.prompt.agent_name }} / {{ entry.prompt.kind }}</h2>
+    <p>
+      <code>{{ entry.prompt.path }}</code> ·
+      hash <code>{{ entry.prompt.hash|slice:":12" }}</code> ·
+      {{ entry.runs_used }} run{{ entry.runs_used|pluralize }} used this version
+    </p>
+    {% if entry.prompt.frontmatter %}
+      <details>
+        <summary>Frontmatter</summary>
+        <pre>{{ entry.prompt.frontmatter }}</pre>
+      </details>
+    {% endif %}
+    <div style="border-top:1px dashed #ccc;padding-top:0.5em">
+      {{ entry.html }}
+    </div>
+  </section>
+{% empty %}
+  <p>No prompts on disk yet.</p>
+{% endfor %}
+{% endblock %}

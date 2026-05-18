@@ -1,0 +1,46 @@
+version: 2
+updates:
+  # Python deps from pyproject.toml. Grouped so a typical week is one PR,
+  # not ten — minor + patch bumps bundle together; majors come solo so
+  # they get reviewed individually.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    groups:
+      python-minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+    ignore:
+      # Django LTS bumps deserve their own PR. Skip non-major auto-bumps
+      # only for Django itself; pip-audit will still flag CVEs.
+      - dependency-name: "django"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions used by workflows. Pin floats safely; bundle them.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "ci"]
+    groups:
+      actions-all:
+        patterns: ["*"]
+
+  # Base image in Dockerfile (python:3.13-slim). Catches the rare base
+  # bump we'd otherwise miss; daily-ish cadence is fine because it almost
+  # never fires.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
+    labels: ["dependencies", "docker"]

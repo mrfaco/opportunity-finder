@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Filter eval — labeling</h1>
+<p><strong>{{ labeled_count }}</strong> items labeled · <strong>{{ pending_count }}</strong> production classifications awaiting human review.</p>
+<div style="margin:1em 0;padding:1em;border:1px dashed #999;background:#fafafa">
+  <strong>Placeholder UI.</strong>
+  <p>{{ todo }}</p>
+  <p>Intended UX:</p>
+  <ul>
+    <li>One classification card at a time, source + content visible.</li>
+    <li>Keyboard shortcuts — <kbd>Y</kbd> yes · <kbd>N</kbd> no · <kbd>A</kbd> ambiguous · <kbd>?</kbd> adversarial.</li>
+    <li>Model verdict + reason hidden behind a "show model" toggle, off by default during fresh labeling, on for disagreement review.</li>
+    <li>Optional reasoning note (single text field).</li>
+    <li>Progress counter persistent at the top.</li>
+    <li>Submit auto-advances to the next pending classification.</li>
+  </ul>
+</div>
+{% endblock %}

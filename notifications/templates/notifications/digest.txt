@@ -1,0 +1,7 @@
+{# TODO(v1-followup): polish copy and add per-investigation snippets. #}
+You have {{ pending|length }} investigation(s) awaiting review.
+
+{% for inv in pending %}
+- {{ inv.cluster.title|default:inv.cluster.id }}
+  /admin/investigations/investigation/{{ inv.id }}/change/
+{% endfor %}

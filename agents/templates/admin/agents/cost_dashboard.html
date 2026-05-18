@@ -1,0 +1,68 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Cost dashboard</h1>
+
+<section style="margin:1em 0">
+  <h2>Today · {{ today.date }}</h2>
+  <ul>
+    <li>Filter classifications: {{ today.filter_classifications }} (${{ today.filter_cost_usd }})</li>
+    <li>Agent runs: {{ today.agent_runs }} (${{ today.agent_run_cost_usd }})</li>
+    <li><strong>Total spend today:</strong> ${{ today.total_cost_usd }}</li>
+  </ul>
+</section>
+
+<section style="margin:1em 0">
+  <h2>Last 7 days · total ${{ totals_7d }}</h2>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Classifications</th><th>Filter $</th><th>Runs</th><th>Run $</th><th>Total $</th></tr>
+    </thead>
+    <tbody>
+      {% for d in last_7 %}
+        <tr>
+          <td>{{ d.date }}</td>
+          <td>{{ d.filter_classifications }}</td>
+          <td>${{ d.filter_cost_usd }}</td>
+          <td>{{ d.agent_runs }}</td>
+          <td>${{ d.agent_run_cost_usd }}</td>
+          <td>${{ d.total_cost_usd }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section style="margin:1em 0">
+  <h2>Per-model breakdown</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Steps</th><th>Cost</th></tr></thead>
+    <tbody>
+      {% for row in per_model %}
+        <tr><td><code>{{ row.model }}</code></td><td>{{ row.steps }}</td><td>${{ row.cost|default:"0" }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3">No steps yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section style="margin:1em 0">
+  <h2>Top 5 most expensive runs (last 7 days)</h2>
+  <table>
+    <thead><tr><th>Run</th><th>Cluster</th><th>Cost</th><th>Steps</th><th>Started</th></tr></thead>
+    <tbody>
+      {% for run in top_runs %}
+        <tr>
+          <td><a href="/admin/agents/agentrun/{{ run.id }}/change/"><code>{{ run.id|slice:":8" }}</code></a></td>
+          <td>{{ run.cluster }}</td>
+          <td>${{ run.cost_used_usd }}</td>
+          <td>{{ run.steps_used }}</td>
+          <td>{{ run.started_at }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

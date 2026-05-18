@@ -1,0 +1,49 @@
+# Keep the build context lean. Anything not needed at runtime should be
+# excluded here so it neither slows the build nor risks getting baked into
+# the image. Source code is the only thing we want to send to the daemon.
+
+.git/
+.gitignore
+.github/
+
+# Local env and secrets — never bake into images
+.env
+.env.*
+!.env.example
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.uv-cache/
+
+# Test / coverage outputs
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Documentation we don't ship inside the container
+AGENTS.md
+NEXT_STEPS.md
+
+# Anything generated locally
+staticfiles/
+media/
+*.log

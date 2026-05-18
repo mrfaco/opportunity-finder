@@ -1,0 +1,26 @@
+# Cross-editor defaults — pairs with ruff format for Python and prevents
+# stray indent/EOL drift in the YAML/Markdown/HTML files ruff doesn't own.
+# See https://editorconfig.org for editor support.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+[*.md]
+# Markdown intentionally keeps trailing whitespace for hard line breaks.
+trim_trailing_whitespace = false
+
+[*.{html,css,js}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

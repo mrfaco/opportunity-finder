@@ -1,0 +1,95 @@
+# Hooks enforced before code lands.
+#
+# Install (once per clone):     pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push
+# Run on all files:             pre-commit run --all-files
+# Skip in an emergency:         git commit --no-verify   (don't habituate!)
+#
+# Two stages:
+#   * `commit` — fast checks (<2s). Format, lint, exception discipline,
+#                whitespace, large-file guard. Runs every commit.
+#   * `push`   — slow checks (~30s+). Full pytest with coverage gate. Runs
+#                only on `git push`, so commit velocity stays fast but no
+#                broken commit ever leaves the laptop.
+#
+# Coverage ratchet: the threshold in pyproject.toml's
+# `tool.pytest.ini_options.addopts` is the minimum. Never lower it. To raise
+# it, run `make coverage-ratchet`.
+
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        # Catches API keys, tokens, .env-style secrets. Public repo — this
+        # is the highest-leverage hook here. Rotates a tedious incident
+        # into an instant local failure.
+
+  - repo: local
+    hooks:
+      - id: exception-discipline
+        name: exception discipline (no swallow, no fallback)
+        entry: python scripts/check_exception_discipline.py
+        language: system
+        types: [python]
+        pass_filenames: false
+        # Rationale: AGENTS.md → "Exception discipline".
+
+      - id: validate-prompts
+        name: prompt frontmatter validator
+        entry: python scripts/validate_prompts.py
+        language: system
+        files: ^prompts/.*\.md$
+        pass_filenames: false
+        # Prompts are load-bearing; malformed frontmatter would fail at
+        # run-start. Catch it at commit time instead.
+
+      - id: missing-migrations
+        name: Django models in sync with migrations
+        entry: scripts/check_missing_migrations.sh
+        language: system
+        files: '(models\.py|/migrations/.*\.py)$'
+        pass_filenames: false
+        stages: [pre-push]
+        # Pre-push only — needs the docker stack up. Detects the classic
+        # "edited models, forgot makemigrations" footgun before push.
+
+      - id: mypy
+        name: mypy (type check)
+        entry: scripts/run_mypy.sh
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+        # Catches type errors that ruff doesn't. Config in pyproject.toml.
+
+      - id: pytest-coverage
+        name: pytest + coverage gate (ratchets up, never down)
+        entry: scripts/run_tests_with_coverage.sh
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+        # Threshold lives in pyproject.toml addopts. The wrapper script
+        # exists so the hook works whether or not docker is running.

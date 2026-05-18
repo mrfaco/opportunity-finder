@@ -1,0 +1,43 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Filter eval — history</h1>
+
+{% if latest %}
+  <h2>Latest run · {{ latest.run_at }}</h2>
+  <p>
+    Model: <code>{{ latest.model }}</code> ·
+    Prompt: <code>{{ latest.prompt_hash|slice:":12" }}</code> ·
+    Items: {{ latest.eval_set_size }}
+  </p>
+  <ul>
+    <li>Precision: {{ latest.precision|floatformat:3 }}</li>
+    <li>Recall: {{ latest.recall|floatformat:3 }}</li>
+    <li>F1: {{ latest.f1|floatformat:3 }}</li>
+    <li>Total cost: ${{ latest.total_cost_usd }}</li>
+  </ul>
+  <h3>Per-tier breakdown</h3>
+  <pre>{{ latest.metrics_by_tier }}</pre>
+{% else %}
+  <p>No eval runs yet. Trigger one via the <code>run_filter_eval</code> Celery task once the classifier is wired up.</p>
+{% endif %}
+
+<h2>All runs</h2>
+<table>
+  <thead><tr><th>Run at</th><th>Prompt hash</th><th>Model</th><th>Precision</th><th>Recall</th><th>F1</th><th>Cost</th></tr></thead>
+  <tbody>
+  {% for run in runs %}
+    <tr>
+      <td>{{ run.run_at }}</td>
+      <td><code>{{ run.prompt_hash|slice:":12" }}</code></td>
+      <td>{{ run.model }}</td>
+      <td>{{ run.precision|floatformat:3 }}</td>
+      <td>{{ run.recall|floatformat:3 }}</td>
+      <td>{{ run.f1|floatformat:3 }}</td>
+      <td>${{ run.total_cost_usd }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7">No runs.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
