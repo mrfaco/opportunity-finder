@@ -73,13 +73,21 @@ validate-prompts:
 check-migrations:
 	$(COMPOSE) run --rm web python manage.py makemigrations --check --dry-run
 
+# Pre-commit and the hook runners use the host interpreter — they don't run
+# inside the docker container. If a project venv exists at ./venv, use it;
+# otherwise use whatever python is on PATH (assume the user has activated
+# their own env). `--break-system-packages` keeps this working on PEP 668
+# distros where bare `pip install` is blocked.
+PYTHON ?= $(shell test -x venv/bin/python && echo venv/bin/python || command -v python3 || echo python)
+PRECOMMIT ?= $(shell test -x venv/bin/pre-commit && echo venv/bin/pre-commit || echo pre-commit)
+
 hooks-install:
-	pip install --user pre-commit
-	pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push
+	$(PYTHON) -m pip install --upgrade pre-commit
+	$(PRECOMMIT) install --install-hooks --hook-type pre-commit --hook-type pre-push
 
 hooks-run:
-	pre-commit run --all-files --hook-stage pre-commit
-	pre-commit run --all-files --hook-stage pre-push
+	$(PRECOMMIT) run --all-files --hook-stage pre-commit
+	$(PRECOMMIT) run --all-files --hook-stage pre-push
 
 createsuperuser:
 	$(COMPOSE) run --rm web python manage.py createsuperuser
