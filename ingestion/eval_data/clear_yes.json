@@ -1,0 +1,452 @@
+[
+  {
+    "content": "Every PDF tool I've tried either wants a monthly subscription or mangles the output. All I want is to merge a folder of PDFs and pick custom page ranges per file. Does this really not exist as a one-time purchase?",
+    "content_context": {"platform": "hacker_news", "thread": "Ask HN: tools you wish existed"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific task, explicit gap, frustration with pricing model of existing tools."
+  },
+  {
+    "content": "Every month I export three CSVs from our payment processor and reconcile them by hand against the bank statement in a spreadsheet. It takes a full afternoon and I always find a mistake the next day. There has to be a better way to do this for a tiny business.",
+    "content_context": {"platform": "reddit", "subreddit": "smallbusiness"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual recurring workflow, clear pain, identifiable user segment."
+  },
+  {
+    "content": "Our log aggregation vendor just quadrupled our bill. We're a five-person startup and we don't need 90% of what they sell. I'd happily run something self-hosted if it just did search and basic alerting without a PhD to operate.",
+    "content_context": {"platform": "hacker_news", "thread": "log tooling pricing"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Pricing frustration with incumbent, willingness to pay for a leaner alternative."
+  },
+  {
+    "content": "There is no good way to track API deprecations across the dozen vendors we depend on. We find out something broke when a customer complains. I want one place that watches changelogs and emails me before things break.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Concrete unmet need, current state is reactive failure."
+  },
+  {
+    "content": "As a freelance translator I invoice clients in four currencies and my accountant hates the spreadsheet I send. Every invoicing app I tried assumes one currency or charges per seat. I just want clean multi-currency invoices.",
+    "content_context": {"platform": "reddit", "subreddit": "freelance"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Named user segment, specific feature gap, workaround in use."
+  },
+  {
+    "content": "I need to annotate screenshots for bug reports but every tool uploads the image to someone's cloud first. For internal security stuff that's a non-starter. Why is there no decent local-only screenshot annotator?",
+    "content_context": {"platform": "stack_overflow", "tags": ["screenshots", "privacy"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific constraint (local-only) that existing tools violate."
+  },
+  {
+    "content": "Subtitle sync tools all assume English. I'm fansubbing Korean dramas and re-timing every line by hand because the auto-sync drifts. I would pay real money for something that handled non-English audio properly.",
+    "content_context": {"platform": "reddit", "subreddit": "fansubs"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Explicit willingness to pay, gap in existing tools for a niche but real audience."
+  },
+  {
+    "content": "I have 4,000 bookmarks and easily a third are duplicates or dead links. No bookmark manager actually dedupes or prunes. I want something that cleans the mess, not just another folder system.",
+    "content_context": {"platform": "hacker_news", "thread": "bookmark management"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Concrete dataset, specific capability missing across all tools tried."
+  },
+  {
+    "content": "My chores rotate on a schedule that isn't weekly or monthly: trash every 9 days, filter every 6 weeks, etc. Every reminder app forces calendar-style recurrence. I keep missing things because no app fits.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific limitation shared by all current apps; concrete failure mode."
+  },
+  {
+    "content": "Exporting from Figma to CSS gives me absolute positioning soup that no human would write. I end up rebuilding every component by hand. A tool that produced CSS a developer would actually keep would save me days a month.",
+    "content_context": {"platform": "forum", "site": "designernews"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Existing tools produce unusable output; quantified time cost."
+  },
+  {
+    "content": "We have 40 repos and no way to see which ones are pulling npm packages with known CVEs. I check them one at a time when I remember to. I want a dashboard across the whole org.",
+    "content_context": {"platform": "hacker_news", "thread": "supply chain security"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual cross-repo process, clear scope for an aggregating product."
+  },
+  {
+    "content": "My partner and I both have work and personal Google calendars, plus the kids' school calendar. Nothing merges them into one sane shared view. We double-book constantly. This feels like it should be solved and isn't.",
+    "content_context": {"platform": "reddit", "subreddit": "parenting"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Concrete multi-account pain with a real failure consequence."
+  },
+  {
+    "content": "I run a two-room physiotherapy clinic. Appointment-reminder SaaS starts at a price meant for hospital chains and the cheap options look like they were made in 2009. There's a gap for solo practitioners.",
+    "content_context": {"platform": "forum", "site": "smallbiz"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Underserved segment between bloated enterprise and dated cheap tools."
+  },
+  {
+    "content": "I listen to 15 hours of podcasts a week and constantly want to find 'that thing someone said about X'. There's no search across the episodes I've actually listened to. I'd love a personal transcript index.",
+    "content_context": {"platform": "hacker_news", "thread": "podcast tooling"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific recurring need, no existing personal-library search."
+  },
+  {
+    "content": "I own three rental units and tracking expenses for taxes is a nightmare spreadsheet that grows every year. Property-management software is overkill and overpriced for a part-time landlord. I just want clean expense tracking per unit.",
+    "content_context": {"platform": "reddit", "subreddit": "realestateinvesting"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Spreadsheet workaround breaking down, clear narrow segment."
+  },
+  {
+    "content": "I don't need a CRM. I need something that nudges me when I haven't replied to an email in three days. Every solution is either a $50/month sales platform or nothing.",
+    "content_context": {"platform": "hacker_news", "thread": "Ask HN: lightweight tools"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific narrow feature, gap between heavyweight tools and nothing."
+  },
+  {
+    "content": "OCR for handwritten notes is still terrible unless you write like a robot. I have years of notebooks I'd love to search. Whoever cracks reliable messy-handwriting search will have my money instantly.",
+    "content_context": {"platform": "reddit", "subreddit": "notetaking"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Persistent capability gap, explicit willingness to pay."
+  },
+  {
+    "content": "Our four-person team needs to share a handful of passwords. Enterprise password managers want per-seat pricing and an admin console we'll never use. I want dead-simple local-first secret sharing for a tiny team.",
+    "content_context": {"platform": "hacker_news", "thread": "password management"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Pricing/complexity mismatch for small teams, concrete need."
+  },
+  {
+    "content": "Comparing our cloud bills across AWS, GCP and Azure is genuinely impossible. Each console reports things differently. I spend a day a quarter making a unified spreadsheet that's stale the moment I finish.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Cross-vendor manual normalization, quantified recurring cost."
+  },
+  {
+    "content": "I need to diff two large JSON API responses but treat reordered arrays and equivalent number formats as equal. Text diff is useless for this. I keep writing one-off scripts. A real semantic JSON diff would be great.",
+    "content_context": {"platform": "stack_overflow", "tags": ["json", "diff"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Repeated one-off scripting indicates an unmet tooling need."
+  },
+  {
+    "content": "I read across a Kindle, the browser, and PDFs and I have no idea what I've actually finished or where I left off. I want one reading dashboard that pulls from all of them. Goodreads doesn't do this.",
+    "content_context": {"platform": "reddit", "subreddit": "books"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Fragmented data across sources, named incumbent doesn't solve it."
+  },
+  {
+    "content": "Auto-generated changelogs from git history are unreadable: 200 lines of 'fix typo' and 'wip'. I want something that turns commit history into a changelog a customer could actually read, not noise.",
+    "content_context": {"platform": "hacker_news", "thread": "release tooling"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Existing automation produces low-value output; clear quality gap."
+  },
+  {
+    "content": "I schedule posts to four platforms and the big schedulers all cost more than I make from those channels. I want bare-bones cross-posting and scheduling at a hobbyist price.",
+    "content_context": {"platform": "reddit", "subreddit": "socialmedia"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Price mismatch for low-revenue users, concrete feature set."
+  },
+  {
+    "content": "I want to know when a competitor changes their pricing page. Right now I check manually every couple of weeks and miss things. A change-monitor specifically for pricing pages would be perfect.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual monitoring with known misses, specific monitoring target."
+  },
+  {
+    "content": "Tracking retainer hours for consulting clients in a spreadsheet keeps breaking — I lose track of who has hours left and bill wrong. Time trackers don't understand the retainer model at all.",
+    "content_context": {"platform": "reddit", "subreddit": "consulting"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Workaround failing, existing category misses the specific model."
+  },
+  {
+    "content": "Our CSS bundle is 400KB and I'm sure most of it is dead. Existing 'unused CSS' tools choke on a component-heavy app with dynamic class names. I'd love something that actually works on a real codebase.",
+    "content_context": {"platform": "stack_overflow", "tags": ["css", "performance"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Existing tools fail on realistic input; concrete technical need."
+  },
+  {
+    "content": "I cook a lot and scaling recipes is a constant annoyance — half an egg, weird unit conversions, pan sizes. No app handles scaling properly. A genuinely good recipe scaler would get used every day in my kitchen.",
+    "content_context": {"platform": "reddit", "subreddit": "cooking"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Frequent specific annoyance, all current apps fall short."
+  },
+  {
+    "content": "Expense reports eat hours because someone manually types every receipt into the system. The OCR options we tried can't read crumpled thermal receipts. There's clearly room for something that just works.",
+    "content_context": {"platform": "forum", "site": "smallbiz"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual data entry, existing OCR inadequate for real receipts."
+  },
+  {
+    "content": "I have no idea when the warranties on my appliances expire and I always find the receipt after it's too late. I want a simple tracker that reminds me before a warranty lapses.",
+    "content_context": {"platform": "reddit", "subreddit": "homeowners"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Concrete recurring failure, simple well-scoped need."
+  },
+  {
+    "content": "After every client meeting I re-listen to the recording to pull out action items, which doubles the meeting time. I want something that reliably turns a recording into a clean list of next steps.",
+    "content_context": {"platform": "hacker_news", "thread": "meeting tools"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Time-doubling manual process, specific desired output."
+  },
+  {
+    "content": "Typeform is genuinely great and genuinely too expensive for the two surveys a year I run. I want a self-hostable form builder that doesn't look like a 2010 PHP script.",
+    "content_context": {"platform": "hacker_news", "thread": "form builders"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Price mismatch for low-frequency use, quality bar stated."
+  },
+  {
+    "content": "Auditing who has write access to which repo across our GitHub org is a manual click-through nightmare. We've definitely left stale permissions around. I want one report of effective access across the org.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual security audit, concrete report output desired."
+  },
+  {
+    "content": "I want to capture gift ideas for family throughout the year so I'm not panicking in December. Notes apps are too unstructured and gift-registry sites assume a single event. There's a gap here.",
+    "content_context": {"platform": "reddit", "subreddit": "gifts"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Specific use case poorly served by adjacent tools."
+  },
+  {
+    "content": "Our docs site has hundreds of pages and links rot constantly. Running a link checker once a quarter isn't enough. I want continuous monitoring that tells me the day a link breaks.",
+    "content_context": {"platform": "stack_overflow", "tags": ["documentation", "links"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Periodic tooling insufficient, continuous version is the unmet need."
+  },
+  {
+    "content": "I freelance and have no real idea which projects actually made money once I subtract software, contractor costs, and unpaid revision rounds. I want true per-project profitability, not just hours logged.",
+    "content_context": {"platform": "reddit", "subreddit": "freelance"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Time trackers don't model true profitability; concrete gap."
+  },
+  {
+    "content": "I want spaced repetition for code patterns and library APIs I keep forgetting, but Anki's card model is wrong for code — formatting, syntax highlighting, runnable snippets. A code-native SRS tool would be great.",
+    "content_context": {"platform": "hacker_news", "thread": "learning to code"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Adjacent tool's model is wrong for the use case; specific need."
+  },
+  {
+    "content": "I use Obsidian on my laptop but the official sync subscription to get my notes on my phone feels steep for what it is. I'd pay once for a tool that just syncs a folder of markdown to mobile.",
+    "content_context": {"platform": "reddit", "subreddit": "obsidian"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Subscription resistance, concrete one-time-purchase appetite."
+  },
+  {
+    "content": "I run a small market garden and planning irrigation by hand against the weather forecast is error-prone. Big-ag software is absurd overkill. Something simple for a one-acre operation would sell.",
+    "content_context": {"platform": "forum", "site": "farming"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Underserved scale between hobby and industrial."
+  },
+  {
+    "content": "Every app update I manually take 20 screenshots across 6 device sizes for the store listings. It's an hour of soul-crushing work per release. Automating store screenshots properly would be a real product.",
+    "content_context": {"platform": "hacker_news", "thread": "mobile dev pain"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Quantified repetitive manual work tied to every release."
+  },
+  {
+    "content": "Nobody at our 12-person company knows the full list of SaaS tools we pay for. Surprise renewals hit the card all the time. I want one place that tracks every subscription and warns before renewal.",
+    "content_context": {"platform": "forum", "site": "smallbiz"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Concrete financial leakage, clear product scope."
+  },
+  {
+    "content": "Flight search never shows the real price. I book the 'cheap' fare then pay $80 for a bag. I want a search that includes my actual baggage and seat needs in the comparison up front.",
+    "content_context": {"platform": "reddit", "subreddit": "travel"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Existing search hides true cost; specific better behavior."
+  },
+  {
+    "content": "We have 800 images on our site with no alt text and an accessibility audit due. Doing them by hand will take a week. A tool that drafts alt text in bulk for review would be hugely valuable right now.",
+    "content_context": {"platform": "stack_overflow", "tags": ["accessibility", "images"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Bulk one-off pain with a deadline; concrete desired tool."
+  },
+  {
+    "content": "Managing notes for a long-running tabletop RPG campaign is chaos — NPCs, plot threads, session recaps. Generic note apps lose the connections. A purpose-built campaign manager would get heavy use in my group.",
+    "content_context": {"platform": "reddit", "subreddit": "rpg"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Generic tools lose structure; specific enthusiastic audience."
+  },
+  {
+    "content": "I manage medications for my elderly father and every app is either a clinical EHR or a cutesy pill reminder. I want something serious but simple for a family caregiver, with schedules and refill alerts.",
+    "content_context": {"platform": "reddit", "subreddit": "caregivers"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Clear gap between two poorly-fitting extremes."
+  },
+  {
+    "content": "I constantly need to turn a messy 40-email thread into a clean summary to forward to someone. I do it by hand every time. A tool that summarized an email thread into something shareable would save me hours weekly.",
+    "content_context": {"platform": "hacker_news", "thread": "email tools"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Frequent manual transformation, clear output spec."
+  },
+  {
+    "content": "I want to be told the moment a specific out-of-stock product is available again at a specific store. The generic price trackers don't cover the regional retailer I need. I'd pay for reliable back-in-stock alerts.",
+    "content_context": {"platform": "reddit", "subreddit": "deals"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Existing trackers have coverage gaps; explicit pay intent."
+  },
+  {
+    "content": "My friend group lends books to each other and we constantly lose track of who has what. A spreadsheet doesn't cut it. A tiny shared lending tracker for a personal library would actually get used.",
+    "content_context": {"platform": "reddit", "subreddit": "books"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Spreadsheet inadequate, small concrete social use case."
+  },
+  {
+    "content": "Reconciling Stripe payouts against what actually lands in the bank account is weirdly hard — fees, timing, grouped transfers. I do it manually and it never quite ties out. A reconciliation tool for this would sell.",
+    "content_context": {"platform": "hacker_news", "thread": "fintech ops"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Manual reconciliation that doesn't tie out; concrete product."
+  },
+  {
+    "content": "Tracking job applications across companies — who I applied to, when, follow-up dates, recruiter names — is a mess in a spreadsheet that I stop updating after a week. A purpose-built job-search tracker is overdue.",
+    "content_context": {"platform": "reddit", "subreddit": "jobs"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Spreadsheet abandoned in practice; clear scoped need."
+  },
+  {
+    "content": "Hosted status pages cost a startling amount for what is basically a page that says 'up' or 'down'. I want a cheap or self-hosted status page that still looks professional to customers.",
+    "content_context": {"platform": "hacker_news", "thread": "status page pricing"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_yes",
+    "reasoning_note": "Price-to-value mismatch with incumbents; clear product."
+  }
+]

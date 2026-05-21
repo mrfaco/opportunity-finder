@@ -1,0 +1,452 @@
+[
+  {
+    "content": "Show HN: I built a Pomodoro timer in Rust. It's open source, lives in your menu bar, and has a dark mode. Feedback welcome!",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Launch announcement / self-promotion, no unmet need expressed."
+  },
+  {
+    "content": "PostgreSQL 18 has been released. Highlights include async I/O improvements and better query planning for partitioned tables. Release notes linked below.",
+    "content_context": {"platform": "hacker_news", "thread": "PostgreSQL 18 released"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "News / release announcement, no pain or need."
+  },
+  {
+    "content": "Just wanted to say thank you to the maintainers of this library. It's been rock solid in production for three years and the docs are excellent. Open source at its best.",
+    "content_context": {"platform": "github", "thread": "issue: thank you"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Pure praise, no embedded complaint."
+  },
+  {
+    "content": "How do I center a div horizontally and vertically in CSS? I've seen a few approaches and want to know the modern one.",
+    "content_context": {"platform": "stack_overflow", "tags": ["css", "flexbox"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Basic question with a well-known answer; not an unmet need."
+  },
+  {
+    "content": "Honestly I think tabs are better than spaces and I will die on this hill. Spaces people, explain yourselves.",
+    "content_context": {"platform": "reddit", "subreddit": "programming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Opinion / debate bait, no concrete pain or product need."
+  },
+  {
+    "content": "Ugh, Mondays. Why do weekends go so fast? Anyway, back to the grind, hope everyone has a productive week.",
+    "content_context": {"platform": "reddit", "subreddit": "casualconversation"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Rhetorical venting, nothing software can or should fix."
+  },
+  {
+    "content": "Our company just hit 1,000 customers! Huge thanks to everyone who believed in us early. Onwards and upwards.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Milestone announcement, no need expressed."
+  },
+  {
+    "content": "What's the difference between `let` and `const` in JavaScript? When should I use each one?",
+    "content_context": {"platform": "stack_overflow", "tags": ["javascript"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Beginner question with a standard answer."
+  },
+  {
+    "content": "The new season of that show was incredible. No spoilers, but the finale completely got me. Anyone else watch it?",
+    "content_context": {"platform": "reddit", "subreddit": "television"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Entertainment chat, unrelated to any product need."
+  },
+  {
+    "content": "We're hiring a senior backend engineer, remote, EU time zones. Rust and Postgres. Competitive salary and equity. DM me if interested.",
+    "content_context": {"platform": "hacker_news", "thread": "Who is hiring"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Job posting, not a user need."
+  },
+  {
+    "content": "Reminder that the conference early-bird tickets end Friday. Lineup is great this year, hope to see folks there.",
+    "content_context": {"platform": "forum", "site": "community"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Event promotion, no pain."
+  },
+  {
+    "content": "I finally finished reading the docs cover to cover and I have to say this framework is beautifully designed. Whoever wrote the guides deserves a raise.",
+    "content_context": {"platform": "reddit", "subreddit": "webdev"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Praise for documentation, no complaint."
+  },
+  {
+    "content": "How can I check the Python version installed on my machine from the command line?",
+    "content_context": {"platform": "stack_overflow", "tags": ["python"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Trivial how-to with a one-line answer."
+  },
+  {
+    "content": "Hot take: most startups fail because of founder conflict, not the market. Change my mind.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Opinion / debate, no actionable software need."
+  },
+  {
+    "content": "Version 4.2.0 is out. This is a patch release: two bug fixes and a dependency bump. No breaking changes. Upgrade at your leisure.",
+    "content_context": {"platform": "github", "thread": "release v4.2.0"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Routine release note."
+  },
+  {
+    "content": "Does anyone else love the smell of fresh coffee in the morning? Best part of working from home honestly.",
+    "content_context": {"platform": "reddit", "subreddit": "wfh"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Idle chat, no need."
+  },
+  {
+    "content": "Quick reminder for new members: please read the community guidelines before posting. Be kind, no spam, search before asking. Thanks!",
+    "content_context": {"platform": "forum", "site": "community"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Moderation notice, irrelevant to product opportunity."
+  },
+  {
+    "content": "What does the `404` HTTP status code mean exactly?",
+    "content_context": {"platform": "stack_overflow", "tags": ["http"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Definitional question, well-known answer."
+  },
+  {
+    "content": "Congrats to the team on the acquisition! Well deserved after all the hard work. Excited to see what's next.",
+    "content_context": {"platform": "hacker_news", "thread": "Company acquired"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Congratulatory comment on news, no need."
+  },
+  {
+    "content": "I switched to a standing desk last month and my back feels great. Highly recommend if you sit all day.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Personal recommendation, no unmet need or software angle."
+  },
+  {
+    "content": "Show HN: a curated list of awesome command-line tools. Just a GitHub repo of links I've collected over the years.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Self-promotion of a link list, no pain expressed."
+  },
+  {
+    "content": "Is JavaScript single-threaded or multi-threaded? I keep getting confused by the event loop discussion.",
+    "content_context": {"platform": "stack_overflow", "tags": ["javascript", "concurrency"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Conceptual question with a standard answer."
+  },
+  {
+    "content": "The weather has been absolutely miserable this week. Three days of rain and counting. Roll on summer.",
+    "content_context": {"platform": "reddit", "subreddit": "casualconversation"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Complaint about something software cannot address."
+  },
+  {
+    "content": "Our open-source project just crossed 10k stars on GitHub. Thank you to every contributor — this community is amazing.",
+    "content_context": {"platform": "github", "thread": "discussion: milestone"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Milestone celebration, no need."
+  },
+  {
+    "content": "What's the best way to learn a new programming language as an experienced developer? Looking for general advice.",
+    "content_context": {"platform": "reddit", "subreddit": "learnprogramming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Open-ended advice question, not a product gap."
+  },
+  {
+    "content": "Reposting because the mods removed it the first time: the new framework is just the old one with extra steps. Discuss.",
+    "content_context": {"platform": "reddit", "subreddit": "programming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Opinion bait, no concrete pain."
+  },
+  {
+    "content": "We've open-sourced our internal design system. It's React-based, fully typed, and battle-tested. Link in the comments.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Release announcement, not a need."
+  },
+  {
+    "content": "How do I install Node.js on Ubuntu?",
+    "content_context": {"platform": "stack_overflow", "tags": ["node.js", "ubuntu"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Routine setup question with documented answer."
+  },
+  {
+    "content": "Friendly poll: coffee or tea while coding? I'm firmly team tea but curious where everyone lands.",
+    "content_context": {"platform": "reddit", "subreddit": "programming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Casual poll, no need."
+  },
+  {
+    "content": "Just passed my AWS certification exam on the second try. Took three months of study. AMA if you're prepping for it.",
+    "content_context": {"platform": "reddit", "subreddit": "aws"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Personal achievement post, no product need."
+  },
+  {
+    "content": "The keynote yesterday was fantastic. The demos were slick and the roadmap looks genuinely exciting. Best one in years.",
+    "content_context": {"platform": "hacker_news", "thread": "Conference keynote"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Praise of an event, no complaint."
+  },
+  {
+    "content": "What is the time complexity of inserting into a hash map?",
+    "content_context": {"platform": "stack_overflow", "tags": ["algorithms", "data-structures"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Textbook question with a known answer."
+  },
+  {
+    "content": "Remote work is here to stay and anyone who says otherwise is in denial. The genie is out of the bottle.",
+    "content_context": {"platform": "reddit", "subreddit": "wfh"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Opinion / prediction, no actionable need."
+  },
+  {
+    "content": "Our blog post on how we cut our build time in half is now live. We go through the profiling and the caching changes step by step.",
+    "content_context": {"platform": "hacker_news", "thread": "blog post"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Content marketing / how-we-did-it post, no need expressed."
+  },
+  {
+    "content": "Happy Friday everyone! What's everyone shipping this weekend? Drop your side projects below.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Community chatter prompt, no need."
+  },
+  {
+    "content": "Can someone explain what a REST API is in simple terms? New to web development.",
+    "content_context": {"platform": "stack_overflow", "tags": ["rest", "api"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Beginner concept question, well-covered."
+  },
+  {
+    "content": "I love how the community here is so welcoming to beginners. Asked a dumb question yesterday and got three thoughtful answers. Thank you all.",
+    "content_context": {"platform": "reddit", "subreddit": "learnprogramming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Gratitude post, no pain."
+  },
+  {
+    "content": "Announcing our Series A. We raised $12M to grow the team. We're grateful to our investors and excited for the road ahead.",
+    "content_context": {"platform": "hacker_news", "thread": "funding announcement"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Funding news, no user need."
+  },
+  {
+    "content": "What's your favorite text editor and why? Trying to start a friendly discussion, not a war (I know, I know).",
+    "content_context": {"platform": "reddit", "subreddit": "programming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Preference discussion, no concrete pain."
+  },
+  {
+    "content": "TIL you can use `git bisect` to find the commit that introduced a bug. Mind blown, where has this been all my life.",
+    "content_context": {"platform": "reddit", "subreddit": "git"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "TIL post — the need is already met by an existing tool."
+  },
+  {
+    "content": "Our roadmap for next quarter is now public. Top items: better mobile support and a revamped onboarding flow. Feedback in the thread.",
+    "content_context": {"platform": "github", "thread": "discussion: roadmap"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Vendor roadmap announcement, not an external need."
+  },
+  {
+    "content": "Just want to vent: my coworker keeps reformatting the whole file when they commit. Drives me up the wall.",
+    "content_context": {"platform": "reddit", "subreddit": "programming"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Interpersonal venting; the technical fix (a formatter/config) already exists."
+  },
+  {
+    "content": "Which laptop should I buy for web development in 2026? Budget is flexible, mostly front-end work.",
+    "content_context": {"platform": "reddit", "subreddit": "webdev"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Hardware buying advice, not a software product gap."
+  },
+  {
+    "content": "Happy to report the migration went smoothly over the weekend. Zero downtime, all green dashboards. The team did a great job.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Success report, no pain."
+  },
+  {
+    "content": "What books would you recommend for someone getting into system design? Looking to level up.",
+    "content_context": {"platform": "reddit", "subreddit": "cscareerquestions"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Recommendation request, no product need."
+  },
+  {
+    "content": "PSA: the API will undergo scheduled maintenance Sunday 02:00–04:00 UTC. Expect brief interruptions. Status page linked.",
+    "content_context": {"platform": "forum", "site": "community"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Operational notice, no need."
+  },
+  {
+    "content": "I disagree with the article. Microservices aren't dead, people just used them wrong. The pendulum will swing back.",
+    "content_context": {"platform": "hacker_news", "thread": "Microservices article"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Architectural opinion, no concrete pain."
+  },
+  {
+    "content": "How do I print 'Hello, World!' in Go?",
+    "content_context": {"platform": "stack_overflow", "tags": ["go"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Trivial beginner question."
+  },
+  {
+    "content": "Six months into my first dev job and I finally feel like I know what I'm doing. To anyone job hunting: it gets better, keep going.",
+    "content_context": {"platform": "reddit", "subreddit": "cscareerquestions"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Encouragement post, no need."
+  },
+  {
+    "content": "We've published our 2025 transparency report. Uptime was 99.98% and we resolved 94% of tickets within a day. Details inside.",
+    "content_context": {"platform": "forum", "site": "community"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "high",
+    "difficulty_tier": "clear_no",
+    "reasoning_note": "Corporate report, no user need."
+  }
+]

@@ -33,8 +33,16 @@ def test_load_prompt_parses_frontmatter():
     assert p.agent_name == "filter"
     assert p.kind == "classifier"
     assert p.frontmatter.get("schema_version") == "1.0"
+    assert p.frontmatter.get("description")
     assert p.hash and len(p.hash) == 64
-    assert "TODO" in p.content
+    assert p.content.strip()  # non-empty body
+
+
+def test_prompt_from_content_hash_matches_load_prompt():
+    """A Prompt rebuilt from content hashes identically to the on-disk one."""
+    on_disk = prompt_loader.load_prompt("filter", "classifier")
+    rebuilt = prompt_loader.prompt_from_content("filter", "classifier", on_disk.content)
+    assert rebuilt.hash == on_disk.hash
 
 
 def test_get_prompts_for_agent_returns_all_kinds():

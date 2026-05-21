@@ -4,13 +4,25 @@ The v1 commit ships a runnable skeleton. The work below is the path to a real,
 end-to-end system, in the order that makes earlier work pay off as quickly as
 possible.
 
-## 1. Author `prompts/filter/classifier.md` v1.0 + seed eval set
+## 1. Author `prompts/filter/classifier.md` v1.0 + seed eval set — ✅ DONE
 
-Without the classifier, nothing flows downstream. Pick canonical examples
-spanning all four difficulty tiers, hand-label 200 items into
-`FilterEvalSet`, and write the prompt in `prompts/filter/classifier.md`.
-Wire `run_filter_eval` so we can measure precision/recall against the
-labeled set as we iterate.
+The classifier prompt is authored in `prompts/filter/classifier.md`. The
+200-item seed eval set lives as version-controlled JSON under
+`ingestion/eval_data/` (50 per difficulty tier), loaded via
+`manage.py load_eval_set`. `ingestion.filter.classify_content` makes a live
+Haiku call with prompt caching and structured output; `run_filter_eval`
+classifies the whole set and records precision/recall/F1 (overall and
+per-tier) into a `FilterEvalRun`. Run it once an `ANTHROPIC_API_KEY` is set:
+
+```sh
+make migrate
+make shell  # then: from ingestion.tasks import run_filter_eval; run_filter_eval()
+```
+
+Remaining polish for a later pass: the keyboard-driven labeling UI at
+`/admin/ingestion/filter-labeling/` is still a placeholder, and the eval set
+is hand-curated rather than drawn from production classifications (that
+arrives once the ingestion adapters land).
 
 ## 2. Plug in a real embedding model
 
@@ -37,11 +49,13 @@ Role + goal + termination criteria in `system.md`; seven-question rubric,
 brief structure, evidence rules in `procedural.md`. Cross-reference
 `investigations/schemas.py::Brief` for the structured contract.
 
-## 6. Plumb real Anthropic API calls through the filter classifier
+## 6. Plumb real Anthropic API calls through the filter classifier — ✅ DONE
 
-`ingestion.filter.classify_item` currently raises `NotImplementedError`.
-Use the Anthropic SDK with prompt caching enabled; record token counts and
-cost per row.
+Done as part of step 1. `ingestion.filter.classify_content` uses the
+Anthropic SDK with prompt caching and structured output, and records token
+counts + latency on every `FilterVerdict`. The remaining wiring is the
+ingestion pipeline that persists a `FilterClassification` per ingested item
+— that lands with step 3 (the Hacker News adapter).
 
 ## 7. Plumb real Anthropic API calls through the investigation agent loop
 

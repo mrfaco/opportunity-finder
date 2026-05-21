@@ -1,0 +1,452 @@
+[
+  {
+    "content": "I would honestly pay ANYTHING for a tool that lets me edit a PDF — add text, sign it, fill in forms. Why does this not exist in 2026?! It drives me insane.",
+    "content_context": {"platform": "reddit", "subreddit": "software"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Loud pay-anything language, but basic PDF editing is a mature, well-served category. This is a discovery failure, not an unmet need."
+  },
+  {
+    "content": "I was so frustrated that no good Markdown note app synced to a plain folder that I spent six months building one. Show HN: it's live today, free tier available.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Opens with complaint language but is a finished launch announcement — the need is already being addressed by the poster."
+  },
+  {
+    "content": "It is absolutely maddening that I cannot find a single calendar app that lets me color-code events. Every. Single. One. is broken. How is this so hard?!",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "High-intensity frustration about a feature that virtually every calendar app already has."
+  },
+  {
+    "content": "Why is there NO way to convert a video file to a different format without sketchy websites? I refuse to believe this is an unsolved problem. Someone please build this.",
+    "content_context": {"platform": "reddit", "subreddit": "software"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Demand-shaped, but mature offline converters exist; the author hasn't looked."
+  },
+  {
+    "content": "My commute has gotten unbearable — 90 minutes each way, and the trains are never on time. I wish someone would just FIX this. It's ruining my life.",
+    "content_context": {"platform": "reddit", "subreddit": "commuting"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Strong pain language but not a software-addressable problem."
+  },
+  {
+    "content": "The dark mode in this app is too dark and the light mode is too bright. It's genuinely painful to use. Whoever designed this clearly never tried it.",
+    "content_context": {"platform": "github", "thread": "issue: theme contrast"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Reads like product pain but is a bug report on one specific app, not a market gap."
+  },
+  {
+    "content": "I desperately wish there were an app that could just tell me what stock to buy to guarantee I make money. Surely with all this AI someone can build that.",
+    "content_context": {"platform": "reddit", "subreddit": "investing"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Phrased as an unmet need but asks for something impossible / not legitimately buildable."
+  },
+  {
+    "content": "It is INSANE that I have to manually turn on Do Not Disturb every night. Why can't my phone just... do this. I'm so tired of it.",
+    "content_context": {"platform": "reddit", "subreddit": "android"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Frustration-shaped, but scheduled Do Not Disturb is a built-in OS setting."
+  },
+  {
+    "content": "Can the maintainers please add a built-in rate limiter to this library? I keep having to write my own. It would be such an obvious addition.",
+    "content_context": {"platform": "github", "thread": "issue: feature request"},
+    "source": "github",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Sounds like an unmet need but it's a feature request to one open-source project, not a standalone market opportunity — and rate limiters are abundant."
+  },
+  {
+    "content": "I am BEGGING for a to-do app that is simple. Just a list. No projects, no tags, no AI. Why is every app so bloated?! Someone make a simple one!!",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Intense demand, but dead-simple to-do apps are plentiful; this is taste/discovery, not a gap."
+  },
+  {
+    "content": "It infuriates me that I can't search my own text messages by date range. This is such a basic thing. How does no phone do this properly?!",
+    "content_context": {"platform": "reddit", "subreddit": "iphone"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Loud, but message search by date is a standard OS feature."
+  },
+  {
+    "content": "Honestly someone needs to invent a way to make meetings shorter. I'd pay good money. I sit in pointless meetings all day and it's killing me.",
+    "content_context": {"platform": "reddit", "subreddit": "work"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Pay-money framing, but the problem is organizational behavior, not a missing tool."
+  },
+  {
+    "content": "After years of frustration with clunky habit trackers I finally built the one I always wanted. Launching today — would love this community's feedback.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Frustration backstory, but it's a launch post — the poster has already built the solution."
+  },
+  {
+    "content": "Why can't I just rename multiple files at once?! I have 200 photos with terrible names and I'm losing my mind doing them one by one.",
+    "content_context": {"platform": "reddit", "subreddit": "techsupport"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Sounds like a gap, but bulk rename is built into every major OS and countless utilities."
+  },
+  {
+    "content": "It would be a dream to have an app that does my taxes for me completely automatically with zero input. Why hasn't anyone built true zero-effort tax filing?!",
+    "content_context": {"platform": "reddit", "subreddit": "personalfinance"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Demand-shaped, but 'zero input' is impossible — taxes inherently require user-specific data."
+  },
+  {
+    "content": "My neighbour's dog barks all night and there is NOTHING I can do about it. I wish there were an app or something. I'm exhausted.",
+    "content_context": {"platform": "reddit", "subreddit": "neighborsfromhell"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Genuine distress and an explicit 'wish there were an app', but not a software-addressable problem."
+  },
+  {
+    "content": "Coming from years of fighting spreadsheets, I built a proper budgeting tool for couples. It's in beta now — comment if you'd like an invite.",
+    "content_context": {"platform": "forum", "site": "indiehackers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Pain narrative up front, but this is a beta launch / waitlist post."
+  },
+  {
+    "content": "It drives me absolutely up the wall that I can't undo a sent email. Why is this not universal yet?! Worst design decision in tech history.",
+    "content_context": {"platform": "reddit", "subreddit": "technology"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Strong language, but undo-send is a standard feature in the major email clients."
+  },
+  {
+    "content": "I would pay a subscription just to never see another cookie consent banner. Someone PLEASE solve this. It's the bane of my existence online.",
+    "content_context": {"platform": "reddit", "subreddit": "privacy"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Pay-money framing, but well-known browser extensions already do exactly this."
+  },
+  {
+    "content": "It's maddening that there's no app to track my water intake. How is wellness a billion dollar industry and this doesn't exist?!",
+    "content_context": {"platform": "reddit", "subreddit": "fitness"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Indignant demand for something that is one of the most saturated app categories in existence."
+  },
+  {
+    "content": "I keep a plain text file where I paste error messages and the fix that worked, because I solve the same errors over and over and Stack Overflow is a maze. Works fine for me.",
+    "content_context": {"platform": "hacker_news", "thread": "personal workflows"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Says 'works fine for me' but is describing a homemade workaround for a real, repeated pain — a personal error-solution knowledge base."
+  },
+  {
+    "content": "Nice launch! Looks polished. The only thing stopping me from switching is that it doesn't import my existing data — and honestly that's the whole reason I'd need to switch.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN comment"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Praise-shaped comment under a launch, but it states a specific blocking need (migration/import) that is the deciding factor."
+  },
+  {
+    "content": "Quick question — is there a standard way to keep a design system's tokens in sync between Figma and the codebase? Right now our designer edits Figma and I retype every value by hand.",
+    "content_context": {"platform": "stack_overflow", "tags": ["design-systems", "figma"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Politely phrased as a how-to question, but the honest answer is 'no good standard way' and it reveals a real manual retyping workflow."
+  },
+  {
+    "content": "Does anyone know a way to get a notification when a specific government form's PDF gets updated? I check the page weekly so I don't miss filing changes.",
+    "content_context": {"platform": "reddit", "subreddit": "smallbusiness"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Reads as a simple question, but it exposes a real manual weekly check and a specific monitoring need."
+  },
+  {
+    "content": "Just part of the job I guess: every Monday I copy numbers from six supplier portals into one spreadsheet so the team has a single price list. Takes the whole morning.",
+    "content_context": {"platform": "reddit", "subreddit": "procurement"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Stated with resignation, not complaint ('just part of the job'), but describes a heavy recurring manual aggregation — a clear opportunity."
+  },
+  {
+    "content": "TIL if you rename your screenshots with a date prefix and a tag, you can sort of search them later. Been doing this for a year. Bit tedious but better than nothing.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Framed as a happy 'TIL hack', but the hack is a tedious manual workaround for unsearchable screenshots."
+  },
+  {
+    "content": "Mildly inconvenient that to reschedule a recurring client meeting I have to delete and recreate the whole series. Been doing that for two years now.",
+    "content_context": {"platform": "reddit", "subreddit": "consulting"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Understated ('mildly inconvenient') but describes a concrete, long-standing workflow failure worth investigating."
+  },
+  {
+    "content": "How do other people keep their personal knowledge base from rotting? Mine has 2,000 notes and finding anything means I basically already have to know where it is.",
+    "content_context": {"platform": "hacker_news", "thread": "PKM"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Phrased as a question, but describes a real failure at scale (retrieval breaks down) of existing tools."
+  },
+  {
+    "content": "Not a big deal, but I export our analytics to CSV every Friday and reformat it into the chart the board wants, because the dashboard can't produce that view. Routine by now.",
+    "content_context": {"platform": "forum", "site": "founders"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Downplayed ('not a big deal', 'routine'), but a weekly manual reformat the existing tool can't do is a genuine gap."
+  },
+  {
+    "content": "Cool project. For what it's worth, the dealbreaker for our team would be the lack of audit logs — we literally cannot adopt anything without them. Otherwise great.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN comment"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Sounds like a compliment with a footnote, but names a hard, specific unmet requirement for a whole buyer segment."
+  },
+  {
+    "content": "Is it just me or is there no clean way to share read-only access to a subset of a Postgres database with a contractor? I end up making a manual export every time.",
+    "content_context": {"platform": "stack_overflow", "tags": ["postgresql", "access-control"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Phrased as a 'is it just me' question, but the manual-export workaround signals a real recurring gap."
+  },
+  {
+    "content": "Honestly the spreadsheet works. We track every catering order, allergy, and headcount for our events in one sheet with about twelve tabs. New staff take a month to learn it though.",
+    "content_context": {"platform": "reddit", "subreddit": "eventplanning"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'The spreadsheet works' but the twelve-tab onboarding cost reveals the workaround has clearly outgrown itself."
+  },
+  {
+    "content": "Small thing: when a customer replies to a support ticket from two different email addresses it creates two tickets and we merge them by hand. Happens a few times a day.",
+    "content_context": {"platform": "forum", "site": "support"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Called a 'small thing' but it is a daily manual merge — a concrete, repeatable pain."
+  },
+  {
+    "content": "Does anyone have a recommendation for software that reconciles inventory counts across a physical shop and an online store in real time? We currently do a nightly manual sync.",
+    "content_context": {"platform": "reddit", "subreddit": "ecommerce"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Looks like a routine recommendation request, but the nightly manual sync is the real signal of an unmet need."
+  },
+  {
+    "content": "I made my peace with it: every grant report means pulling figures from the accounting tool, the CRM, and two spreadsheets, then formatting to each funder's template. Three days, four times a year.",
+    "content_context": {"platform": "forum", "site": "nonprofit"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'Made my peace with it' masks a heavy, quantified, recurring multi-source reporting pain."
+  },
+  {
+    "content": "Looks slick! We'd switch in a heartbeat if it supported SAML — without SSO our security team won't even let us trial it. That's the only thing.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN comment"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Compliment-shaped, but identifies a hard procurement blocker shared across enterprise buyers."
+  },
+  {
+    "content": "It's fine, really — I just keep a separate notebook where I log every plant in the garden and when I last watered or fed it. The app I tried didn't fit how I think.",
+    "content_context": {"platform": "reddit", "subreddit": "gardening"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'It's fine, really' but the person abandoned existing apps and maintains a manual log — a fit gap worth a look, though niche."
+  },
+  {
+    "content": "Quick one: how do you all back up a Notion workspace properly? The official export is a mess of zip files and I do it manually each month just in case.",
+    "content_context": {"platform": "reddit", "subreddit": "notion"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Asked as a 'quick one', but the official export being unusable plus a manual monthly ritual is a real gap."
+  },
+  {
+    "content": "We're proud of our uptime, but I'll admit the on-call runbook is twelve markdown files nobody can find at 3am. We've always done it this way.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Wrapped in pride and 'always done it this way', but names a concrete, high-stakes retrieval failure during incidents."
+  },
+  {
+    "content": "Genuinely curious how other freelancers handle this: I screenshot every client approval from chat apps and file them, so I have proof if a dispute comes up. Tedious but it's saved me twice.",
+    "content_context": {"platform": "reddit", "subreddit": "freelance"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Framed as curiosity, but describes a tedious manual evidence-collection workaround that has real value to the user."
+  },
+  {
+    "content": "The app is great and I recommend it to everyone. My one wish — and it's why half my team still won't use it — is offline mode. We're often on planes.",
+    "content_context": {"platform": "product_hunt", "thread": "review"},
+    "source": "product_hunt",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "A glowing review, but the offline-mode 'wish' is blocking adoption for a real segment."
+  },
+  {
+    "content": "No complaints really — I just have a Raspberry Pi at home running a cron job that pings our client sites every five minutes and texts me if one is down. Set it up years ago.",
+    "content_context": {"platform": "hacker_news", "thread": "homelab"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'No complaints' but the person built and maintains custom infrastructure for uptime monitoring — a workaround signalling a need (though commodity tools exist, the fit clearly wasn't there)."
+  },
+  {
+    "content": "How does everyone handle proofreading? I paste every paragraph into three different tools and reconcile the suggestions myself because no single one catches enough.",
+    "content_context": {"platform": "reddit", "subreddit": "writing"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "A question on the surface, but using three tools and manually reconciling is a clear unmet-quality gap."
+  },
+  {
+    "content": "Loved the demo. Realistically though we can't move off our current tool until there's a bulk-import from it — migrating 5 years of records by hand isn't happening.",
+    "content_context": {"platform": "product_hunt", "thread": "comment"},
+    "source": "product_hunt",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Enthusiastic comment, but states a concrete migration blocker that gates a real purchase."
+  },
+  {
+    "content": "It's honestly fine. Every payroll run I just double-check the contractor hours against their invoices manually — only takes an hour and it catches the odd mistake.",
+    "content_context": {"platform": "forum", "site": "smallbiz"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'Honestly fine' downplays a recurring manual cross-check that exists precisely because the tools don't reconcile it."
+  },
+  {
+    "content": "Is there a recommended approach for keeping a staging database seeded with realistic but anonymized production data? We hand-write the seed script and it's perpetually out of date.",
+    "content_context": {"platform": "stack_overflow", "tags": ["database", "testing"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Best-practice question on the surface, but 'perpetually out of date' hand-written script is the real signal."
+  },
+  {
+    "content": "Don't get me wrong, I like the tool. But we keep a separate spreadsheet of which features each customer asked for, because the tool has nowhere to put that. Everyone does this, right?",
+    "content_context": {"platform": "forum", "site": "founders"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Praise-cushioned, but describes a shadow spreadsheet filling a real gap — and assumes it's universal."
+  },
+  {
+    "content": "Works for us — when a candidate moves stage in the hiring tool, someone manually messages the interview panel on Slack. It's just a habit now.",
+    "content_context": {"platform": "forum", "site": "recruiting"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "'Works for us' but the manual stage-change notification is an integration gap dressed up as routine."
+  },
+  {
+    "content": "Curious what others do — I keep a private changelog of every config change I make to our servers in a text file, because when something breaks I need to know what I touched.",
+    "content_context": {"platform": "hacker_news", "thread": "ops habits"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Posed as curiosity; describes a manual change-log workaround for an auditing need (config management tools exist, but the felt gap is real)."
+  },
+  {
+    "content": "Beautiful design, congrats on the launch. The catch for us: no API. We automate everything, and a tool we can't script is a tool we can't buy, sadly.",
+    "content_context": {"platform": "hacker_news", "thread": "Show HN comment"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "adversarial",
+    "reasoning_note": "Reads as a congratulations, but names a concrete capability gap that disqualifies the product for a whole buyer type."
+  }
+]

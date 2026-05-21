@@ -82,6 +82,27 @@ def load_prompt(agent_name: str, kind: str) -> Prompt:
     )
 
 
+def prompt_from_content(agent_name: str, kind: str, content: str) -> Prompt:
+    """Build a ``Prompt`` from explicit content rather than reading disk.
+
+    Used to reconstruct a historical prompt version (e.g. a past
+    ``FilterEvalRun.prompt_content``) so it can be re-run. The hash is
+    computed the same way as ``load_prompt`` so identical content yields an
+    identical hash.
+    """
+    canonical = canonicalize(content)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return Prompt(
+        agent_name=agent_name,
+        kind=kind,
+        content=content,
+        canonical=canonical,
+        hash=digest,
+        frontmatter={},
+        path=f"prompts/{agent_name}/{kind}.md",
+    )
+
+
 def get_prompts_for_agent(agent_name: str) -> dict[str, Prompt]:
     """Load every ``.md`` prompt for the given agent.
 

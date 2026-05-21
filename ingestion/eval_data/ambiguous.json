@@ -1,0 +1,452 @@
+[
+  {
+    "content": "Is there a better way to take notes during meetings? I just use a text file but it feels inefficient somehow.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Vague dissatisfaction, no specific gap; the market for meeting notes is already crowded."
+  },
+  {
+    "content": "I wish my to-do app synced a bit faster. Sometimes there's a lag between my phone and laptop.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Minor complaint about an existing product, likely a bug not a market gap."
+  },
+  {
+    "content": "Managing environment variables across projects gets messy. I've got .env files everywhere. Wonder if other people have a cleaner system.",
+    "content_context": {"platform": "hacker_news", "thread": "dev workflow"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Real friction, but many tools exist; unclear if a genuine gap or a discovery problem."
+  },
+  {
+    "content": "Anyone else find it annoying that you can't easily see all your active browser tabs across devices? Or is there something I'm missing?",
+    "content_context": {"platform": "reddit", "subreddit": "browsers"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "The author suspects a solution exists; browsers largely do this already."
+  },
+  {
+    "content": "Tracking habits is something I keep wanting to do better. I've tried a couple of apps and bounced off both. Maybe it's me.",
+    "content_context": {"platform": "reddit", "subreddit": "selfimprovement"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Saturated category; the author hints the problem may be behavioral, not tooling."
+  },
+  {
+    "content": "Our standup notes live in Slack and disappear into the scroll. It would be nice to have them somewhere more permanent.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Mild but real pain; could be solved by discipline or by a lightweight tool."
+  },
+  {
+    "content": "I sometimes wish I could search inside all the PDFs on my computer at once. Spotlight kind of does it but not well.",
+    "content_context": {"platform": "reddit", "subreddit": "macapps"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "OS search and several apps already cover this; weak differentiation."
+  },
+  {
+    "content": "Code review takes longer than I'd like. Not sure if that's a tooling problem or just the nature of the work.",
+    "content_context": {"platform": "hacker_news", "thread": "engineering process"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author themselves unsure it's a tooling gap; too vague."
+  },
+  {
+    "content": "Would be cool to have a single inbox for all my messaging apps. I know unified-inbox things exist but they never quite work for me.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Existing solutions acknowledged but found wanting — could be a real quality gap or unfixable platform limits."
+  },
+  {
+    "content": "I keep losing track of which branch does what in my side projects. Maybe better naming would fix it, maybe a tool.",
+    "content_context": {"platform": "stack_overflow", "tags": ["git", "workflow"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Likely a habit problem; author offers the non-tooling fix themselves."
+  },
+  {
+    "content": "It would be nice if invoicing felt less tedious. I use one of the popular tools and it's fine, just not delightful.",
+    "content_context": {"platform": "reddit", "subreddit": "freelance"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "'Fine, just not delightful' — weak signal, mature category."
+  },
+  {
+    "content": "Onboarding new hires involves a lot of scattered docs. We manage, but it's not great. Curious how other teams handle it.",
+    "content_context": {"platform": "forum", "site": "managers"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Real friction, but 'we manage' and a crowded onboarding-tool space make it borderline."
+  },
+  {
+    "content": "I feel like I spend too much time deciding what to cook. Meal planning apps exist but I never stick with them.",
+    "content_context": {"platform": "reddit", "subreddit": "mealprep"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Mature category; retention is the author's problem, not absence of tools."
+  },
+  {
+    "content": "Wish there were an easier way to share a quick screen recording without it becoming a whole production.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Several well-known tools already do exactly this."
+  },
+  {
+    "content": "Keeping documentation in sync with the code is an ongoing struggle. Not sure any tool really solves it but one can dream.",
+    "content_context": {"platform": "hacker_news", "thread": "docs and code"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Genuine recurring pain, but author doubts it's solvable — borderline."
+  },
+  {
+    "content": "Our team's Kanban board has gotten unwieldy. Maybe we need a different tool, maybe we just need fewer cards.",
+    "content_context": {"platform": "forum", "site": "managers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Process problem as likely as tooling; author unsure."
+  },
+  {
+    "content": "It would be handy to get a weekly digest of what changed in the repos I follow, instead of a flood of notifications.",
+    "content_context": {"platform": "stack_overflow", "tags": ["github", "notifications"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Specific desired behavior, but GitHub and several tools partially cover it."
+  },
+  {
+    "content": "I'd love a calmer way to read the news but I'm not sure what that even looks like as a product.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Vague aspiration, no concrete shape; crowded space."
+  },
+  {
+    "content": "Tracking expenses as a couple is a bit of a pain. We use a shared spreadsheet and it works, mostly.",
+    "content_context": {"platform": "reddit", "subreddit": "personalfinance"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "'Works, mostly' plus a saturated personal-finance market."
+  },
+  {
+    "content": "I wish I could annotate web articles and have the notes stick around. I think some extensions do this?",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author suspects solutions exist; this is largely a discovery problem."
+  },
+  {
+    "content": "Scheduling 1:1s with my reports keeps slipping. A nudge of some kind would help, though my calendar sort of does that.",
+    "content_context": {"platform": "forum", "site": "managers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author notes the calendar already partly handles it."
+  },
+  {
+    "content": "Our error logs are noisy and it's hard to spot the signal. Better grouping would be nice — most tools claim to do it.",
+    "content_context": {"platform": "hacker_news", "thread": "observability"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author concedes existing tools claim this feature; unclear real gap."
+  },
+  {
+    "content": "I'd like to keep a running log of decisions we make as a team, but I'm not sure a dedicated tool is warranted.",
+    "content_context": {"platform": "forum", "site": "managers"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Specific need (decision log) but author doubts it deserves a product."
+  },
+  {
+    "content": "Switching between work and personal accounts in every app is mildly annoying. Browsers have profiles but it's still clunky.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Mild annoyance, partial solutions exist; weak signal."
+  },
+  {
+    "content": "It'd be nice to have a smarter clipboard history. The built-in one is limited but third-party ones exist.",
+    "content_context": {"platform": "reddit", "subreddit": "macapps"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author names the existing category; not a clear gap."
+  },
+  {
+    "content": "Coordinating availability for a recurring group call across time zones is fiddly. Doodle-type tools help but not for recurring stuff.",
+    "content_context": {"platform": "reddit", "subreddit": "remotework"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Specific gap (recurring, not one-off) but adjacent tools are close."
+  },
+  {
+    "content": "I'd love better analytics on my own reading habits, but honestly I might just be procrastinating from actually reading.",
+    "content_context": {"platform": "reddit", "subreddit": "books"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author undercuts their own need; very weak signal."
+  },
+  {
+    "content": "Managing API keys for the various services a side project uses is a little stressful. I'm sure there's a proper way.",
+    "content_context": {"platform": "stack_overflow", "tags": ["security", "secrets"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author assumes a known solution exists; likely a practice gap."
+  },
+  {
+    "content": "It would be nice if my photo library were better organized, but I say that every year and never do anything about it.",
+    "content_context": {"platform": "reddit", "subreddit": "photography"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Aspirational, mature category, low intent."
+  },
+  {
+    "content": "Our changelog process is ad hoc. Sometimes we update it, sometimes we forget. A bit of structure would help.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Real inconsistency, but the fix could easily be process rather than product."
+  },
+  {
+    "content": "I wish budgeting felt less like a chore. The apps are fine, I just don't enjoy the category.",
+    "content_context": {"platform": "reddit", "subreddit": "personalfinance"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "'Apps are fine' — the dislike is of the task, not a tooling gap."
+  },
+  {
+    "content": "Tracking which library versions are safe to upgrade is something I'd like to be more on top of. Dependabot helps somewhat.",
+    "content_context": {"platform": "hacker_news", "thread": "dependency management"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author names an existing tool that already addresses much of this."
+  },
+  {
+    "content": "It would be handy to have one place for all my recurring subscriptions, though my bank app sort of shows them.",
+    "content_context": {"platform": "reddit", "subreddit": "personalfinance"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author concedes the bank app partly covers it; weak gap."
+  },
+  {
+    "content": "Capturing quick ideas before they vanish is something I struggle with. I have three note apps and use none of them well.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "The author has tools and doesn't use them — behavioral, not a gap."
+  },
+  {
+    "content": "Reviewing analytics across our marketing channels means logging into five dashboards. Mildly annoying. There are aggregators I haven't tried.",
+    "content_context": {"platform": "forum", "site": "marketing"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author acknowledges untried aggregators; discovery problem."
+  },
+  {
+    "content": "A lightweight way to collect feedback on a draft document would be useful. Comments in docs work but get messy on long pieces.",
+    "content_context": {"platform": "reddit", "subreddit": "writing"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Specific failure mode of existing tools, but the gap is narrow."
+  },
+  {
+    "content": "I'd like to understand where my time goes each day. Time-tracking apps exist but manually logging never sticks.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Mature category; the friction (manual logging) is acknowledged but not framed as a buildable gap."
+  },
+  {
+    "content": "Our team wiki is a graveyard. People don't update it. I doubt switching tools would change the underlying behavior.",
+    "content_context": {"platform": "forum", "site": "managers"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author explicitly doubts a tool would help — culture problem."
+  },
+  {
+    "content": "It'd be nice to get notified when a long-running script finishes, instead of checking back. I think there are ways to do this.",
+    "content_context": {"platform": "stack_overflow", "tags": ["bash", "notifications"]},
+    "source": "stack_overflow",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Solvable with known one-liners; author senses that."
+  },
+  {
+    "content": "Planning content for our blog is disorganized. We use a spreadsheet. It works but feels primitive.",
+    "content_context": {"platform": "forum", "site": "marketing"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "'Works but feels primitive' and a crowded content-calendar space."
+  },
+  {
+    "content": "A better way to keep up with several newsletters without inbox clutter would be welcome. Read-it-later apps kind of help.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Adjacent tools acknowledged; not a distinct gap."
+  },
+  {
+    "content": "Our QA checklist lives in a Google Doc everyone forgets to open. Maybe a checklist app, maybe just discipline.",
+    "content_context": {"platform": "forum", "site": "devops"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author offers the non-product fix; process problem."
+  },
+  {
+    "content": "It would be nice to visualize how my side project's code has grown over time. Probably a niche want.",
+    "content_context": {"platform": "hacker_news", "thread": "dev curiosities"},
+    "source": "hacker_news",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author calls it niche; curiosity rather than a felt pain."
+  },
+  {
+    "content": "Coordinating who brings what to a potluck always devolves into a chaotic group chat. A simple shared list would do, which a doc kind of is.",
+    "content_context": {"platform": "reddit", "subreddit": "casualconversation"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "A shared doc already does this; very low intent."
+  },
+  {
+    "content": "I'd like cleaner handoffs between design and engineering. We've improved it a lot already, just not perfect.",
+    "content_context": {"platform": "forum", "site": "designernews"},
+    "source": "forum",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "'Improved a lot already' — diminishing pain, crowded space."
+  },
+  {
+    "content": "Keeping track of feature flags as they pile up is getting awkward. The flag platform has a dashboard but it's cluttered.",
+    "content_context": {"platform": "hacker_news", "thread": "feature flags"},
+    "source": "hacker_news",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Specific lifecycle pain (stale flags), but the incumbent partly covers it."
+  },
+  {
+    "content": "I want to read more long-form articles but I never have them when I have time to read. Read-later apps exist; I just don't open them.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Behavioral problem the author names themselves."
+  },
+  {
+    "content": "Managing translations for our small app is a bit manual. We use JSON files and a spreadsheet. It's survivable.",
+    "content_context": {"platform": "stack_overflow", "tags": ["i18n", "localization"]},
+    "source": "stack_overflow",
+    "human_label": "yes",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Real manual workflow, but 'survivable' and many i18n tools exist."
+  },
+  {
+    "content": "It would be nice to know which of my emails actually need a reply versus which are noise. Email is just like that, I suppose.",
+    "content_context": {"platform": "reddit", "subreddit": "productivity"},
+    "source": "reddit",
+    "human_label": "no",
+    "human_confidence": "low",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Author resigns to it; many email tools already attempt triage."
+  },
+  {
+    "content": "Tracking my freelance leads is something I do haphazardly. A CRM feels too heavy, a spreadsheet too light. Somewhere in between, maybe.",
+    "content_context": {"platform": "reddit", "subreddit": "freelance"},
+    "source": "reddit",
+    "human_label": "yes",
+    "human_confidence": "medium",
+    "difficulty_tier": "ambiguous",
+    "reasoning_note": "Plausible gap between two extremes, but stated tentatively and lightly."
+  }
+]
