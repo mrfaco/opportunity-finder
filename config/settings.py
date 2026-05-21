@@ -115,6 +115,13 @@ VOYAGE_API_KEY = env("VOYAGE_API_KEY", default="")
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="voyage-3.5")
 
 # ---------------------------------------------------------------------------
+# Ingestion
+# ---------------------------------------------------------------------------
+# On the first ingestion run for a source (no checkpoint yet), how far back to
+# reach. Subsequent runs only pull items newer than the stored checkpoint.
+INGEST_HN_INITIAL_DAYS = env.int("INGEST_HN_INITIAL_DAYS", default=7)
+
+# ---------------------------------------------------------------------------
 # Default budgets for agent runs
 # ---------------------------------------------------------------------------
 DEFAULT_BUDGET_MAX_STEPS = env.int("DEFAULT_BUDGET_MAX_STEPS", default=30)

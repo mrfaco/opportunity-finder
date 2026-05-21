@@ -11,31 +11,35 @@ from celery import shared_task
 from agents import prompts as prompt_loader
 from agents.cost import compute_cost
 
+from .adapters.base import SourceAdapter
+from .adapters.hacker_news import HackerNewsAdapter
 from .filter import classify_content
 from .metrics import compute_metrics, compute_metrics_by_tier
 from .models import FilterEvalClassification, FilterEvalRun, FilterEvalSet
+from .pipeline import ingest_from_adapter
 
 logger = logging.getLogger(__name__)
+
+# Registry of source name -> adapter class. New adapters slot in here.
+_ADAPTERS: dict[str, type[SourceAdapter]] = {
+    HackerNewsAdapter.source: HackerNewsAdapter,
+}
 
 
 @shared_task
 def ingest_source(source: str) -> dict:
-    """Run one adapter; classify and cluster each new item.
+    """Run one source adapter through the classify → embed → cluster pipeline.
 
-    TODO(v1-followup): wire up the adapter → classifier → clustering pipeline.
-    Sketch:
-      1. Instantiate the right ``SourceAdapter`` subclass.
-      2. For each new item from ``fetch_new_items``:
-         a. Compute embedding.
-         b. Call ``ingestion.filter.classify_content``.
-         c. If verdict is opportunity, persist a ``ClusterItem``, run
-            ``clusters.clustering.assign_item_to_cluster``, write a
-            ``FilterClassification`` row.
-         d. Otherwise, write a discarded ``FilterClassification`` only.
+    ``source`` is an adapter key (e.g. ``"hacker_news"``). Unknown sources
+    raise rather than silently no-op.
     """
-    raise NotImplementedError(
-        f"TODO(v1-followup): implement ingest_source pipeline for source={source!r}"
-    )
+    adapter_cls = _ADAPTERS.get(source)
+    if adapter_cls is None:
+        raise ValueError(
+            f"No ingestion adapter registered for source {source!r}. "
+            f"Known sources: {sorted(_ADAPTERS)}"
+        )
+    return ingest_from_adapter(adapter_cls())
 
 
 def _resolve_prompt(prompt_hash: str | None) -> prompt_loader.Prompt:

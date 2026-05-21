@@ -45,7 +45,13 @@ docker-compose build
 docker-compose up
 make migrate
 make createsuperuser
+docker-compose run --rm web python manage.py setup_schedules   # seed Celery Beat jobs
 ```
+
+To run ingestion you also need `ANTHROPIC_API_KEY` (classifier) and
+`VOYAGE_API_KEY` (embeddings) in `.env`. Once `setup_schedules` has run,
+the `celery_beat` service ingests Hacker News hourly; trigger it manually
+with `ingestion.tasks.ingest_source.delay("hacker_news")` from `make shell`.
 
 Then navigate to `http://localhost:8000/admin/`.
 

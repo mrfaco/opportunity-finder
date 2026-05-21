@@ -9,7 +9,26 @@ from .models import (
     FilterEvalClassification,
     FilterEvalRun,
     FilterEvalSet,
+    IngestionCheckpoint,
 )
+
+
+@admin.register(IngestionCheckpoint)
+class IngestionCheckpointAdmin(admin.ModelAdmin):
+    list_display = (
+        "source",
+        "last_item_posted_at",
+        "last_run_at",
+        "items_seen",
+        "opportunities_found",
+    )
+    readonly_fields = (
+        "source",
+        "last_item_posted_at",
+        "last_run_at",
+        "items_seen",
+        "opportunities_found",
+    )
 
 
 @admin.register(FilterClassification)

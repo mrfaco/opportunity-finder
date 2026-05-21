@@ -16,6 +16,26 @@ from django.db import models
 from clusters.models import ClusterItem
 
 
+class IngestionCheckpoint(models.Model):
+    """Per-source watermark for incremental ingestion.
+
+    Each ingestion run pulls only items posted after ``last_item_posted_at``
+    and advances the watermark as items are successfully processed. A run that
+    fails partway leaves the checkpoint at the last good item, so the next run
+    resumes from there rather than re-classifying (and re-paying for) work
+    already done.
+    """
+
+    source = models.CharField(max_length=32, unique=True)
+    last_item_posted_at = models.DateTimeField(null=True, blank=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    items_seen = models.PositiveIntegerField(default=0)
+    opportunities_found = models.PositiveIntegerField(default=0)
+
+    def __str__(self) -> str:
+        return f"{self.source} @ {self.last_item_posted_at}"
+
+
 class VerdictBand(models.TextChoices):
     HIGH_YES = "high_yes", "High yes"
     HIGH_NO = "high_no", "High no"

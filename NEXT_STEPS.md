@@ -33,12 +33,18 @@ the wrong dimensionality. The `reembed_cluster_items` management command
 re-embeds all items and recomputes centroids after a model change. Needs a
 `VOYAGE_API_KEY` in `.env`.
 
-## 3. Implement the Hacker News ingestion adapter
+## 3. Implement the Hacker News ingestion adapter — ✅ DONE
 
-`ingestion/adapters/hacker_news.py` is the first real adapter. Pull Ask HN
-threads + comment text, identify candidate items via lightweight signal
-heuristics, push them through the classifier and clustering pipeline.
-Wire `ingest_source` to drive it.
+`ingestion/adapters/hacker_news.py` pulls Ask HN stories via the Algolia HN
+search API. `ingestion/pipeline.py` runs each item through
+classify → embed → cluster and writes a `FilterClassification` per item
+(kept or discarded). A per-source `IngestionCheckpoint` makes runs
+incremental and crash-safe. `ingest_source` is wired to the adapter
+registry; `manage.py setup_schedules` seeds the hourly ingestion + nightly
+refinement Celery Beat tasks.
+
+Deferred: comment ingestion (higher volume — needs a keyword pre-filter
+before the classifier call). Tracked loosely under step 10.
 
 ## 4. Implement the `query_cluster` tool
 
