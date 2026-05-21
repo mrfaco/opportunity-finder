@@ -11,6 +11,9 @@ from decimal import Decimal
 
 from django.db.models import Count, Sum
 
+from agents.models import AgentRun
+from ingestion.models import FilterClassification
+
 # TODO(v1-followup): verify each rate against the Anthropic pricing page
 # before treating these numbers as anything beyond an order-of-magnitude
 # estimate.
@@ -57,9 +60,6 @@ def daily_cost_summary(day: date | None = None) -> dict:
     Includes both classifier rows (``FilterClassification``) and agent runs
     (``AgentRun``).
     """
-    from agents.models import AgentRun
-    from ingestion.models import FilterClassification
-
     target = day or date.today()
     start = target
     end = target + timedelta(days=1)

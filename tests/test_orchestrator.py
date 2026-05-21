@@ -26,9 +26,9 @@ def test_start_run_creates_running_run_with_snapshot(monkeypatch, settings):
     settings.CELERY_TASK_ALWAYS_EAGER = True
 
     # Stub the loop so we don't try to call Anthropic in the smoke test.
-    from agents import tasks as agent_tasks
-
-    monkeypatch.setattr(agent_tasks, "run_agent_loop", _no_op_task())
+    # Patch the name where it is *used* — orchestrator imports run_agent_loop
+    # into its own namespace at module load.
+    monkeypatch.setattr(orchestrator, "run_agent_loop", _no_op_task())
 
     cluster = Cluster.objects.create(
         status=ClusterStatus.PENDING,

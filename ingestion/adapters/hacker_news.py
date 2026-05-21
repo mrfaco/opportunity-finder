@@ -20,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from django.conf import settings
 
-from .base import IngestedItem, SourceAdapter
+from ingestion.adapters.base import IngestedItem, SourceAdapter
 
 _ALGOLIA_URL = "https://hn.algolia.com/api/v1/search_by_date"
 _HITS_PER_PAGE = 100

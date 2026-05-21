@@ -117,6 +117,8 @@ select = [
     "TRY400", # use `logging.exception` instead of `logging.error` in except
     "G",      # flake8-logging-format
     "RET504", # unnecessary assignment before return
+    "PLC0415", # imports must be module-level (deferred imports need `# noqa`)
+    "TID252", # no relative imports — use the absolute package path
 ]
 # A handful of legitimate suppressions we accept as explicit `# noqa: BLE001`.
 # Treat blanket exceptions in the agent loop's outer safety net as the only
@@ -124,5 +126,10 @@ select = [
 # as a structured event then re-raises termination). Everything else: fail.
 
 [tool.ruff.lint.per-file-ignores]
-# Tests legitimately use broad excepts to assert on error paths.
-"tests/**/*.py" = ["BLE001", "S101"]
+# Tests legitimately use broad excepts to assert on error paths, and local
+# imports inside test functions are a normal, harmless pattern.
+"tests/**/*.py" = ["BLE001", "S101", "PLC0415"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Absolute imports only — `from agents.models import X`, never `from .models`.
+ban-relative-imports = "all"

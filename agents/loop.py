@@ -12,6 +12,8 @@ is testable.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import time
 from decimal import Decimal
@@ -20,11 +22,11 @@ from uuid import UUID
 
 from django.utils import timezone
 
-from . import context as ctx
-from . import cost
-from . import tools as tool_registry
-from .cache import RunScopedCache
-from .models import (
+from agents import context as ctx
+from agents import cost
+from agents import tools as tool_registry
+from agents.cache import RunScopedCache
+from agents.models import (
     AgentEvent,
     AgentRun,
     AgentRunStatus,
@@ -111,9 +113,6 @@ def _dispatch_tool(
 
     Returns ``(output_dict, was_cached, cache_age_seconds)``.
     """
-    import hashlib
-    import json
-
     input_blob = json.dumps(tool_input, sort_keys=True)
     input_hash = hashlib.sha256(input_blob.encode("utf-8")).hexdigest()[:16]
 

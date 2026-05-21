@@ -24,12 +24,8 @@ from django.conf import settings
 from django.utils import timezone
 from pgvector.django import CosineDistance
 
-from .embeddings import embed_text
-from .models import (
-    Cluster,
-    ClusterItem,
-    ClusterStatus,
-)
+from clusters.embeddings import embed_text
+from clusters.models import Cluster, ClusterItem, ClusterStatus
 
 
 # ---------------------------------------------------------------------------

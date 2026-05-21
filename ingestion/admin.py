@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.shortcuts import render
 from django.urls import path
 
-from .models import (
+from ingestion.models import (
     FilterClassification,
     FilterEvalClassification,
     FilterEvalRun,

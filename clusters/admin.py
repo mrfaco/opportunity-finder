@@ -4,8 +4,8 @@ from django.contrib import admin, messages
 from django.db import transaction
 from django.utils import timezone
 
-from . import clustering
-from .models import (
+from clusters import clustering
+from clusters.models import (
     Cluster,
     ClusterItem,
     ClusterMergeProposal,

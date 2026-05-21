@@ -7,5 +7,6 @@ class AgentsConfig(AppConfig):
 
     def ready(self) -> None:
         # Register tool stubs on app start so the registry is populated
-        # before any orchestrator call.
-        from .tools import stubs  # noqa: F401
+        # before any orchestrator call. Deferred by design — Django's
+        # ready() hook is the correct place for import-for-side-effect.
+        from agents.tools import stubs  # noqa: F401,PLC0415

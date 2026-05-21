@@ -7,8 +7,8 @@ work; only the ``impl`` function bodies need filling in per tool.
 
 from __future__ import annotations
 
-from . import register
-from .base import Tool, ToolInput, ToolOutput
+from agents.tools import register
+from agents.tools.base import Tool, ToolInput, ToolOutput
 
 NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
 

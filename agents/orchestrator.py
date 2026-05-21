@@ -21,11 +21,11 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from agents import prompts as prompt_loader
+from agents import tools as tool_registry
+from agents.models import AgentRun, AgentRunStatus, TerminationReason
+from agents.tasks import run_agent_loop
 from clusters.models import Cluster
-
-from . import prompts as prompt_loader
-from . import tools as tool_registry
-from .models import AgentRun, AgentRunStatus, TerminationReason
 
 
 @dataclass
@@ -123,8 +123,6 @@ def start_run(
 
     # Enqueue the actual loop. Done outside the atomic block so the row is
     # visible to the worker by the time it picks the task up.
-    from .tasks import run_agent_loop
-
     run_agent_loop.delay(str(run.id))
     return run.id
 

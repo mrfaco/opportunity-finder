@@ -54,6 +54,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Re-embedded {reembedded} item(s); recomputed " f"{len(cluster_ids)} centroid(s)."
+                f"Re-embedded {reembedded} item(s); recomputed {len(cluster_ids)} centroid(s)."
             )
         )

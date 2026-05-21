@@ -60,8 +60,7 @@ def _validate(item: dict[str, Any], path: Path, index: int) -> None:
         )
     if item["difficulty_tier"] not in _VALID_TIERS:
         raise CommandError(
-            f"{where}: difficulty_tier {item['difficulty_tier']!r} "
-            f"not in {sorted(_VALID_TIERS)}"
+            f"{where}: difficulty_tier {item['difficulty_tier']!r} not in {sorted(_VALID_TIERS)}"
         )
     if not str(item["content"]).strip():
         raise CommandError(f"{where}: content is empty")

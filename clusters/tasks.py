@@ -8,13 +8,8 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from . import clustering
-from .models import (
-    Cluster,
-    ClusterMergeProposal,
-    ClusterSplitProposal,
-    ProposalStatus,
-)
+from clusters import clustering
+from clusters.models import Cluster, ClusterMergeProposal, ClusterSplitProposal, ProposalStatus
 
 logger = logging.getLogger(__name__)
 

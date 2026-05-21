@@ -18,10 +18,13 @@ class PainMinerAdminSite(AdminSite):
     index_title = "Operational dashboards"
 
     def get_urls(self):
-        from agents.admin import AgentRunAdmin
-        from agents.models import AgentRun
-        from ingestion.admin import FilterEvalSetAdmin
-        from ingestion.models import FilterEvalSet
+        # Deferred by necessity: this module is imported to *construct* the
+        # admin site, while agents/admin.py and ingestion/admin.py register
+        # against it. Importing them at module level would be circular.
+        from agents.admin import AgentRunAdmin  # noqa: PLC0415
+        from agents.models import AgentRun  # noqa: PLC0415
+        from ingestion.admin import FilterEvalSetAdmin  # noqa: PLC0415
+        from ingestion.models import FilterEvalSet  # noqa: PLC0415
 
         # Reuse the views already defined on the ModelAdmins so we don't
         # duplicate logic between the model namespace and the app namespace.

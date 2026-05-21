@@ -22,15 +22,9 @@ from django.utils import timezone
 from agents.cost import compute_cost
 from clusters.clustering import assign_item_to_cluster, compute_embedding
 from clusters.models import ClassifierVerdict, ClusterItem
-
-from .adapters.base import IngestedItem, SourceAdapter
-from .filter import classify_content
-from .models import (
-    DiscardReason,
-    FilterClassification,
-    IngestionCheckpoint,
-    VerdictBand,
-)
+from ingestion.adapters.base import IngestedItem, SourceAdapter
+from ingestion.filter import classify_content
+from ingestion.models import DiscardReason, FilterClassification, IngestionCheckpoint, VerdictBand
 
 logger = logging.getLogger(__name__)
 

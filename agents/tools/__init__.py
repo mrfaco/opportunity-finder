@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from .base import Tool, ToolDefinition
+from agents.tools.base import Tool, ToolDefinition
 
 TOOL_REGISTRY: dict[str, Tool] = {}
 

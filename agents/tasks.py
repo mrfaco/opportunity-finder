@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from celery import shared_task
 
-from .loop import run_loop
+from agents.loop import run_loop
 
 
 @shared_task

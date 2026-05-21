@@ -15,6 +15,8 @@ from uuid import UUID
 
 from django.conf import settings
 
+from investigations.models import Investigation, InvestigationStatus
+
 
 class Approver(ABC):
     @abstractmethod
@@ -33,8 +35,6 @@ class DjangoAdminApprover(Approver):
         return None
 
     def get_pending_count(self) -> int:
-        from investigations.models import Investigation, InvestigationStatus
-
         return Investigation.objects.filter(status=InvestigationStatus.AWAITING_REVIEW).count()
 
 

@@ -10,13 +10,12 @@ from celery import shared_task
 
 from agents import prompts as prompt_loader
 from agents.cost import compute_cost
-
-from .adapters.base import SourceAdapter
-from .adapters.hacker_news import HackerNewsAdapter
-from .filter import classify_content
-from .metrics import compute_metrics, compute_metrics_by_tier
-from .models import FilterEvalClassification, FilterEvalRun, FilterEvalSet
-from .pipeline import ingest_from_adapter
+from ingestion.adapters.base import SourceAdapter
+from ingestion.adapters.hacker_news import HackerNewsAdapter
+from ingestion.filter import classify_content
+from ingestion.metrics import compute_metrics, compute_metrics_by_tier
+from ingestion.models import FilterEvalClassification, FilterEvalRun, FilterEvalSet
+from ingestion.pipeline import ingest_from_adapter
 
 logger = logging.getLogger(__name__)
 

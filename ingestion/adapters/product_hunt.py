@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterator
 
-from .base import IngestedItem, SourceAdapter
+from ingestion.adapters.base import IngestedItem, SourceAdapter
 
 
 class ProductHuntAdapter(SourceAdapter):

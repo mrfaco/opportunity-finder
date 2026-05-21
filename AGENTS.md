@@ -81,6 +81,11 @@ The pre-commit hook runs both on staged files.
 - `ruff format` owns formatting. Don't argue with it.
 - `ruff check` runs with the rule set declared in `pyproject.toml`. New
   rule violations land as commit blockers.
+- **Imports are absolute and module-level.** Use `from agents.models
+  import X`, never `from .models import X` (`TID252`). Keep imports at the
+  top of the file (`PLC0415`); a genuinely-deferred import — circular-import
+  break, Django `ready()` side-effect — needs an explicit `# noqa: PLC0415`
+  with a one-line reason.
 - Migrations are excluded from lint (they are Django-generated).
 - `mypy .` must be clean before push. Config in `pyproject.toml` —
   `django-stubs` plugin is enabled. Migrations + tests + scripts are

@@ -14,7 +14,7 @@ from __future__ import annotations
 import voyageai
 from django.conf import settings
 
-from .models import EMBEDDING_DIM
+from clusters.models import EMBEDDING_DIM
 
 # Voyage accepts up to 1000 inputs per request; we batch more conservatively
 # to stay well under the per-request token ceiling on long items.

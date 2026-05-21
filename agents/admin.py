@@ -10,9 +10,9 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import path
 from django.utils.safestring import mark_safe
 
-from . import cost as cost_mod
-from . import prompts as prompt_loader
-from .models import AgentEvent, AgentRun, AgentStep
+from agents import cost as cost_mod
+from agents import prompts as prompt_loader
+from agents.models import AgentEvent, AgentRun, AgentStep
 
 
 @admin.register(AgentRun)

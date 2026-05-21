@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib import admin, messages
 from django.utils import timezone
 
-from .models import Investigation, InvestigationStatus, StaleReason
+from investigations.models import Investigation, InvestigationStatus, StaleReason
 
 
 @admin.register(Investigation)
