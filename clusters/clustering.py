@@ -24,8 +24,8 @@ from django.conf import settings
 from django.utils import timezone
 from pgvector.django import CosineDistance
 
+from .embeddings import embed_text
 from .models import (
-    EMBEDDING_DIM,
     Cluster,
     ClusterItem,
     ClusterStatus,
@@ -33,20 +33,16 @@ from .models import (
 
 
 # ---------------------------------------------------------------------------
-# Embedding placeholder
+# Embedding
 # ---------------------------------------------------------------------------
 def compute_embedding(text: str) -> list[float]:
-    """Produce a 1024-dim embedding for the given text.
+    """Embed text into a 1024-dim vector for clustering.
 
-    TODO(v1-followup): plug in a real embedding model (e.g. Voyage,
-    Titan v2, OpenAI text-embedding-3-large reduced to 1024). For now we
-    return a deterministic pseudo-random vector based on the text hash so
-    smoke tests are stable.
+    The clustering-facing entry point. Delegates to ``clusters.embeddings``
+    (Voyage AI) so callers in this module never touch the embedding provider
+    directly.
     """
-    rng = np.random.default_rng(abs(hash(text)) % (2**32))
-    vec = rng.normal(size=EMBEDDING_DIM)
-    vec /= np.linalg.norm(vec) + 1e-12
-    return vec.tolist()
+    return embed_text(text)
 
 
 # ---------------------------------------------------------------------------

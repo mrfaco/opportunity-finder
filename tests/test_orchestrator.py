@@ -11,8 +11,7 @@ from django.utils import timezone
 from agents import orchestrator
 from agents import tools as tool_registry
 from agents.models import AgentRun, AgentRunStatus
-from clusters.clustering import EMBEDDING_DIM
-from clusters.models import Cluster, ClusterStatus, Source
+from clusters.models import EMBEDDING_DIM, Cluster, ClusterStatus, Source
 
 
 def _unit_vec(seed: int = 0) -> list[float]:

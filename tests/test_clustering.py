@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from clusters import clustering
 from clusters.models import (
+    EMBEDDING_DIM,
     ClassifierVerdict,
     Cluster,
     ClusterItem,
@@ -46,7 +47,7 @@ def _item(
 
 @pytest.mark.django_db
 def test_new_item_creates_singleton_when_no_clusters():
-    embedding = _unit([1, 0] + [0] * (clustering.EMBEDDING_DIM - 2))
+    embedding = _unit([1, 0] + [0] * (EMBEDDING_DIM - 2))
     item = _item(embedding)
     cluster = clustering.assign_item_to_cluster(item)
     item.save()
@@ -60,8 +61,8 @@ def test_new_item_creates_singleton_when_no_clusters():
 def test_similar_item_joins_existing_cluster(settings):
     settings.CLUSTER_JOIN_THRESHOLD = 0.75
 
-    near = _unit([1, 0] + [0] * (clustering.EMBEDDING_DIM - 2))
-    very_near = _unit([0.95, 0.05] + [0] * (clustering.EMBEDDING_DIM - 2))
+    near = _unit([1, 0] + [0] * (EMBEDDING_DIM - 2))
+    very_near = _unit([0.95, 0.05] + [0] * (EMBEDDING_DIM - 2))
 
     first = _item(near, source_item_id="a")
     clustering.assign_item_to_cluster(first)
@@ -80,8 +81,8 @@ def test_dissimilar_item_creates_new_cluster(settings):
     settings.CLUSTER_JOIN_THRESHOLD = 0.75
     settings.CLUSTER_RECENCY_DAYS = 90
 
-    far_a = _unit([1, 0, 0] + [0] * (clustering.EMBEDDING_DIM - 3))
-    far_b = _unit([0, 0, 1] + [0] * (clustering.EMBEDDING_DIM - 3))
+    far_a = _unit([1, 0, 0] + [0] * (EMBEDDING_DIM - 3))
+    far_b = _unit([0, 0, 1] + [0] * (EMBEDDING_DIM - 3))
 
     first = _item(far_a, source_item_id="a")
     clustering.assign_item_to_cluster(first)

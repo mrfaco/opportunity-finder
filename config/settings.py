@@ -108,6 +108,13 @@ MODEL_FILTER = env("MODEL_FILTER", default="claude-haiku-4-5")
 MODEL_INVESTIGATION = env("MODEL_INVESTIGATION", default="claude-sonnet-4-6")
 
 # ---------------------------------------------------------------------------
+# Embeddings — Voyage AI. voyage-3.5 outputs 1024-dim vectors natively,
+# matching the pgvector columns in clusters.models (EMBEDDING_DIM).
+# ---------------------------------------------------------------------------
+VOYAGE_API_KEY = env("VOYAGE_API_KEY", default="")
+EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="voyage-3.5")
+
+# ---------------------------------------------------------------------------
 # Default budgets for agent runs
 # ---------------------------------------------------------------------------
 DEFAULT_BUDGET_MAX_STEPS = env.int("DEFAULT_BUDGET_MAX_STEPS", default=30)

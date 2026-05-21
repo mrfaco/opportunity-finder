@@ -24,11 +24,14 @@ Remaining polish for a later pass: the keyboard-driven labeling UI at
 is hand-curated rather than drawn from production classifications (that
 arrives once the ingestion adapters land).
 
-## 2. Plug in a real embedding model
+## 2. Plug in a real embedding model — ✅ DONE
 
-`compute_embedding` in `clusters/clustering.py` currently emits a
-deterministic random vector. Replace with Voyage / Titan v2 / OpenAI
-text-embedding-3-large reduced to 1024-dim. Backfill any existing items.
+`clusters/embeddings.py` embeds text via Voyage AI (`voyage-3.5`, 1024-dim
+native — matches the pgvector columns). `clustering.compute_embedding`
+delegates to it. `embed_texts` batches and fails loud if the model returns
+the wrong dimensionality. The `reembed_cluster_items` management command
+re-embeds all items and recomputes centroids after a model change. Needs a
+`VOYAGE_API_KEY` in `.env`.
 
 ## 3. Implement the Hacker News ingestion adapter
 
