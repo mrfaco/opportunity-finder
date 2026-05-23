@@ -1,14 +1,19 @@
-"""Stub implementations for every tool the investigation agent uses.
+"""Tool registrations for the investigation agent.
 
-Each stub validates its input and raises ``NotImplementedError``. The wrapper
-in ``Tool.dispatch`` runs Pydantic validation first, so the schemas already
-work; only the ``impl`` function bodies need filling in per tool.
+Tools that are still stubs raise ``NotImplementedError``; tools that have
+been implemented (currently: ``query_cluster``) run real code. The wrapper
+in ``Tool.dispatch`` runs Pydantic validation first, so every tool's schema
+already works regardless of impl status.
 """
 
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from pydantic import BaseModel
+
 from agents.tools import register
 from agents.tools.base import Tool, ToolInput, ToolOutput
+from clusters.models import Cluster
 
 NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
 
@@ -16,24 +21,106 @@ NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
 # ---------------------------------------------------------------------------
 # Internal / cluster-query tools
 # ---------------------------------------------------------------------------
+class ClusterItemBrief(BaseModel):
+    """A compact representative of a cluster member.
+
+    The full ``raw_text`` is intentionally omitted — the agent should call
+    ``fetch_hn_item`` or ``fetch_url`` when it needs the full content of a
+    specific item, rather than have every cluster query blow up its context.
+    """
+
+    id: str
+    source: str
+    source_item_id: str
+    url: str
+    title: str | None = None
+    author: str | None = None
+    posted_at: str
+    snippet: str
+    classifier_confidence: float
+
+
+class ClusterSummary(BaseModel):
+    id: str
+    status: str
+    title: str | None = None
+    summary: str | None = None
+    size: int
+    sources: list[str]
+    category_tags: list[str]
+    classifier_score: float
+    first_seen_at: str | None = None
+    last_seen_at: str | None = None
+    key_items: list[ClusterItemBrief]
+
+
 class QueryClusterInput(ToolInput):
     cluster_id: str
+    # How many representative items to include. The agent can fetch the full
+    # content of any specific item via fetch_hn_item / fetch_url.
+    max_items: int = 5
 
 
 class QueryClusterOutput(ToolOutput):
-    cluster_summary: dict | None = None
+    cluster: ClusterSummary | None = None
 
 
-def _query_cluster(_inp: QueryClusterInput) -> QueryClusterOutput:
-    raise NotImplementedError(NOT_YET)
+def _query_cluster(inp: QueryClusterInput) -> QueryClusterOutput:
+    """Look up a cluster by id and return its summary plus key members.
+
+    Returns ``status='not_found'`` when the id does not match a cluster (or
+    is not a valid UUID). This is the tool's structured-error contract with
+    the agent, not a fallback — the agent uses the signal to self-correct.
+    """
+    try:
+        cluster = Cluster.objects.get(pk=inp.cluster_id)
+    except (  # allow: suppress-exception
+        Cluster.DoesNotExist,
+        ValueError,
+        DjangoValidationError,
+    ) as exc:
+        return QueryClusterOutput(
+            status="not_found",
+            error_reason=f"No cluster with id {inp.cluster_id!r} ({exc.__class__.__name__})",
+        )
+
+    items = list(cluster.items.order_by("-classifier_confidence", "-posted_at")[: inp.max_items])
+    summary = ClusterSummary(
+        id=str(cluster.id),
+        status=cluster.status,
+        title=cluster.title,
+        summary=cluster.summary,
+        size=cluster.size,
+        sources=list(cluster.sources),
+        category_tags=list(cluster.category_tags),
+        classifier_score=cluster.classifier_score,
+        first_seen_at=cluster.first_seen_at.isoformat() if cluster.first_seen_at else None,
+        last_seen_at=cluster.last_seen_at.isoformat() if cluster.last_seen_at else None,
+        key_items=[
+            ClusterItemBrief(
+                id=str(item.id),
+                source=item.source,
+                source_item_id=item.source_item_id,
+                url=item.url,
+                title=item.title,
+                author=item.author,
+                posted_at=item.posted_at.isoformat(),
+                snippet=item.snippet,
+                classifier_confidence=item.classifier_confidence,
+            )
+            for item in items
+        ],
+    )
+    return QueryClusterOutput(status="success", cluster=summary)
 
 
 register(
     Tool(
         name="query_cluster",
         description=(
-            "Return the cluster's summary, title, sources, key items, and metadata. "
-            "The first tool the investigation agent should call."
+            "Return the cluster's summary, title, sources, classifier score, and a "
+            "small sample of representative member items (highest classifier "
+            "confidence first). The first tool the investigation agent should call."
         ),
         input_type=QueryClusterInput,
         output_type=QueryClusterOutput,

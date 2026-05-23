@@ -46,11 +46,19 @@ refinement Celery Beat tasks.
 Deferred: comment ingestion (higher volume — needs a keyword pre-filter
 before the classifier call). Tracked loosely under step 10.
 
-## 4. Implement the `query_cluster` tool
+## 4. Implement the `query_cluster` tool — ✅ DONE
 
-The investigation agent's first tool call is almost always `query_cluster`.
-Implementing this alone unlocks "manual investigation runs from the admin"
-once the model wrapper is in place.
+`query_cluster` is now real. Inputs: `cluster_id`, optional `max_items` (5).
+Returns a structured `ClusterSummary` (id, status, title, summary, size,
+sources, category_tags, classifier_score, first/last_seen_at) plus a sample
+of the highest-confidence member items as `ClusterItemBrief` (id, source,
+url, title, author, posted_at, snippet, classifier_confidence). Returns
+`status='not_found'` for missing or non-UUID ids — the agent's
+structured-error contract, not a fallback.
+
+Implementation reads live cluster state by id; per-run snapshot semantics
+for tool reads is deferred (would require threading run context through
+``Tool.dispatch``).
 
 ## 5. Author `prompts/investigation/system.md` and `procedural.md` v1.0
 
