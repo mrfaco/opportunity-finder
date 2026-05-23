@@ -94,7 +94,7 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 # Pre-push hook runs `pytest --cov` against this threshold. Bump the number
 # (never down) as more code lands. See AGENTS.md for the ratchet rule.
-addopts = "--cov --cov-report=term-missing --cov-fail-under=72"
+addopts = "--cov --cov-report=term-missing --cov-fail-under=80"
 
 [tool.ruff]
 line-length = 100

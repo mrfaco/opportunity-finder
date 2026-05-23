@@ -1,13 +1,14 @@
-"""Investigation agent loop — control-flow skeleton.
+"""Investigation agent loop.
 
 The loop is intentionally split from the orchestrator. The orchestrator owns
 persistence + budget enforcement + tool dispatch + trajectory logging; the
 loop's only job is to consume snapshots, drive the model, and decide when to
 emit a final brief.
 
-In v1, the model call (`_call_model`) and most tool implementations raise
-``NotImplementedError``. The control flow itself is complete so the wiring
-is testable.
+``_call_model`` is a live Anthropic call (system + tools cached as the
+stable prefix). The agent signals termination by calling the ``record_brief``
+tool; the loop intercepts that call, persists the brief on the ``AgentRun``,
+creates the ``Investigation`` row, and exits.
 """
 
 from __future__ import annotations
@@ -36,6 +37,8 @@ from agents.models import (
     TerminationReason,
     ToolStatus,
 )
+from core.anthropic_client import get_client
+from investigations.models import Investigation
 
 logger = logging.getLogger(__name__)
 
@@ -83,27 +86,91 @@ def _build_initial_history(run: AgentRun) -> list[dict[str, Any]]:
     return history
 
 
+_MAX_TOKENS = 8000
+
+
 def _call_model(
     history: list[dict[str, Any]], model: str, tools: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    """Single Anthropic completion call.
+    """One completion turn against the Anthropic SDK.
 
-    Expected return shape:
+    Lifts the ``system``-role entry out of ``history`` into the SDK's
+    ``system=`` parameter, converts the MCP-shape tool list into Anthropic's
+    shape, applies top-level prompt caching (the system prompt + tools are
+    stable across the run; the auto-cache picks up the most recent stable
+    prefix on each call).
+
+    Returns a flat dict the loop persists into ``AgentStep`` / ``AgentEvent``:
+
         {
-            "content": [...],         # raw content blocks
+            "content": [<raw content blocks, fed back into messages>],
             "stop_reason": "...",
             "input_tokens": int,
             "output_tokens": int,
             "cached_tokens": int,
-            "tool_calls": [...],      # parsed tool-use blocks
-            "final_text": str | None, # text content if model is done
+            "tool_calls": [{"id", "name", "input"}, ...],
+            "final_text": str | None,   # populated only when the model
+                                        # ended a turn without tool calls
         }
 
-    TODO(v1-followup): implement against the Anthropic SDK with prompt
-    caching enabled (cache the system + procedural prompts; tools are tier-1
-    cached as well). Plumb errors → ``ToolStatus`` / loop termination paths.
+    Errors (rate limit, auth, server) propagate to the outer loop's
+    structured-failure handler. No fallback verdict.
     """
-    raise NotImplementedError("TODO(v1-followup): wire up Anthropic SDK call with prompt caching")
+    client = get_client()
+
+    system_blocks: list[dict[str, Any]] = []
+    messages: list[dict[str, Any]] = []
+    for msg in history:
+        if msg["role"] == "system":
+            system_blocks.append(
+                {
+                    "type": "text",
+                    "text": msg["content"],
+                    "cache_control": {"type": "ephemeral"},
+                }
+            )
+        else:
+            messages.append(msg)
+
+    anthropic_tools = [
+        {"name": t["name"], "description": t["description"], "input_schema": t["inputSchema"]}
+        for t in tools
+    ]
+
+    # mypy can't prove that our dynamically-built dicts match the SDK's
+    # narrow TypedDicts (MessageParam, ToolParam, TextBlockParam) — the
+    # shapes are correct by construction.
+    response = client.messages.create(  # type: ignore[call-overload]
+        model=model,
+        max_tokens=_MAX_TOKENS,
+        system=system_blocks,
+        messages=messages,
+        tools=anthropic_tools,
+        # Auto-cache the last cacheable block in the request — combined with
+        # the cache_control already on system, this keeps the stable prefix
+        # warm across iterations.
+        cache_control={"type": "ephemeral"},
+    )
+
+    tool_calls: list[dict[str, Any]] = []
+    final_text_parts: list[str] = []
+    for block in response.content:
+        if block.type == "tool_use":
+            tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
+        elif block.type == "text":
+            final_text_parts.append(block.text)
+
+    final_text = "\n".join(final_text_parts) if final_text_parts and not tool_calls else None
+    usage = response.usage
+    return {
+        "content": response.content,
+        "stop_reason": response.stop_reason,
+        "input_tokens": usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "cached_tokens": (getattr(usage, "cache_read_input_tokens", 0) or 0),
+        "tool_calls": tool_calls,
+        "final_text": final_text,
+    }
 
 
 def _dispatch_tool(
@@ -209,12 +276,28 @@ def run_loop(run_id: UUID | str) -> None:
                 step=step,
                 sequence=event_seq,
                 event_type=EventType.MODEL_RESPONSE,
-                payload=response,
+                payload={
+                    "stop_reason": response["stop_reason"],
+                    "tool_calls": response["tool_calls"],
+                    "final_text": response["final_text"],
+                },
                 payload_size_bytes=len(str(response)),
             )
 
-            # Tool calls
-            for call in response.get("tool_calls", []):
+            # Append the full assistant turn (text + tool_use blocks) to
+            # history as one entry, exactly as Anthropic expects to see it
+            # back on the next call.
+            if response["content"]:
+                history.append({"role": "assistant", "content": response["content"]})
+
+            # Dispatch every tool the model called this turn. Collect the
+            # results into one user message of tool_result blocks (also the
+            # Anthropic-required shape). Record any record_brief input as
+            # the run's final output and break the loop after the turn.
+            tool_results: list[dict[str, Any]] = []
+            brief_to_record: dict[str, Any] | None = None
+
+            for call in response["tool_calls"]:
                 tool_name = call["name"]
                 tool_input = call["input"]
                 event_seq += 1
@@ -258,12 +341,38 @@ def run_loop(run_id: UUID | str) -> None:
                     payload_size_bytes=len(str(output)),
                     tool_name=tool_name,
                 )
-                history.append({"role": "assistant", "content": call})
-                history.append({"role": "user", "content": {"tool_result": output}})
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": call["id"],
+                        "content": json.dumps(output),
+                    }
+                )
+                if tool_name == "record_brief" and output.get("status") == "success":
+                    brief_to_record = tool_input
 
-            if response.get("final_text") is not None:
-                # Agent produced the brief.
-                run.final_output = {"text": response["final_text"], "raw": response}
+            if tool_results:
+                history.append({"role": "user", "content": tool_results})
+
+            if brief_to_record is not None:
+                # The agent's "I'm done" signal. Persist the brief, create
+                # the Investigation row, and break the loop.
+                run.final_output = brief_to_record
+                run.termination_reason = TerminationReason.AGENT_DECIDED_DONE
+                run.status = AgentRunStatus.COMPLETED
+                Investigation.objects.create(
+                    cluster=run.cluster,
+                    primary_run=run,
+                    brief=brief_to_record,
+                    cluster_snapshot=run.cluster_snapshot,
+                )
+                break
+
+            if response["final_text"] is not None and not response["tool_calls"]:
+                # Degraded success: the model ended the turn without calling
+                # record_brief. Capture the text so a human can salvage it,
+                # but don't create an Investigation (no structured brief).
+                run.final_output = {"text": response["final_text"]}
                 run.termination_reason = TerminationReason.AGENT_DECIDED_DONE
                 run.status = AgentRunStatus.COMPLETED
                 break

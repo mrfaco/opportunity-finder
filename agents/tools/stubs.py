@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from agents.tools import register
 from agents.tools.base import Tool, ToolInput, ToolOutput
 from clusters.models import Cluster
+from investigations.schemas import Brief
 
 NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
 
@@ -441,6 +442,44 @@ register(
         output_type=SummarizeTextOutput,
         impl=_summarize_text,
         cost_tier=2,
+        cache_ttl_seconds=0,
+    )
+)
+
+
+# ---------------------------------------------------------------------------
+# Termination tool — the agent's "I'm done" signal.
+# ---------------------------------------------------------------------------
+class RecordBriefOutput(ToolOutput):
+    pass  # status field on the base is the whole response
+
+
+def _record_brief(_brief: Brief) -> RecordBriefOutput:
+    """Confirm receipt of the brief.
+
+    The loop intercepts ``record_brief`` calls before this impl is reached —
+    it extracts the brief from the tool input, persists it to the AgentRun,
+    creates the Investigation row, and terminates the loop. This impl exists
+    so that if the loop ever does dispatch it, the agent gets a clean
+    success acknowledgement.
+    """
+    return RecordBriefOutput(status="success")
+
+
+register(
+    Tool(
+        name="record_brief",
+        description=(
+            "Record the final opportunity brief and end the investigation. "
+            "Call this exactly once when you have answers to all seven "
+            "questions in the procedural prompt and are ready to finalize. "
+            "The input fields are the brief — see the procedural prompt for "
+            "what each field should contain."
+        ),
+        input_type=Brief,
+        output_type=RecordBriefOutput,
+        impl=_record_brief,
+        cost_tier=0,
         cache_ttl_seconds=0,
     )
 )

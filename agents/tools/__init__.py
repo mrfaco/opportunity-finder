@@ -35,6 +35,7 @@ AGENT_TOOLSETS: dict[str, list[str]] = {
         "fetch_url",
         "query_trustmrr",
         "summarize_text",
+        "record_brief",
     ],
 }
 

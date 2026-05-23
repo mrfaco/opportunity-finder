@@ -84,11 +84,26 @@ counts + latency on every `FilterVerdict`. The remaining wiring is the
 ingestion pipeline that persists a `FilterClassification` per ingested item
 — that lands with step 3 (the Hacker News adapter).
 
-## 7. Plumb real Anthropic API calls through the investigation agent loop
+## 7. Plumb real Anthropic API calls through the investigation agent loop — ✅ DONE
 
-`agents.loop._call_model` is the last piece. Use the SDK with tools,
-prompt caching, and structured-output parsing of the final brief against
-`Brief.json_schema()`.
+`agents.loop._call_model` is a live Anthropic SDK call. The system prompt
++ tools are cached as the stable prefix (top-level `cache_control`); the
+loop converts the MCP-shape tool list into the SDK's shape and lifts the
+`role: "system"` history entry out into the SDK's `system=` parameter.
+
+The agent signals termination by calling the new ``record_brief`` tool
+whose input type is ``investigations.schemas.Brief`` — the JSON schema is
+enforced by Pydantic. The loop intercepts that call, persists the brief
+onto ``AgentRun.final_output``, sets termination to
+``AGENT_DECIDED_DONE``, and creates an ``Investigation`` row in
+``awaiting_review`` status linking back to the run. A degraded text-only
+end-turn is still accepted but does not create an Investigation.
+
+7 new tests (mocked Anthropic SDK + real query_cluster tool against the
+test DB) exercise the model-call shape, prompt-cache headers, full
+two-turn loop with brief recording, the tool_use ↔ tool_result history
+round-trip, and the record_brief tool registration. Coverage gate
+ratcheted 72% → 80%.
 
 ## 8. Implement the rest of the tools in priority order
 

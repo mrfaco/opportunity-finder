@@ -41,7 +41,10 @@ class ToolDefinition(BaseModel):
     cache_errors: dict[str, int]
 
 
-InT = TypeVar("InT", bound=ToolInput)
+# Tool inputs are bound to ``BaseModel``, not ``ToolInput``, so existing
+# Pydantic schemas (e.g. ``investigations.schemas.Brief``) can be used as
+# tool input types directly without forcing them through a wrapper.
+InT = TypeVar("InT", bound=BaseModel)
 OutT = TypeVar("OutT", bound=ToolOutput)
 
 
