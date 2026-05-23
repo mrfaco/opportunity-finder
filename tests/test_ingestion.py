@@ -13,9 +13,10 @@ import pytest
 from django.utils import timezone
 
 from clusters.models import EMBEDDING_DIM, Cluster, ClusterItem
+from core.html import html_to_text
 from ingestion import pipeline
 from ingestion.adapters.base import IngestedItem
-from ingestion.adapters.hacker_news import HackerNewsAdapter, _html_to_text
+from ingestion.adapters.hacker_news import HackerNewsAdapter
 from ingestion.filter import FilterVerdict
 from ingestion.models import FilterClassification, IngestionCheckpoint, VerdictBand
 
@@ -25,7 +26,7 @@ from ingestion.models import FilterClassification, IngestionCheckpoint, VerdictB
 # ---------------------------------------------------------------------------
 def test_html_to_text_flattens_light_html():
     raw = "<p>I wish there was a tool.<p>The &quot;workaround&quot; is awful &amp; slow."
-    text = _html_to_text(raw)
+    text = html_to_text(raw)
     assert "<p>" not in text
     assert '"workaround"' in text
     assert "&amp;" not in text

@@ -8,15 +8,22 @@ already works regardless of impl status.
 
 from __future__ import annotations
 
+import re
+from datetime import UTC, datetime
+
+import httpx
 from django.core.exceptions import ValidationError as DjangoValidationError
+from pgvector.django import CosineDistance
 from pydantic import BaseModel
 
 from agents.tools import register
 from agents.tools.base import Tool, ToolInput, ToolOutput
 from clusters.models import Cluster
+from core.html import html_to_text
 from investigations.schemas import Brief
 
 NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
+_HN_TIMEOUT_S = 20.0
 
 
 # ---------------------------------------------------------------------------
@@ -137,18 +144,73 @@ class QueryRelatedClustersInput(ToolInput):
     limit: int = 5
 
 
+class RelatedCluster(BaseModel):
+    id: str
+    title: str | None = None
+    summary: str | None = None
+    size: int
+    status: str
+    last_seen_at: str | None = None
+    similarity: float
+
+
 class QueryRelatedClustersOutput(ToolOutput):
-    related: list[dict] = []
+    related: list[RelatedCluster] = []
 
 
-def _query_related_clusters(_inp: QueryRelatedClustersInput) -> QueryRelatedClustersOutput:
-    raise NotImplementedError(NOT_YET)
+def _query_related_clusters(inp: QueryRelatedClustersInput) -> QueryRelatedClustersOutput:
+    """Find the nearest active clusters to the given one by centroid similarity.
+
+    Excludes the source cluster and any cluster without a centroid (newly
+    created singletons that haven't been refined yet). Uses pgvector's cosine
+    distance.
+    """
+    try:
+        source = Cluster.objects.get(pk=inp.cluster_id)
+    except (  # allow: suppress-exception
+        Cluster.DoesNotExist,
+        ValueError,
+        DjangoValidationError,
+    ) as exc:
+        return QueryRelatedClustersOutput(
+            status="not_found",
+            error_reason=f"No cluster with id {inp.cluster_id!r} ({exc.__class__.__name__})",
+        )
+    if source.centroid_embedding is None:
+        return QueryRelatedClustersOutput(
+            status="success",
+            related=[],
+            error_reason="Source cluster has no centroid yet.",
+        )
+
+    qs = (
+        Cluster.active.exclude(pk=source.pk)
+        .exclude(centroid_embedding__isnull=True)
+        .annotate(_dist=CosineDistance("centroid_embedding", source.centroid_embedding))
+        .order_by("_dist")[: inp.limit]
+    )
+    related = [
+        RelatedCluster(
+            id=str(c.id),
+            title=c.title,
+            summary=c.summary,
+            size=c.size,
+            status=c.status,
+            last_seen_at=c.last_seen_at.isoformat() if c.last_seen_at else None,
+            similarity=round(1.0 - float(c._dist), 4),
+        )
+        for c in qs
+    ]
+    return QueryRelatedClustersOutput(status="success", related=related)
 
 
 register(
     Tool(
         name="query_related_clusters",
-        description="Find other clusters with similar centroids — for prior-work detection.",
+        description=(
+            "Find other clusters whose centroids are nearest to the given cluster — "
+            "useful for spotting prior or adjacent investigations of the same need."
+        ),
         input_type=QueryRelatedClustersInput,
         output_type=QueryRelatedClustersOutput,
         impl=_query_related_clusters,
@@ -189,18 +251,67 @@ class SearchHackerNewsInput(ToolInput):
     limit: int = 10
 
 
+class HNSearchHit(BaseModel):
+    object_id: str
+    type: str
+    title: str | None = None
+    url: str | None = None
+    author: str | None = None
+    posted_at: str
+    points: int | None = None
+    num_comments: int | None = None
+    snippet: str = ""
+
+
 class SearchHackerNewsOutput(ToolOutput):
-    results: list[dict] = []
+    results: list[HNSearchHit] = []
 
 
-def _search_hacker_news(_inp: SearchHackerNewsInput) -> SearchHackerNewsOutput:
-    raise NotImplementedError(NOT_YET)
+def _hn_search_hit_type(hit: dict) -> str:
+    tags = hit.get("_tags") or []
+    for t in ("story", "comment", "poll", "job", "ask_hn", "show_hn"):
+        if t in tags:
+            return t
+    return "unknown"
+
+
+def _search_hacker_news(inp: SearchHackerNewsInput) -> SearchHackerNewsOutput:
+    """Search Hacker News via Algolia for stories and comments matching the query."""
+    response = httpx.get(
+        "https://hn.algolia.com/api/v1/search",
+        params={"query": inp.query, "hitsPerPage": inp.limit},
+        timeout=_HN_TIMEOUT_S,
+    )
+    response.raise_for_status()
+    data = response.json()
+    hits = []
+    for hit in data.get("hits", []):
+        snippet_raw = hit.get("story_text") or hit.get("comment_text") or ""
+        snippet = html_to_text(snippet_raw)[:400]
+        object_id = str(hit["objectID"])
+        hits.append(
+            HNSearchHit(
+                object_id=object_id,
+                type=_hn_search_hit_type(hit),
+                title=hit.get("title"),
+                url=hit.get("url") or f"https://news.ycombinator.com/item?id={object_id}",
+                author=hit.get("author"),
+                posted_at=datetime.fromtimestamp(hit["created_at_i"], tz=UTC).isoformat(),
+                points=hit.get("points"),
+                num_comments=hit.get("num_comments"),
+                snippet=snippet,
+            )
+        )
+    return SearchHackerNewsOutput(status="success", results=hits)
 
 
 register(
     Tool(
         name="search_hacker_news",
-        description="Search Hacker News via the Algolia HN search API.",
+        description=(
+            "Search Hacker News (stories and comments) via the Algolia search API. "
+            "Use this to find external corroboration of the cluster's pain."
+        ),
         input_type=SearchHackerNewsInput,
         output_type=SearchHackerNewsOutput,
         impl=_search_hacker_news,
@@ -212,20 +323,89 @@ register(
 
 class FetchHNItemInput(ToolInput):
     item_id: int
+    max_children: int = 50
+
+
+class HNComment(BaseModel):
+    id: str
+    author: str | None = None
+    posted_at: str | None = None
+    text: str = ""
+
+
+class HNItem(BaseModel):
+    id: str
+    type: str
+    title: str | None = None
+    url: str | None = None
+    author: str | None = None
+    posted_at: str | None = None
+    points: int | None = None
+    text: str = ""
+    num_comments: int | None = None
+    top_children: list[HNComment] = []
 
 
 class FetchHNItemOutput(ToolOutput):
-    item: dict | None = None
+    item: HNItem | None = None
 
 
-def _fetch_hn_item(_inp: FetchHNItemInput) -> FetchHNItemOutput:
-    raise NotImplementedError(NOT_YET)
+def _flatten_children(node: dict | None, out: list[HNComment], limit: int) -> None:
+    """Flatten the comment tree breadth-first up to ``limit`` items."""
+    if node is None:
+        return
+    queue: list[dict] = list(node.get("children") or [])
+    while queue and len(out) < limit:
+        child = queue.pop(0)
+        out.append(
+            HNComment(
+                id=str(child.get("id")),
+                author=child.get("author"),
+                posted_at=child.get("created_at"),
+                text=html_to_text(child.get("text") or ""),
+            )
+        )
+        queue.extend(child.get("children") or [])
+
+
+def _fetch_hn_item(inp: FetchHNItemInput) -> FetchHNItemOutput:
+    """Fetch one HN item (story/comment) plus a bounded slice of its descendants."""
+    response = httpx.get(
+        f"https://hn.algolia.com/api/v1/items/{inp.item_id}",
+        timeout=_HN_TIMEOUT_S,
+    )
+    if response.status_code == 404:
+        return FetchHNItemOutput(
+            status="not_found",
+            error_reason=f"No HN item with id {inp.item_id}",
+        )
+    response.raise_for_status()
+    data = response.json()
+    children: list[HNComment] = []
+    _flatten_children(data, children, inp.max_children)
+    item = HNItem(
+        id=str(data.get("id")),
+        type=str(data.get("type") or "unknown"),
+        title=data.get("title"),
+        url=data.get("url"),
+        author=data.get("author"),
+        posted_at=data.get("created_at"),
+        points=data.get("points"),
+        text=html_to_text(data.get("text") or ""),
+        num_comments=data.get("num_comments"),
+        top_children=children,
+    )
+    return FetchHNItemOutput(status="success", item=item)
 
 
 register(
     Tool(
         name="fetch_hn_item",
-        description="Fetch a Hacker News item (story or comment) with its child comments.",
+        description=(
+            "Fetch a Hacker News story or comment by id, including a bounded slice "
+            "of its descendant comments. Use this to read the full content of an "
+            "item that a search result only previewed."
+        ),
         input_type=FetchHNItemInput,
         output_type=FetchHNItemOutput,
         impl=_fetch_hn_item,
@@ -372,18 +552,61 @@ class FetchUrlInput(ToolInput):
 
 
 class FetchUrlOutput(ToolOutput):
+    url: str = ""
     title: str | None = None
-    content_text: str | None = None
+    content_text: str = ""
+    content_truncated: bool = False
 
 
-def _fetch_url(_inp: FetchUrlInput) -> FetchUrlOutput:
-    raise NotImplementedError(NOT_YET)
+# Cap to keep one fetch from blowing up the agent's context. ~200 KB of HTML
+# typically flattens to well under 100 KB of text.
+_FETCH_MAX_BYTES = 200_000
+_FETCH_TIMEOUT_S = 20.0
+_TITLE_RE = re.compile(r"<title[^>]*>([^<]*)</title>", re.IGNORECASE | re.DOTALL)
+
+
+def _fetch_url(inp: FetchUrlInput) -> FetchUrlOutput:
+    """Fetch a URL and return its main text content.
+
+    Bounded by ``_FETCH_MAX_BYTES`` to keep one over-large page from blowing
+    up the agent's context window. ``content_truncated`` signals whether the
+    cap was hit. Non-2xx responses raise — the agent should treat that as a
+    real failure, not a tool-level fallback.
+    """
+    response = httpx.get(
+        inp.url,
+        timeout=_FETCH_TIMEOUT_S,
+        follow_redirects=True,
+        headers={"User-Agent": "opportunity-finder/0.1"},
+    )
+    response.raise_for_status()
+    raw = response.content[:_FETCH_MAX_BYTES]
+    truncated = len(response.content) > _FETCH_MAX_BYTES
+    try:
+        body = raw.decode(response.encoding or "utf-8", errors="replace")
+    except LookupError:  # allow: suppress-exception
+        # Unknown encoding declared in headers — fall back to utf-8 with
+        # replacement. This is recovery from an upstream bug, not an error
+        # path: the bytes are still served, the agent just sees mojibake.
+        body = raw.decode("utf-8", errors="replace")
+    title_match = _TITLE_RE.search(body)
+    title = html_to_text(title_match.group(1)) if title_match else None
+    return FetchUrlOutput(
+        status="success",
+        url=str(response.url),
+        title=title or None,
+        content_text=html_to_text(body),
+        content_truncated=truncated,
+    )
 
 
 register(
     Tool(
         name="fetch_url",
-        description="Fetch a URL and return its main text content.",
+        description=(
+            "Fetch a URL and return its main text content (HTML stripped). "
+            "Bounded to ~200KB of source; use when a search snippet isn't enough."
+        ),
         input_type=FetchUrlInput,
         output_type=FetchUrlOutput,
         impl=_fetch_url,

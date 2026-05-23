@@ -12,14 +12,13 @@ Comment ingestion is a separate, higher-volume increment (see NEXT_STEPS).
 
 from __future__ import annotations
 
-import html
-import re
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import httpx
 from django.conf import settings
 
+from core.html import html_to_text
 from ingestion.adapters.base import IngestedItem, SourceAdapter
 
 _ALGOLIA_URL = "https://hn.algolia.com/api/v1/search_by_date"
@@ -27,20 +26,6 @@ _HITS_PER_PAGE = 100
 # Safety cap — one run should never need this many pages of new Ask HN posts.
 _MAX_PAGES = 20
 _REQUEST_TIMEOUT_S = 20.0
-
-_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _html_to_text(raw: str) -> str:
-    """Flatten the light HTML in an Ask HN body to plain text.
-
-    HN story text uses only ``<p>``, ``<a>``, ``<i>``, ``<pre><code>``. We
-    turn paragraph breaks into blank lines, strip the remaining tags, and
-    unescape entities.
-    """
-    text = raw.replace("<p>", "\n\n")
-    text = _TAG_RE.sub("", text)
-    return html.unescape(text).strip()
 
 
 class HackerNewsAdapter(SourceAdapter):
@@ -66,7 +51,7 @@ class HackerNewsAdapter(SourceAdapter):
     def _to_item(self, hit: dict) -> IngestedItem:
         item_id = str(hit["objectID"])
         title = hit.get("title") or ""
-        body = _html_to_text(hit.get("story_text") or "")
+        body = html_to_text(hit.get("story_text") or "")
         raw_text = f"{title}\n\n{body}".strip()
         return IngestedItem(
             source=self.source,

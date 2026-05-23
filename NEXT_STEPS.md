@@ -105,13 +105,36 @@ two-turn loop with brief recording, the tool_use ↔ tool_result history
 round-trip, and the record_brief tool registration. Coverage gate
 ratcheted 72% → 80%.
 
-## 8. Implement the rest of the tools in priority order
+## 8. Implement the rest of the tools — 🟡 partial (4 of 12 done)
 
-Recommended order based on agent-call frequency: `query_related_clusters`,
-`fetch_hn_item`, `search_hacker_news`, `web_search`, `fetch_url`,
-`search_github_issues`, `search_stack_overflow`, `search_product_hunt`,
-`fetch_product_hunt_comments`, `query_known_competitors`,
-`query_trustmrr`, `summarize_text`.
+Done in this session — the no-auth, no-new-model tier:
+
+- **`query_related_clusters`** — pgvector nearest-neighbor on centroids,
+  excludes self + inactive, returns each candidate with its cosine
+  similarity to the source.
+- **`search_hacker_news`** — Algolia HN search API, returns stories and
+  comments with snippets, falls back to the HN permalink when an item
+  has no external URL.
+- **`fetch_hn_item`** — Algolia items endpoint, flattens the comment
+  tree breadth-first up to a `max_children` cap.
+- **`fetch_url`** — `httpx.get` with HTML stripped to text via the
+  shared `core.html.html_to_text` helper, bounded at ~200KB of source
+  with a `content_truncated` flag.
+
+Deferred to follow-up sessions (each needs an API key, OAuth flow, or
+new data model):
+
+- **`web_search`** — needs a provider decision (Brave / Tavily /
+  Anthropic's native web_search tool).
+- **`search_github_issues`** — needs a GitHub PAT.
+- **`search_stack_overflow`** — Stack Exchange API key.
+- **`search_product_hunt`** / **`fetch_product_hunt_comments`** —
+  Product Hunt GraphQL + OAuth.
+- **`query_known_competitors`** — requires a `Competitor` model (does
+  not exist yet).
+- **`query_trustmrr`** — paid third-party API.
+- **`summarize_text`** — Anthropic Haiku call; useful but lowest
+  priority since the investigation agent (Sonnet) can summarize inline.
 
 ## 9. Implement the LLM judge for merge/split proposals
 
