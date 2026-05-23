@@ -22,7 +22,6 @@ from clusters.models import Cluster
 from core.html import html_to_text
 from investigations.schemas import Brief
 
-NOT_YET = "TODO(v1-followup): implement in the tool-impl session"
 _HN_TIMEOUT_S = 20.0
 
 
@@ -228,7 +227,12 @@ class QueryKnownCompetitorsOutput(ToolOutput):
 
 
 def _query_known_competitors(_inp: QueryKnownCompetitorsInput) -> QueryKnownCompetitorsOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: needs a Competitor model + admin curation surface. Once that
+    # exists, this looks up competitors whose category_tags overlap with the
+    # cluster's, or that humans tagged on past Investigations in this space.
+    raise NotImplementedError(
+        "query_known_competitors needs a Competitor data model — does not exist yet."
+    )
 
 
 register(
@@ -425,7 +429,10 @@ class SearchGitHubIssuesOutput(ToolOutput):
 
 
 def _search_github_issues(_inp: SearchGitHubIssuesInput) -> SearchGitHubIssuesOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: needs a GitHub PAT (settings.GITHUB_TOKEN). Then a single
+    # call to GET https://api.github.com/search/issues with the query, mapping
+    # each item to a structured result. Rate limit: 30 req/min authenticated.
+    raise NotImplementedError("search_github_issues needs a GITHUB_TOKEN; not configured.")
 
 
 register(
@@ -451,7 +458,12 @@ class SearchStackOverflowOutput(ToolOutput):
 
 
 def _search_stack_overflow(_inp: SearchStackOverflowInput) -> SearchStackOverflowOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: Stack Exchange API works key-less at low quota (300/day) and
+    # at 10000/day with a STACKEXCHANGE_KEY. Use /2.3/search/advanced with
+    # site=stackoverflow + the query; map to results with snippet from body_markdown.
+    raise NotImplementedError(
+        "search_stack_overflow needs a STACKEXCHANGE_KEY (optional, recommended for quota)."
+    )
 
 
 register(
@@ -477,7 +489,10 @@ class SearchProductHuntOutput(ToolOutput):
 
 
 def _search_product_hunt(_inp: SearchProductHuntInput) -> SearchProductHuntOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: Product Hunt v2 GraphQL API needs an OAuth client (developer
+    # token works for dev). Settings: PRODUCT_HUNT_TOKEN. Query:
+    # `query { posts(first:10, order:RANKING) { edges { node { name, tagline, url } } } }`.
+    raise NotImplementedError("search_product_hunt needs a PRODUCT_HUNT_TOKEN (OAuth bearer).")
 
 
 register(
@@ -505,7 +520,12 @@ class FetchProductHuntCommentsOutput(ToolOutput):
 def _fetch_product_hunt_comments(
     _inp: FetchProductHuntCommentsInput,
 ) -> FetchProductHuntCommentsOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: same auth as search_product_hunt (PRODUCT_HUNT_TOKEN).
+    # GraphQL: post(slug:$slug) { comments(first:$limit) { edges { node {
+    # body, user{name} } } } }.
+    raise NotImplementedError(
+        "fetch_product_hunt_comments needs a PRODUCT_HUNT_TOKEN (same as search_product_hunt)."
+    )
 
 
 register(
@@ -531,7 +551,13 @@ class WebSearchOutput(ToolOutput):
 
 
 def _web_search(_inp: WebSearchInput) -> WebSearchOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: needs a provider decision before keys are wired.
+    # Candidates: Brave Search API (paid, no scraping), Tavily (LLM-tuned,
+    # cheap), Anthropic's server-side `web_search_20260209` tool (cleanest —
+    # Claude handles the search itself; would remove this client tool entirely).
+    raise NotImplementedError(
+        "web_search needs a provider decision (Brave / Tavily / Anthropic server-side)."
+    )
 
 
 register(
@@ -625,7 +651,11 @@ class QueryTrustMRROutput(ToolOutput):
 
 
 def _query_trustmrr(_inp: QueryTrustMRRInput) -> QueryTrustMRROutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked: TrustMRR is a paid third-party API. Settings:
+    # TRUSTMRR_API_KEY. If we never sign up, the alternative is to drop
+    # this tool and let the agent infer revenue signals from web_search +
+    # competitor pages — accept the loss of structured revenue data.
+    raise NotImplementedError("query_trustmrr needs a TRUSTMRR_API_KEY (paid third-party).")
 
 
 register(
@@ -651,7 +681,14 @@ class SummarizeTextOutput(ToolOutput):
 
 
 def _summarize_text(_inp: SummarizeTextInput) -> SummarizeTextOutput:
-    raise NotImplementedError(NOT_YET)
+    # Blocked, low priority: would be one Haiku call (settings.MODEL_FILTER
+    # — Haiku is what we already use for the classifier) producing a short
+    # summary. The Sonnet investigation agent can already summarize inline,
+    # so this is only worth it as a context-compaction helper (call it on
+    # older verbose tool results when budget pressure is high).
+    raise NotImplementedError(
+        "summarize_text deferred — Sonnet summarizes inline; revisit if context pressure appears."
+    )
 
 
 register(
