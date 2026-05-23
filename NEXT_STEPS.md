@@ -60,11 +60,21 @@ Implementation reads live cluster state by id; per-run snapshot semantics
 for tool reads is deferred (would require threading run context through
 ``Tool.dispatch``).
 
-## 5. Author `prompts/investigation/system.md` and `procedural.md` v1.0
+## 5. Author `prompts/investigation/system.md` and `procedural.md` v1.0 — ✅ DONE
 
-Role + goal + termination criteria in `system.md`; seven-question rubric,
-brief structure, evidence rules in `procedural.md`. Cross-reference
-`investigations/schemas.py::Brief` for the structured contract.
+`system.md` carries the role, what counts as an opportunity, the
+investigation strategy (which tools to call in what order), the honesty
+rules (no fabrication, cite or hedge, calibrated confidence), termination
+criteria, and budget awareness.
+
+`procedural.md` carries the seven-question rubric, the field-by-field
+brief structure (matching `investigations.schemas.Brief`), evidence rules,
+confidence calibration bands, output format guidance, and a worked-example
+sketch.
+
+The loop in step 7 will decide the exact output mechanism (forced
+`record_brief` tool vs. `messages.parse` with the `Brief` Pydantic model);
+the prompts describe the brief semantically so either path works.
 
 ## 6. Plumb real Anthropic API calls through the filter classifier — ✅ DONE
 
