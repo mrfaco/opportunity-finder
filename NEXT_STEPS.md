@@ -24,6 +24,25 @@ Remaining polish for a later pass: the keyboard-driven labeling UI at
 is hand-curated rather than drawn from production classifications (that
 arrives once the ingestion adapters land).
 
+**Classifier prompt v1.1 — queued follow-up.** First live eval run
+(`run=626e1c14`, 200 items, F1=0.898, $0.39) was perfect on
+`clear_yes`/`clear_no` (100%) but dropped to 74% on `ambiguous` and 88% on
+`adversarial`. All 19 errors collapse into two root causes — both
+prompt-fixable:
+- **FN pattern (9/9)**: model anchors on stated tone ("works for me",
+  "survivable") and ignores that a maintained workaround is itself the
+  evidence. Fix: explicit workaround-trumps-minimization clause.
+- **FP pattern (10/10)**: model doesn't apply the competitor check under
+  emotional pressure ("PLEASE solve this") — every FP names a saturated
+  category (cookie blockers, Loom, 1Password, browser tab sync, OS PDF
+  search, etc.). Fix: require naming 2+ existing tools before yes, and
+  only count emotional intensity if framing reveals a gap those tools
+  miss.
+
+17 of 19 errors land at confidence 0.68–0.82 (the uncertain band the
+prompt already calibrates to), so pipeline-level routing of low-confidence
+verdicts to human review would also reclaim most of the gap.
+
 ## 2. Plug in a real embedding model — ✅ DONE
 
 `clusters/embeddings.py` embeds text via Voyage AI (`voyage-3.5`, 1024-dim

@@ -69,7 +69,7 @@ Confirm in `/admin/django_celery_beat/periodictask/` that the rows appear.
 
 Each step costs more than the previous — run them in order so a cheap failure catches a wiring issue before you spend more.
 
-### 5a. Filter eval (~$0.05–0.10)
+### 5a. Filter eval (~$0.40)
 
 Loads the 200-item eval set and runs every row through the live Haiku classifier. Catches API key issues, prompt loading, structured-output parsing, cost math.
 
