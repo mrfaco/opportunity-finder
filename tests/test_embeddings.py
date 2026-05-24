@@ -8,6 +8,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+import voyageai.error
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -98,6 +99,78 @@ def test_compute_embedding_delegates_to_provider(monkeypatch):
     vec = clustering.compute_embedding("some text")
     assert len(vec) == EMBEDDING_DIM
     assert vec[0] == 0.7
+
+
+# ---------------------------------------------------------------------------
+# _embed_with_retry — RateLimitError backoff
+# ---------------------------------------------------------------------------
+def _flaky_client(rate_limit_count: int, then_vectors: list[list[float]]):
+    """Client that raises RateLimitError N times, then returns vectors."""
+    calls = {"n": 0}
+
+    def embed(batch, model, input_type):  # noqa: ARG001
+        calls["n"] += 1
+        if calls["n"] <= rate_limit_count:
+            raise voyageai.error.RateLimitError("simulated rate limit")
+        vecs = [then_vectors[i % len(then_vectors)] for i in range(len(batch))]
+        return SimpleNamespace(embeddings=vecs)
+
+    return SimpleNamespace(embed=embed), calls
+
+
+def test_embed_retries_then_succeeds(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr(embeddings.time, "sleep", lambda s: sleeps.append(s))
+    client, calls = _flaky_client(rate_limit_count=2, then_vectors=[_vec()])
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: client)
+
+    out = embeddings.embed_texts(["a"])
+    assert len(out) == 1
+    assert calls["n"] == 3  # two failures + one success
+    assert sleeps == [2.0, 4.0]  # exponential: 2*1, 2*2
+
+
+def test_embed_exhausts_retries_and_raises(monkeypatch):
+    monkeypatch.setattr(embeddings.time, "sleep", lambda s: None)
+    client, calls = _flaky_client(rate_limit_count=999, then_vectors=[_vec()])
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: client)
+
+    with pytest.raises(voyageai.error.RateLimitError):
+        embeddings.embed_texts(["a"])
+    # All MAX_RETRY_ATTEMPTS were used (5 retried + 1 final un-caught).
+    assert calls["n"] == embeddings._MAX_RETRY_ATTEMPTS
+
+
+def test_embed_does_not_retry_on_other_errors(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr(embeddings.time, "sleep", lambda s: sleeps.append(s))
+    calls = {"n": 0}
+
+    def embed(batch, model, input_type):  # noqa: ARG001
+        calls["n"] += 1
+        raise voyageai.error.AuthenticationError("bad key")
+
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: SimpleNamespace(embed=embed))
+
+    with pytest.raises(voyageai.error.AuthenticationError):
+        embeddings.embed_texts(["a"])
+    assert calls["n"] == 1  # no retry — fail loud on the first attempt
+    assert sleeps == []
+
+
+def test_embed_backoff_capped_at_max(monkeypatch):
+    """Wait values are capped by ``_MAX_RETRY_WAIT_S`` so a long backoff curve
+    doesn't run away on a tight free-tier quota."""
+    sleeps: list[float] = []
+    monkeypatch.setattr(embeddings.time, "sleep", lambda s: sleeps.append(s))
+    monkeypatch.setattr(embeddings, "_BASE_RETRY_WAIT_S", 100.0)
+    monkeypatch.setattr(embeddings, "_MAX_RETRY_WAIT_S", 10.0)
+    client, _ = _flaky_client(rate_limit_count=999, then_vectors=[_vec()])
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: client)
+
+    with pytest.raises(voyageai.error.RateLimitError):
+        embeddings.embed_texts(["a"])
+    assert all(s <= 10.0 for s in sleeps)
 
 
 # ---------------------------------------------------------------------------

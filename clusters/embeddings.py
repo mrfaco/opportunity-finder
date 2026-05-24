@@ -11,14 +11,29 @@ embeddings — the filter and the investigation agent do not embed.
 
 from __future__ import annotations
 
+import logging
+import time
+
 import voyageai
+import voyageai.error
 from django.conf import settings
+from voyageai.object.embeddings import EmbeddingsObject
 
 from clusters.models import EMBEDDING_DIM
+
+logger = logging.getLogger(__name__)
 
 # Voyage accepts up to 1000 inputs per request; we batch more conservatively
 # to stay well under the per-request token ceiling on long items.
 _BATCH_SIZE = 128
+
+# Bounded retry budget for transient rate-limit responses. The Voyage SDK's
+# own tenacity controller is tuned for normal transients and gives up well
+# before the free-tier 3 RPM window reopens; this is the app-level guard.
+# Total worst-case wait before the final attempt: 2+4+8+16+32 = 62s.
+_MAX_RETRY_ATTEMPTS = 6
+_BASE_RETRY_WAIT_S = 2.0
+_MAX_RETRY_WAIT_S = 60.0
 
 
 def get_voyage_client() -> voyageai.Client:
@@ -29,6 +44,32 @@ def get_voyage_client() -> voyageai.Client:
             "(see https://www.voyageai.com/ for a key)."
         )
     return voyageai.Client(api_key=settings.VOYAGE_API_KEY)
+
+
+def _embed_with_retry(
+    client: voyageai.Client, batch: list[str], model: str, input_type: str
+) -> EmbeddingsObject:
+    """Call ``client.embed`` with bounded exponential backoff on RateLimitError.
+
+    Only ``RateLimitError`` is retried — auth, validation, and connection
+    errors fail loud on the first attempt. The final attempt is outside the
+    try/except so failure propagates with the unmodified traceback.
+    """
+    for attempt in range(_MAX_RETRY_ATTEMPTS - 1):
+        try:
+            return client.embed(batch, model=model, input_type=input_type)
+        except voyageai.error.RateLimitError:  # allow: suppress-exception (retried below)
+            wait = min(_MAX_RETRY_WAIT_S, _BASE_RETRY_WAIT_S * (2**attempt))
+            logger.warning(
+                "voyage rate-limited; sleeping %.0fs before retry %d/%d",
+                wait,
+                attempt + 2,
+                _MAX_RETRY_ATTEMPTS,
+            )
+            time.sleep(wait)
+    # Final attempt: no except — failure propagates so the pipeline checkpoint
+    # stays at the last successfully-embedded item.
+    return client.embed(batch, model=model, input_type=input_type)
 
 
 def embed_texts(texts: list[str], input_type: str = "document") -> list[list[float]]:
@@ -49,7 +90,7 @@ def embed_texts(texts: list[str], input_type: str = "document") -> list[list[flo
     out: list[list[float]] = []
     for start in range(0, len(texts), _BATCH_SIZE):
         batch = texts[start : start + _BATCH_SIZE]
-        result = client.embed(batch, model=model, input_type=input_type)
+        result = _embed_with_retry(client, batch, model, input_type)
         # Coerce to float — voyage-3.5 returns floats, but the SDK return type
         # also admits integer (quantized) embeddings; pgvector wants floats.
         out.extend([float(x) for x in vec] for vec in result.embeddings)
