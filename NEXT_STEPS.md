@@ -29,19 +29,48 @@ arrives once the ingestion adapters land).
 `clear_yes`/`clear_no` (100%) but dropped to 74% on `ambiguous` and 88% on
 `adversarial`. All 19 errors collapse into two root causes — both
 prompt-fixable:
+
 - **FN pattern (9/9)**: model anchors on stated tone ("works for me",
   "survivable") and ignores that a maintained workaround is itself the
-  evidence. Fix: explicit workaround-trumps-minimization clause.
+  evidence. Worst confidence: 0.90 on a homemade Raspberry-Pi uptime
+  monitor where the author opens with "no complaints really".
 - **FP pattern (10/10)**: model doesn't apply the competitor check under
   emotional pressure ("PLEASE solve this") — every FP names a saturated
   category (cookie blockers, Loom, 1Password, browser tab sync, OS PDF
-  search, etc.). Fix: require naming 2+ existing tools before yes, and
-  only count emotional intensity if framing reveals a gap those tools
-  miss.
+  search, etc.).
 
 17 of 19 errors land at confidence 0.68–0.82 (the uncertain band the
 prompt already calibrates to), so pipeline-level routing of low-confidence
 verdicts to human review would also reclaim most of the gap.
+
+**Proposed v1.1 edits** — drop these into `prompts/filter/classifier.md`
+as new clauses under the existing signal/calibration sections:
+
+```
+Workaround trumps minimization. When the author describes maintaining a
+custom workaround (a cron job, a notebook, a spreadsheet, a manual
+reconciliation step) AND minimizes it ("it's fine", "works for me",
+"survivable", "honestly fine") — the workaround is the evidence. The
+minimization is social, not evidential. A person who built and maintains
+infrastructure to solve a recurring problem has demonstrated need, even
+when their stated tone is neutral.
+```
+
+```
+Saturation reflex before yes. Loud frustration alone is not evidence of
+opportunity. Before answering yes, name the existing category and at
+least two mature tools that already address the core need (e.g. cookie
+consent → uBlock/Consent-O-Matic; quick screen recording → Loom/CleanShot;
+env var management → 1Password/Vault/dotenv; cross-device tab visibility
+→ Chrome Sync/Safari iCloud Tabs; time tracking → Toggl/RescueTime;
+cross-PDF search → Spotlight/DEVONthink). The bar is then whether the
+author's framing reveals a specific gap those tools miss. Emotional
+intensity without a stated gap does not qualify.
+```
+
+When applying, re-run `run_filter_eval()` and compare metrics to baseline
+above. Target: lift `ambiguous` from 74% → 85%+ and `adversarial` from
+88% → 92%+ without regressing the clear tiers.
 
 ## 2. Plug in a real embedding model — ✅ DONE
 
