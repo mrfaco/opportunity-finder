@@ -20,21 +20,19 @@ TOOL_REGISTRY: dict[str, Tool] = {}
 
 
 # Agents → toolsets. v1 has only the investigation agent.
+#
+# Only implemented tools are exposed — the agent never sees a stub. When a
+# deferred tool gets a real impl, re-add its name here. The full inventory of
+# tool registrations (including deferred ones) still lives in
+# ``agents/tools/stubs.py`` so the registry serves as the canonical list of
+# "tools that exist in concept," even if not yet wired up.
 AGENT_TOOLSETS: dict[str, list[str]] = {
     "investigation": [
         "query_cluster",
         "query_related_clusters",
-        "query_known_competitors",
         "search_hacker_news",
         "fetch_hn_item",
-        "search_github_issues",
-        "search_stack_overflow",
-        "search_product_hunt",
-        "fetch_product_hunt_comments",
-        "web_search",
         "fetch_url",
-        "query_trustmrr",
-        "summarize_text",
         "record_brief",
     ],
 }
