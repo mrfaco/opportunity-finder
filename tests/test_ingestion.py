@@ -215,6 +215,66 @@ def test_ingest_source_rejects_unknown_source():
 # ---------------------------------------------------------------------------
 # setup_schedules command
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# backfill_source command
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+def test_backfill_skips_existing_and_processes_new(monkeypatch):
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    # Pre-seed an item we should skip.
+    base = timezone.now() - timedelta(days=10)
+    existing_adapter = _FakeAdapter([_ingested("existing", base, "old item already in DB")])
+    _patch_classify(monkeypatch, lambda text: _verdict(is_opp=True, confidence=0.95))
+    _patch_embed(monkeypatch)
+    pipeline.ingest_from_adapter(existing_adapter)
+    assert ClusterItem.objects.filter(source_item_id="existing").exists()
+
+    # Now backfill — adapter yields the existing one plus a new one.
+    new_item_at = timezone.now() - timedelta(days=20)
+    backfill_adapter = _FakeAdapter(
+        [
+            _ingested("existing", base, "should be skipped"),
+            _ingested("new", new_item_at, "brand new opportunity"),
+        ]
+    )
+    monkeypatch.setattr(
+        "ingestion.management.commands.backfill_source._ADAPTERS",
+        {"hacker_news": lambda: backfill_adapter},
+    )
+
+    out = StringIO()
+    call_command("backfill_source", "hacker_news", "--days", "30", stdout=out)
+    output = out.getvalue()
+
+    assert "1 existing items will be skipped" in output
+    assert "processing 1 new" in output
+    assert ClusterItem.objects.filter(source_item_id="new").exists()
+    # Existing item was not double-classified.
+    assert ClusterItem.objects.filter(source_item_id="existing").count() == 1
+
+
+def test_backfill_rejects_unknown_source():
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    with pytest.raises(CommandError, match="No ingestion adapter"):
+        call_command("backfill_source", "myspace", "--days", "30")
+
+
+def test_backfill_rejects_nonpositive_days():
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    with pytest.raises(CommandError, match="must be positive"):
+        call_command("backfill_source", "hacker_news", "--days", "0")
+
+
+# ---------------------------------------------------------------------------
+# setup_schedules command
+# ---------------------------------------------------------------------------
 @pytest.mark.django_db
 def test_setup_schedules_creates_periodic_tasks():
     from django.core.management import call_command

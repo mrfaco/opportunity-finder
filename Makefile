@@ -1,4 +1,4 @@
-.PHONY: help up down build migrate makemigrations shell test coverage coverage-ratchet lint format typecheck validate-prompts check-migrations hooks-install hooks-run discipline dev-install createsuperuser logs ps clean
+.PHONY: help up down build migrate makemigrations shell test coverage coverage-ratchet lint format typecheck validate-prompts check-migrations hooks-install hooks-run discipline dev-install createsuperuser logs ps clean backfill-hn
 
 # Override with `make COMPOSE=docker-compose up` if you prefer the legacy binary.
 COMPOSE ?= docker compose
@@ -39,6 +39,7 @@ help:
 	@echo "  hooks-install   Install pre-commit + pre-push hooks (once per clone)"
 	@echo "  hooks-run       Run all configured hooks against every file"
 	@echo "  createsuperuser Create an admin user"
+	@echo "  backfill-hn     Backfill Hacker News (DAYS=30 by default). Costs ~\$$0.002/item."
 	@echo "  logs            Tail the docker-compose logs"
 	@echo "  ps              Show running services"
 	@echo "  clean           Remove containers, volumes, and caches"
@@ -102,6 +103,13 @@ hooks-run:
 
 createsuperuser:
 	$(COMPOSE) run --rm web python manage.py createsuperuser
+
+# Backfill Hacker News beyond the normal incremental ingestion window.
+# Override DAYS to widen the window: ``make backfill-hn DAYS=60``.
+# Re-runs are safe — items already in ClusterItem are skipped by source_item_id.
+DAYS ?= 30
+backfill-hn:
+	$(COMPOSE) run --rm web python manage.py backfill_source hacker_news --days $(DAYS)
 
 logs:
 	$(COMPOSE) logs -f
