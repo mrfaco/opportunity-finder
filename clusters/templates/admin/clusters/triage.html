@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Cluster triage</h1>
+
+<p style="margin:0.5em 0; color:#666">
+  Ranked by <code>log2(1 + size) × avg_confidence × exp(-days_since_last_seen / 7)</code>.
+  Top {{ rows|length|default:0 }} candidates shown.
+  {% if show_all %}
+    <a href="?">Hide investigated</a>
+  {% else %}
+    <a href="?show=all">Show all (including investigated)</a>
+  {% endif %}
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Size</th>
+      <th>Avg conf</th>
+      <th>Max conf</th>
+      <th>Last seen</th>
+      <th>Status</th>
+      <th>Priority</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr style="{% if row.highlight %}background:#fff7d6{% endif %}">
+        <td>
+          <a href="/admin/clusters/cluster/{{ row.cluster.id }}/change/">{{ row.title|truncatechars:90 }}</a>
+        </td>
+        <td>{{ row.size }}</td>
+        <td>{{ row.avg_conf|floatformat:2 }}</td>
+        <td>{{ row.max_conf|floatformat:2 }}</td>
+        <td>
+          {% if row.days_since is None %}
+            never
+          {% else %}
+            {{ row.days_since|floatformat:1 }}d ago
+          {% endif %}
+        </td>
+        <td>{{ row.status }}</td>
+        <td><strong>{{ row.priority|floatformat:3 }}</strong></td>
+        <td>
+          <form method="post" action="/admin/clusters/cluster/{{ row.cluster.id }}/investigate/" style="display:inline">
+            {% csrf_token %}
+            <button type="submit">Investigate</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center; padding:1em">
+          No clusters to triage.
+          {% if not show_all %} <a href="?show=all">Show all</a> to include investigated ones.{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

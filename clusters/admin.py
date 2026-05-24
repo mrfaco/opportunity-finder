@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import math
+
 from django.contrib import admin, messages
 from django.db import transaction
+from django.db.models import Avg, Max, OuterRef, Subquery
+from django.http import HttpResponseNotAllowed, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
+from agents.orchestrator import start_run
 from clusters import clustering
 from clusters.models import (
     Cluster,
@@ -13,6 +19,13 @@ from clusters.models import (
     ClusterStatus,
     ProposalStatus,
 )
+
+# Half-life (in days) of the recency factor. A cluster last seen 7 days ago
+# weighs ~½ of one seen today; 14 days ago weighs ~¼.
+_RECENCY_HALF_LIFE_DAYS = 7.0
+
+# How many top-ranked rows to visually highlight as the recommended picks.
+_HIGHLIGHT_TOP_N = 3
 
 
 @admin.register(Cluster)
@@ -41,6 +54,91 @@ class ClusterAdmin(admin.ModelAdmin):
         "merge_history",
         "centroid_embedding",
     )
+
+    # ------------------------------------------------------------------
+    # Triage dashboard — ranks un-investigated clusters so a human can
+    # decide which one is worth burning an investigation budget on.
+    # ------------------------------------------------------------------
+    def triage_view(self, request):
+        show_all = request.GET.get("show") == "all"
+
+        # Annotate aggregates the agent doesn't already cache on Cluster.
+        # ``first_item_title`` falls back to the highest-confidence item's
+        # title when the cluster has no human-assigned title yet (true for
+        # most clusters until refinement runs).
+        top_item_title = (
+            ClusterItem.objects.filter(cluster=OuterRef("pk"))
+            .order_by("-classifier_confidence")
+            .values("title")[:1]
+        )
+        qs = Cluster.active.annotate(
+            avg_conf=Avg("items__classifier_confidence"),
+            max_conf=Max("items__classifier_confidence"),
+            first_item_title=Subquery(top_item_title),
+        )
+        if not show_all:
+            qs = qs.filter(
+                status__in=[ClusterStatus.PENDING, ClusterStatus.INVESTIGATING],
+                last_investigated_at__isnull=True,
+            )
+
+        now = timezone.now()
+        rows = []
+        for c in qs:
+            size = c.size
+            avg_conf = c.avg_conf or 0.0
+            max_conf = c.max_conf or 0.0
+            if c.last_seen_at:
+                days_since = (now - c.last_seen_at).total_seconds() / 86400.0
+            else:
+                # No items yet: rank as infinitely stale so it sinks.
+                days_since = math.inf
+            if days_since == math.inf:
+                recency = 0.0
+            else:
+                recency = math.exp(-days_since / _RECENCY_HALF_LIFE_DAYS)
+            priority: float = math.log2(1 + size) * avg_conf * recency
+            rows.append(
+                {
+                    "cluster": c,
+                    "title": c.title or c.first_item_title or "<untitled cluster>",
+                    "size": size,
+                    "avg_conf": avg_conf,
+                    "max_conf": max_conf,
+                    "days_since": days_since if days_since != math.inf else None,
+                    "last_seen_at": c.last_seen_at,
+                    "status": c.status,
+                    "priority": priority,
+                }
+            )
+        rows.sort(key=lambda r: float(r["priority"]), reverse=True)  # type: ignore[arg-type]
+        for i, row in enumerate(rows):
+            row["highlight"] = i < _HIGHLIGHT_TOP_N
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Cluster triage",
+            "rows": rows,
+            "show_all": show_all,
+        }
+        return render(request, "admin/clusters/triage.html", context)
+
+    # ------------------------------------------------------------------
+    # Investigate action — POST handler invoked by each row in the triage
+    # table. Calls the live orchestrator, then redirects to the existing
+    # trajectory viewer so the user watches progress on the agent run
+    # they just launched.
+    # ------------------------------------------------------------------
+    def investigate_cluster_view(self, request, cluster_id):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        cluster = get_object_or_404(Cluster, pk=cluster_id)
+        run_id = start_run(cluster.id, "investigation")
+        messages.success(
+            request,
+            f"Investigation kicked off for cluster {cluster.id}. Run {run_id}.",
+        )
+        return HttpResponseRedirect(f"/admin/agents/run/{run_id}/trajectory/")
 
 
 @admin.register(ClusterItem)

@@ -23,12 +23,15 @@ class PainMinerAdminSite(AdminSite):
         # against it. Importing them at module level would be circular.
         from agents.admin import AgentRunAdmin  # noqa: PLC0415
         from agents.models import AgentRun  # noqa: PLC0415
+        from clusters.admin import ClusterAdmin  # noqa: PLC0415
+        from clusters.models import Cluster  # noqa: PLC0415
         from ingestion.admin import FilterEvalSetAdmin  # noqa: PLC0415
         from ingestion.models import FilterEvalSet  # noqa: PLC0415
 
         # Reuse the views already defined on the ModelAdmins so we don't
         # duplicate logic between the model namespace and the app namespace.
         agents_admin = AgentRunAdmin(AgentRun, self)
+        clusters_admin = ClusterAdmin(Cluster, self)
         ingestion_admin = FilterEvalSetAdmin(FilterEvalSet, self)
 
         custom = [
@@ -46,6 +49,16 @@ class PainMinerAdminSite(AdminSite):
                 "agents/run/<uuid:run_id>/trajectory/",
                 self.admin_view(agents_admin.trajectory_view),
                 name="agents-trajectory",
+            ),
+            path(
+                "clusters/triage/",
+                self.admin_view(clusters_admin.triage_view),
+                name="clusters-triage",
+            ),
+            path(
+                "clusters/cluster/<uuid:cluster_id>/investigate/",
+                self.admin_view(clusters_admin.investigate_cluster_view),
+                name="clusters-investigate",
             ),
             path(
                 "ingestion/filter-labeling/",
