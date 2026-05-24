@@ -42,6 +42,7 @@ class ClusterAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "sources", "category_tags")
     search_fields = ("id", "title", "summary")
+    exclude = ("centroid_embedding",)
     readonly_fields = (
         "id",
         "created_at",
@@ -52,8 +53,22 @@ class ClusterAdmin(admin.ModelAdmin):
         "last_investigated_at",
         "investigation_count",
         "merge_history",
-        "centroid_embedding",
+        "centroid_summary",
     )
+
+    @admin.display(description="Centroid embedding")
+    def centroid_summary(self, obj: Cluster) -> str:
+        """Display the centroid as a dimension + preview.
+
+        The raw VectorField is a numpy array; Django's
+        ``display_for_field`` calls ``value in field.empty_values`` on it,
+        which numpy interprets element-wise and raises. Render a short
+        string instead so the detail page works.
+        """
+        vec = obj.centroid_embedding
+        if vec is None or len(vec) == 0:
+            return "(empty)"
+        return f"{len(vec)}-dim: [{vec[0]:.4f}, {vec[1]:.4f}, …, {vec[-1]:.4f}]"
 
     # ------------------------------------------------------------------
     # Triage dashboard — ranks un-investigated clusters so a human can
@@ -154,14 +169,23 @@ class ClusterItemAdmin(admin.ModelAdmin):
     )
     list_filter = ("source", "classifier_verdict")
     search_fields = ("title", "raw_text", "source_item_id", "author")
+    exclude = ("embedding",)
     readonly_fields = (
         "id",
         "created_at",
         "updated_at",
         "added_to_cluster_at",
         "assigned_at",
-        "embedding",
+        "embedding_summary",
     )
+
+    @admin.display(description="Embedding")
+    def embedding_summary(self, obj: ClusterItem) -> str:
+        """See ClusterAdmin.centroid_summary — same numpy-array rendering bug."""
+        vec = obj.embedding
+        if vec is None or len(vec) == 0:
+            return "(empty)"
+        return f"{len(vec)}-dim: [{vec[0]:.4f}, {vec[1]:.4f}, …, {vec[-1]:.4f}]"
 
 
 @admin.register(ClusterMergeProposal)

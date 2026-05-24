@@ -207,3 +207,30 @@ def test_investigate_404_for_unknown_cluster(admin_client, monkeypatch):
     monkeypatch.setattr("clusters.admin.start_run", lambda *a, **kw: uuid.uuid4())
     response = admin_client.post(f"/admin/clusters/cluster/{uuid.uuid4()}/investigate/")
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Detail pages — regression guard for the numpy-array readonly-field crash.
+# Django's display_for_field does ``value in field.empty_values`` on every
+# readonly field; numpy arrays raise "truth value is ambiguous" there. We
+# render embeddings via a string-returning method instead.
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+def test_cluster_detail_page_renders(admin_client):
+    cluster = _make_cluster(size=2, avg_conf=0.8, last_seen_days_ago=1, title="detail-test")
+    response = admin_client.get(f"/admin/clusters/cluster/{cluster.id}/change/")
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "detail-test" in body
+    # The centroid summary should appear in place of the raw vector.
+    assert "-dim:" in body
+
+
+@pytest.mark.django_db
+def test_cluster_item_detail_page_renders(admin_client):
+    cluster = _make_cluster(size=1, avg_conf=0.8, last_seen_days_ago=1)
+    item = cluster.items.first()
+    response = admin_client.get(f"/admin/clusters/clusteritem/{item.id}/change/")
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "-dim:" in body
