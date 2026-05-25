@@ -218,32 +218,11 @@ def find_split_candidates() -> list[Cluster]:
 
 
 # ---------------------------------------------------------------------------
-# LLM judges — stubs
+# LLM judges
 # ---------------------------------------------------------------------------
-def llm_judge_merge(cluster_a: Cluster, cluster_b: Cluster) -> tuple[bool, float, str]:
-    """Ask a cheap-model LLM whether two clusters describe the same user need.
-
-    Returns ``(verdict, confidence, reasoning)``.
-
-    TODO(v1-followup): implement using Haiku with a binary
-    "same underlying user need, yes/no" prompt. Inputs to the judge should
-    include each cluster's summary + top 3 key items.
-    """
-    raise NotImplementedError(
-        "TODO(v1-followup): wire up Anthropic Haiku judge for merge proposals"
-    )
-
-
-def llm_judge_split(
-    cluster: Cluster,
-    sub_clusters: list[list[ClusterItem]],
-) -> tuple[bool, float, str]:
-    """Ask a cheap-model LLM whether a proposed split is sensible.
-
-    TODO(v1-followup): implement using Haiku. Input: each sub-cluster's
-    representative items. The judge confirms whether they describe genuinely
-    distinct needs vs. surface variation on a single need.
-    """
-    raise NotImplementedError(
-        "TODO(v1-followup): wire up Anthropic Haiku judge for split proposals"
-    )
+# ``judge_merge`` lives in ``clusters/judges.py`` — wired into step 3 of
+# refine_clusters_nightly. ``judge_split`` is a deliberate follow-on; the
+# split path also needs a sub-clustering algorithm to populate
+# ``ClusterSplitProposal.sub_cluster_assignments`` before a judge can
+# meaningfully evaluate it, and the current dataset (max cluster size 10
+# vs. SPLIT_SIZE_THRESHOLD=30) can't exercise either piece.

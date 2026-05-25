@@ -156,7 +156,13 @@ def test_generate_raises_when_cluster_has_no_items():
 
 
 @pytest.mark.django_db
-def test_refine_titles_multi_item_clusters_only(monkeypatch):
+def test_refine_titles_multi_item_clusters_only(monkeypatch, settings):
+    # Disable step 3 (merge judge): the fixture uses identical centroids
+    # which would otherwise produce merge candidates, and the orphan
+    # reassignment in step 2 can leave one cluster empty, tripping the
+    # judge's empty-cluster precondition. The merge path has its own
+    # dedicated tests in test_cluster_judges.py.
+    settings.CLUSTER_MERGE_THRESHOLD = 2.0
     multi = _make_cluster(size=3)
     singleton = _make_cluster(size=1)
 

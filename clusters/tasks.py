@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from clusters import clustering
+from clusters.judges import judge_merge
 from clusters.models import Cluster, ClusterMergeProposal, ClusterSplitProposal, ProposalStatus
 from clusters.summarizer import generate_title_and_summary
 
@@ -67,10 +68,11 @@ def refine_clusters_nightly() -> dict[str, int]:
                 clustering.recompute_centroid(new_cluster)
                 stats["orphans_reassigned"] += 1
 
-    # 3. Merge proposals. We enqueue every candidate above the threshold and
-    # leave ``llm_judge_*`` fields null until the judge is implemented (see
-    # NEXT_STEPS.md step 9). Humans review proposals from admin in the
-    # meantime — no fallback values, no swallowed NotImplementedError.
+    # 3. Merge proposals. For each candidate pair above the similarity
+    # threshold, run the Haiku judge and persist its verdict. The judge
+    # is advisory — proposals still require a human approve/apply in
+    # admin — but the structured opinion lets the operator prioritize.
+    # Humans see the obvious-yes proposals at the top of the queue.
     for a, b, sim in clustering.find_merge_candidates():
         if ClusterMergeProposal.objects.filter(
             cluster_a__in=[a, b],
@@ -78,10 +80,14 @@ def refine_clusters_nightly() -> dict[str, int]:
             status=ProposalStatus.PENDING_REVIEW,
         ).exists():
             continue
+        verdict = judge_merge(cluster_a=a, cluster_b=b, centroid_similarity=sim)
         ClusterMergeProposal.objects.create(
             cluster_a=a,
             cluster_b=b,
             centroid_similarity=sim,
+            llm_judge_verdict=verdict.verdict,
+            llm_judge_confidence=verdict.confidence,
+            llm_judge_reasoning=verdict.reasoning,
         )
         stats["merge_proposals_queued"] += 1
 
