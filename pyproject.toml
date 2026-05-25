@@ -40,7 +40,12 @@ dev = [
     "pytest>=8.3",
     "pytest-django>=4.8",
     "pytest-cov>=5.0",
-    "ruff>=0.6",
+    # Pin ruff exactly so the host venv, the docker image, and pre-commit
+    # all format identically. Without the pin the three end up on
+    # different minor versions and every commit thrashes the same files
+    # back and forth (the "pre-commit Restored changes" loop). Bump in
+    # lockstep with the rev in .pre-commit-config.yaml below.
+    "ruff==0.15.14",
     "mypy>=1.11",
     "django-stubs[compatible-mypy]>=5.0",
     "types-PyYAML>=6.0",

@@ -32,7 +32,12 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    # Pinned in lockstep with the ``ruff==`` line in pyproject.toml so
+    # the three ruff installs (host venv, docker image, pre-commit's
+    # isolated venv) format identically. Mismatch produces the recurring
+    # "pre-commit Restored changes" thrash where each tool's reformat
+    # undoes the previous one.
+    rev: v0.15.14
     hooks:
       - id: ruff-format
       - id: ruff

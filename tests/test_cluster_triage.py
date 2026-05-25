@@ -187,9 +187,9 @@ def test_triage_sort_by_max_conf_desc(admin_client):
         ("big-stale-low-conf", body.find("big-stale-low-conf")),
     ]
     assert all(p > 0 for _, p in positions)
-    assert positions == sorted(
-        positions, key=lambda x: x[1]
-    ), f"max_conf desc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+    assert positions == sorted(positions, key=lambda x: x[1]), (
+        f"max_conf desc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+    )
 
 
 @pytest.mark.django_db
@@ -205,9 +205,9 @@ def test_triage_sort_by_avg_conf_asc(admin_client):
         ("high-avg", body.find("high-avg")),
     ]
     assert all(p > 0 for _, p in positions)
-    assert positions == sorted(
-        positions, key=lambda x: x[1]
-    ), f"avg_conf asc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+    assert positions == sorted(positions, key=lambda x: x[1]), (
+        f"avg_conf asc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+    )
 
 
 @pytest.mark.django_db
