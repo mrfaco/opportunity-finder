@@ -48,10 +48,24 @@ services:
       redis:
         condition: service_healthy
 
+  # Celery worker wrapped in ``watchmedo`` so it restarts itself when any
+  # ``*.py`` file changes under /app. The bind-mount keeps source synced
+  # in; watchmedo handles the SIGTERM → graceful shutdown → re-exec cycle
+  # so we don't have to ``docker compose restart`` (and lose in-progress
+  # tasks) every time we edit a tool implementation. Note that an
+  # already-running task continues with the *old* code until it finishes;
+  # the restart only affects what runs next.
   celery_worker:
     build: .
     user: "${HOST_UID:-0}:${HOST_GID:-0}"
-    command: celery -A config worker -l info
+    command: >
+      watchmedo auto-restart
+        --directory=/app
+        --pattern=*.py
+        --recursive
+        --signal SIGTERM
+        --
+        celery -A config worker -l info
     volumes:
       - .:/app
     env_file: .env
@@ -64,7 +78,14 @@ services:
   celery_beat:
     build: .
     user: "${HOST_UID:-0}:${HOST_GID:-0}"
-    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: >
+      watchmedo auto-restart
+        --directory=/app
+        --pattern=*.py
+        --recursive
+        --signal SIGTERM
+        --
+        celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app
     env_file: .env

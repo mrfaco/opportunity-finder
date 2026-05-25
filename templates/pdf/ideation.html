@@ -1,0 +1,109 @@
+{% extends "pdf/_base.html" %}
+{% block body %}
+<h1>Ideation — {{ investigation_headline|default:"(no headline)" }}</h1>
+<p class="meta">
+  <span class="pill">{{ ideation.status }}</span>
+  &nbsp;Ideation ID: <strong>{{ ideation.id }}</strong>
+</p>
+
+<dl class="meta">
+  <dt>Investigation</dt><dd>{{ ideation.investigation_id }}</dd>
+  <dt>Created</dt><dd>{{ ideation.created_at|date:"Y-m-d H:i" }} UTC</dd>
+  {% if ideation.decided_at %}
+    <dt>Decided</dt><dd>{{ ideation.decided_at|date:"Y-m-d H:i" }} UTC</dd>
+  {% endif %}
+  {% if ideation.guidance %}
+    <dt>Guidance</dt><dd>{{ ideation.guidance }}</dd>
+  {% endif %}
+  <dt>Schema</dt><dd>{{ ideation.output_schema_version }}</dd>
+</dl>
+
+{% if output.concepts %}
+  {% for concept in output.concepts %}
+    <div class="concept">
+      <h3>{{ concept.name }} <span class="pill">{{ concept.bet_axis }}</span></h3>
+      <p><em>{{ concept.one_liner }}</em></p>
+
+      <h3>Buyer</h3>
+      <p>{{ concept.buyer }}</p>
+
+      <h3>Pricing hypothesis</h3>
+      <p>{{ concept.rough_pricing_hypothesis }}</p>
+
+      {% if concept.core_features %}
+        <h3>Core features</h3>
+        <ul>{% for f in concept.core_features %}<li>{{ f }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if concept.explicitly_not_included %}
+        <h3>Explicitly not included</h3>
+        <ul>{% for f in concept.explicitly_not_included %}<li>{{ f }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if concept.mvp_scope %}
+        <h3>MVP scope · <span class="pill">{{ concept.mvp_scope.build_size }}</span></h3>
+        <p>{{ concept.mvp_scope.build_estimate_assumptions }}</p>
+        {% if concept.mvp_scope.minimum_features_for_test %}
+          <p><strong>Minimum features:</strong></p>
+          <ul>{% for f in concept.mvp_scope.minimum_features_for_test %}<li>{{ f }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if concept.mvp_scope.explicitly_deferred_to_v2 %}
+          <p><strong>Deferred to v2:</strong></p>
+          <ul>{% for f in concept.mvp_scope.explicitly_deferred_to_v2 %}<li>{{ f }}</li>{% endfor %}</ul>
+        {% endif %}
+      {% endif %}
+
+      <h3>First validation test</h3>
+      <p>{{ concept.first_validation_test }}</p>
+
+      {% if concept.kill_criteria %}
+        <h3>Kill criteria</h3>
+        <ul>{% for k in concept.kill_criteria %}<li>{{ k }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if concept.competitive_landscape %}
+        <h3>Competitive landscape</h3>
+        <table>
+          <thead><tr><th>Name</th><th>Threat</th><th>Positioning / Overlap</th></tr></thead>
+          <tbody>
+            {% for comp in concept.competitive_landscape %}
+              <tr>
+                <td>
+                  <strong>{{ comp.name }}</strong>
+                  {% if comp.url %}<br><span class="url">{{ comp.url }}</span>{% endif %}
+                </td>
+                <td><span class="pill">{{ comp.threat_level }}</span></td>
+                <td>
+                  {{ comp.positioning }}<br>
+                  <em>Overlap:</em> {{ comp.overlap }}<br>
+                  <em>Evidence:</em> {{ comp.evidence }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+
+      {% if concept.fit_to_builder %}
+        <h3>Fit to builder</h3>
+        <ul>
+          <li><strong>Distribution:</strong> {{ concept.fit_to_builder.distribution_fit }}</li>
+          <li><strong>Skills:</strong> {{ concept.fit_to_builder.skill_fit }}</li>
+          <li><strong>Capital:</strong> {{ concept.fit_to_builder.capital_fit }}</li>
+        </ul>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% else %}
+  <p class="empty">Ideation has no concepts yet (run is still in progress or failed).</p>
+{% endif %}
+
+{% if output.ideation_notes %}
+  <h2>Ideation notes</h2>
+  <p>{{ output.ideation_notes }}</p>
+{% endif %}
+
+<p class="footer-note">
+  Generated from opportunity-finder · ideation {{ ideation.id }}
+</p>
+{% endblock %}

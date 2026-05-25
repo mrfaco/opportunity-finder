@@ -66,6 +66,11 @@ urlpatterns = [
         name="api-investigation-detail",
     ),
     path(
+        "investigations/<uuid:pk>/pdf/",
+        views.InvestigationPdfView.as_view(),
+        name="api-investigation-pdf",
+    ),
+    path(
         "investigations/<uuid:pk>/promote/",
         views.InvestigationActionViewSet.as_view({"post": "promote"}),
         name="api-investigation-promote",
@@ -83,4 +88,9 @@ urlpatterns = [
     # Ideations
     path("ideations/", views.IdeationsView.as_view(), name="api-ideations"),
     path("ideations/<uuid:pk>/", views.IdeationDetailView.as_view(), name="api-ideation-detail"),
+    path(
+        "ideations/<uuid:pk>/pdf/",
+        views.IdeationPdfView.as_view(),
+        name="api-ideation-pdf",
+    ),
 ]

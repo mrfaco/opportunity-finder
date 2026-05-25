@@ -680,6 +680,81 @@ def test_stale_marks_promoted_investigation_stale(client, auth_headers, cluster)
 
 
 @pytest.mark.django_db
+def test_investigation_pdf_returns_application_pdf(client, auth_headers, cluster, monkeypatch):
+    """The PDF view delegates to ``core.pdf.render_pdf``. We stub that so
+    the test doesn't depend on WeasyPrint's system libs (Pango/Cairo).
+    The bytes returned are passed straight through to the response.
+    """
+    inv = _make_investigation(cluster)
+
+    captured = {}
+
+    def _fake_render(template_name, context):
+        captured["template"] = template_name
+        captured["context"] = context
+        return b"%PDF-fake-bytes"
+
+    monkeypatch.setattr("api.views.render_pdf", _fake_render)
+    resp = client.get(f"/api/v1/investigations/{inv.id}/pdf/", **auth_headers)
+    assert resp.status_code == 200
+    assert resp["Content-Type"] == "application/pdf"
+    assert resp.content == b"%PDF-fake-bytes"
+    assert "investigation-" in resp["Content-Disposition"]
+    assert captured["template"] == "pdf/investigation.html"
+    # The context should include the investigation, its brief, and the cluster.
+    assert captured["context"]["investigation"].id == inv.id
+    assert captured["context"]["brief"]["headline"] == "An opportunity"
+    assert captured["context"]["cluster"].id == cluster.id
+
+
+@pytest.mark.django_db
+def test_investigation_pdf_404(client, auth_headers):
+    resp = client.get(
+        "/api/v1/investigations/11111111-1111-1111-1111-111111111111/pdf/",
+        **auth_headers,
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_ideation_pdf_returns_application_pdf(client, auth_headers, cluster, monkeypatch):
+    inv = _make_investigation(cluster, status=InvestigationStatus.PROMOTED)
+    ideation = Ideation.objects.create(
+        investigation=inv,
+        status=IdeationStatus.AWAITING_REVIEW,
+        guidance="test guidance",
+        output={"schema_version": "1.0", "concepts": []},
+    )
+
+    captured = {}
+
+    def _fake_render(template_name, context):
+        captured["template"] = template_name
+        captured["context"] = context
+        return b"%PDF-ideation-bytes"
+
+    monkeypatch.setattr("api.views.render_pdf", _fake_render)
+    resp = client.get(f"/api/v1/ideations/{ideation.id}/pdf/", **auth_headers)
+    assert resp.status_code == 200
+    assert resp["Content-Type"] == "application/pdf"
+    assert resp.content == b"%PDF-ideation-bytes"
+    assert "ideation-" in resp["Content-Disposition"]
+    assert captured["template"] == "pdf/ideation.html"
+    assert captured["context"]["ideation"].id == ideation.id
+    # Investigation headline is surfaced so the PDF can title itself.
+    assert captured["context"]["investigation_headline"] == "An opportunity"
+
+
+@pytest.mark.django_db
+def test_ideation_pdf_404(client, auth_headers):
+    resp = client.get(
+        "/api/v1/ideations/22222222-2222-2222-2222-222222222222/pdf/",
+        **auth_headers,
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
 def test_ideations_list_and_detail(client, auth_headers, cluster):
     inv = _make_investigation(cluster, status=InvestigationStatus.PROMOTED)
     ideation = Ideation.objects.create(

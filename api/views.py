@@ -15,6 +15,7 @@ module, not here.
 
 from __future__ import annotations
 
+from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -43,6 +44,7 @@ from api.serializers import (
 from clusters import orchestrator as cluster_orchestrator
 from clusters import tasks as cluster_tasks
 from clusters.models import Cluster, ClusterItem, ClusterMergeProposal, ClusterStatus
+from core.pdf import render_pdf
 from ideation.models import Ideation
 from ingestion import tasks as ingestion_tasks
 from ingestion.models import IngestionCheckpoint
@@ -366,6 +368,26 @@ class InvestigationDetailView(APIView):
         return Response(InvestigationDetailSerializer(inv).data)
 
 
+class InvestigationPdfView(APIView):
+    """GET a PDF render of one investigation's brief."""
+
+    def get(self, request, pk):
+        try:
+            inv = Investigation.objects.select_related("cluster").get(pk=pk)
+        except Investigation.DoesNotExist:
+            return Response(
+                {"detail": f"Investigation {pk} does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        pdf_bytes = render_pdf(
+            "pdf/investigation.html",
+            {"investigation": inv, "brief": inv.brief or {}, "cluster": inv.cluster},
+        )
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="investigation-{inv.id}.pdf"'
+        return response
+
+
 class InvestigationActionViewSet(viewsets.ViewSet):
     """Action endpoints — promote / reject / stale.
 
@@ -439,3 +461,29 @@ class IdeationDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(IdeationDetailSerializer(ideation).data)
+
+
+class IdeationPdfView(APIView):
+    """GET a PDF render of one ideation's concept set."""
+
+    def get(self, request, pk):
+        try:
+            ideation = Ideation.objects.select_related("investigation").get(pk=pk)
+        except Ideation.DoesNotExist:
+            return Response(
+                {"detail": f"Ideation {pk} does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        inv = ideation.investigation
+        brief = (inv.brief or {}) if inv else {}
+        pdf_bytes = render_pdf(
+            "pdf/ideation.html",
+            {
+                "ideation": ideation,
+                "output": ideation.output or {},
+                "investigation_headline": brief.get("headline"),
+            },
+        )
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="ideation-{ideation.id}.pdf"'
+        return response

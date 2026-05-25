@@ -1,0 +1,93 @@
+{% extends "pdf/_base.html" %}
+{% block body %}
+<h1>{{ brief.headline|default:"Investigation brief" }}</h1>
+<p class="meta">
+  <span class="pill">{{ investigation.status }}</span>
+  &nbsp;Investigation ID: <strong>{{ investigation.id }}</strong>
+</p>
+
+<dl class="meta">
+  <dt>Cluster</dt><dd>{{ cluster.title|default:cluster.id }}</dd>
+  <dt>Created</dt><dd>{{ investigation.created_at|date:"Y-m-d H:i" }} UTC</dd>
+  {% if investigation.decided_at %}
+    <dt>Decided</dt><dd>{{ investigation.decided_at|date:"Y-m-d H:i" }} UTC</dd>
+  {% endif %}
+  {% if brief.confidence is not None %}
+    <dt>Confidence</dt><dd>{{ brief.confidence|floatformat:2 }}</dd>
+  {% endif %}
+  <dt>Schema</dt><dd>{{ investigation.brief_schema_version }}</dd>
+</dl>
+
+<h2>Problem</h2>
+<p>{{ brief.problem_statement|default:"(not set)" }}</p>
+
+<h2>Target user</h2>
+<p>{{ brief.target_user|default:"(not set)" }}</p>
+
+<h2>Evidence summary</h2>
+<p>{{ brief.evidence_summary|default:"(not set)" }}</p>
+
+{% if brief.evidence %}
+  <h2>Evidence</h2>
+  <table>
+    <thead><tr><th>Source</th><th>Title / Snippet</th></tr></thead>
+    <tbody>
+      {% for e in brief.evidence %}
+        <tr>
+          <td>
+            {{ e.source }}
+            {% if e.posted_at %}<br><span class="url">{{ e.posted_at }}</span>{% endif %}
+          </td>
+          <td>
+            {% if e.title %}<strong>{{ e.title }}</strong><br>{% endif %}
+            {{ e.snippet }}
+            {% if e.url %}<br><span class="url">{{ e.url }}</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+{% if brief.competitors %}
+  <h2>Competitors</h2>
+  <table>
+    <thead><tr><th>Name</th><th>Signal / Notes</th></tr></thead>
+    <tbody>
+      {% for c in brief.competitors %}
+        <tr>
+          <td>
+            <strong>{{ c.name }}</strong>
+            {% if c.url %}<br><span class="url">{{ c.url }}</span>{% endif %}
+          </td>
+          <td>
+            {% if c.revenue_signal %}<em>{{ c.revenue_signal }}</em><br>{% endif %}
+            {{ c.notes|default:"" }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+{% if brief.differentiators %}
+  <h2>Differentiators</h2>
+  <ul>
+    {% for d in brief.differentiators %}<li>{{ d }}</li>{% endfor %}
+  </ul>
+{% endif %}
+
+{% if brief.risks %}
+  <h2>Risks</h2>
+  <ul>
+    {% for r in brief.risks %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+{% endif %}
+
+<h2>Recommended next step</h2>
+<p>{{ brief.recommended_next_step|default:"(not set)" }}</p>
+
+<p class="footer-note">
+  Generated from opportunity-finder · investigation {{ investigation.id }}
+</p>
+{% endblock %}

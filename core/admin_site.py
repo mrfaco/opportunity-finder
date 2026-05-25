@@ -115,9 +115,19 @@ class PainMinerAdminSite(UnfoldAdminSite):
                 name="investigations-promote-from-latest",
             ),
             path(
+                "investigations/<uuid:investigation_id>/pdf/",
+                self.admin_view(investigations_admin.download_pdf_view),
+                name="investigations-pdf",
+            ),
+            path(
                 "ideation/latest/",
                 self.admin_view(ideation_admin.latest_view),
                 name="ideation-latest",
+            ),
+            path(
+                "ideation/<uuid:ideation_id>/pdf/",
+                self.admin_view(ideation_admin.download_pdf_view),
+                name="ideation-pdf",
             ),
         ]
         return custom + super().get_urls()

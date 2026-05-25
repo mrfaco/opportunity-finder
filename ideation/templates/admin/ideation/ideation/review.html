@@ -28,7 +28,16 @@
       · <a href="/admin/agents/run/{{ primary_run.id }}/trajectory/" class="text-blue-600 dark:text-blue-400 hover:underline">trajectory</a>
     </p>
   {% endif %}
-  <a href="{{ re_ideate_url }}" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm">Re-ideate with guidance →</a>
+  <div class="flex items-center gap-2 flex-wrap">
+    <a href="{{ re_ideate_url }}" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm">Re-ideate with guidance →</a>
+    <a href="/admin/ideation/{{ ideation.id }}/pdf/"
+       download="ideation-{{ ideation.id }}.pdf"
+       class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm"
+       style="background:#1e293b;"
+       title="Download as PDF">
+      ⬇ PDF
+    </a>
+  </div>
 </div>
 
 {% if concepts %}

@@ -9,12 +9,13 @@ optional guidance string.
 from __future__ import annotations
 
 from django.contrib import admin, messages
-from django.http import HttpResponseRedirect
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
 from django.utils import timezone
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
+from core.pdf import render_pdf
 from ideation.models import Ideation, IdeationStatus
 from ideation.orchestrator import start_ideation
 from investigations.models import Investigation
@@ -184,3 +185,26 @@ class IdeationAdmin(UnfoldModelAdmin):
             "limit": _LATEST_LIMIT,
         }
         return render(request, "admin/ideation/latest.html", context)
+
+    # ------------------------------------------------------------------
+    # PDF download — used by both the admin review page button and the
+    # API endpoint at /api/v1/ideations/<id>/pdf/. Renderer lives in
+    # core/pdf.py.
+    # ------------------------------------------------------------------
+    def download_pdf_view(self, request, ideation_id):
+        ideation = get_object_or_404(
+            Ideation.objects.select_related("investigation"), pk=ideation_id
+        )
+        inv = ideation.investigation
+        brief = (inv.brief or {}) if inv else {}
+        pdf_bytes = render_pdf(
+            "pdf/ideation.html",
+            {
+                "ideation": ideation,
+                "output": ideation.output or {},
+                "investigation_headline": brief.get("headline"),
+            },
+        )
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="ideation-{ideation.id}.pdf"'
+        return response

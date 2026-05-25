@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from django.contrib import admin, messages
-from django.http import HttpResponseNotAllowed, HttpResponseRedirect
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
+from core.pdf import render_pdf
 from investigations.models import Investigation, InvestigationStatus
 from investigations.orchestrator import (
     InvestigationNotInState,
@@ -185,3 +186,26 @@ class InvestigationAdmin(UnfoldModelAdmin):
             "awaiting_review_status": InvestigationStatus.AWAITING_REVIEW.value,
         }
         return render(request, "admin/investigations/latest.html", context)
+
+    # ------------------------------------------------------------------
+    # PDF download — used by both the admin review page button and the
+    # API endpoint at /api/v1/investigations/<id>/pdf/. The renderer
+    # itself is in core/pdf.py (WeasyPrint behind one function).
+    # ------------------------------------------------------------------
+    def download_pdf_view(self, request, investigation_id):
+        inv = get_object_or_404(
+            Investigation.objects.select_related("cluster"), pk=investigation_id
+        )
+        pdf_bytes = render_pdf(
+            "pdf/investigation.html",
+            {
+                "investigation": inv,
+                "brief": inv.brief or {},
+                "cluster": inv.cluster,
+            },
+        )
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        # ``inline`` so a click in admin previews in the browser; the
+        # download attribute on the link makes browsers save instead.
+        response["Content-Disposition"] = f'inline; filename="investigation-{inv.id}.pdf"'
+        return response
