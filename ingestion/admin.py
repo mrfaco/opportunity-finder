@@ -40,7 +40,11 @@ class IngestionCheckpointAdmin(UnfoldModelAdmin):
     # ------------------------------------------------------------------
     def operations_view(self, request):
         # Deferred to avoid a top-level ingestion→clusters import (the modules
-        # already have a tangled reverse FK relationship).
+        # already have a tangled reverse FK relationship) and so django-celery-
+        # results — a runtime-only dep — doesn't have to be importable at module
+        # load time for tests that don't exercise this view.
+        from django_celery_results.models import TaskResult  # noqa: PLC0415
+
         from clusters.models import ClusterItem  # noqa: PLC0415
 
         checkpoints = {cp.source: cp for cp in IngestionCheckpoint.objects.all()}
@@ -57,11 +61,18 @@ class IngestionCheckpointAdmin(UnfoldModelAdmin):
                 }
             )
         latest_items = ClusterItem.objects.select_related("cluster").order_by("-assigned_at")[:25]
+        # Show the 25 most recent ingestion task runs (in-progress + finished).
+        # Filter to ``ingestion.tasks.*`` so the page isn't polluted by agent
+        # loops, refinements, etc. — those have their own dashboards.
+        task_runs = TaskResult.objects.filter(
+            task_name__startswith="ingestion.tasks.",
+        ).order_by("-date_created")[:25]
         context = {
             **self.admin_site.each_context(request),
             "title": "Ingestion operations",
             "rows": rows,
             "latest_items": latest_items,
+            "task_runs": task_runs,
         }
         return render(request, "admin/ingestion/operations.html", context)
 

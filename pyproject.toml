@@ -13,6 +13,7 @@ dependencies = [
     "redis>=5.0",
     "celery>=5.4",
     "django-celery-beat>=2.6",
+    "django-celery-results>=2.5",
     "pydantic>=2.7",
     "anthropic>=0.39",
     "voyageai>=0.3",

@@ -99,7 +99,11 @@ class GitHubAdapter(SourceAdapter):
         if since is None:
             since = datetime.now(tz=UTC) - timedelta(days=settings.INGEST_GITHUB_INITIAL_DAYS)
         since_str = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        query = f"{settings.INGEST_GITHUB_QUERY} created:>{since_str}"
+        # ``is:issue`` is required by the authenticated /search/issues
+        # endpoint — GitHub rejects the query with 422 otherwise. Pin it
+        # here so the env-tunable INGEST_GITHUB_QUERY can't accidentally
+        # remove it.
+        query = f"{settings.INGEST_GITHUB_QUERY} is:issue created:>{since_str}"
 
         for page in range(1, _MAX_PAGES + 1):
             data = self._search(query, page)

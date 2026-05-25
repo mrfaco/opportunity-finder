@@ -139,7 +139,10 @@ def test_github_adapter_parses_hits(monkeypatch):
     assert item.author == "someone"
     assert item.metadata["repo"] == "acme/tool"
     assert item.metadata["labels"] == ["enhancement"]
-    # Query string was assembled with the configured base + created window.
+    # Query string was assembled with the configured base, the always-on
+    # ``is:issue`` qualifier (required by GitHub for authenticated calls),
+    # and the created window.
+    assert "is:issue" in captured["params"]["q"]
     assert "created:>2026-01-01" in captured["params"]["q"]
     assert captured["params"]["sort"] == "created"
     assert captured["params"]["order"] == "desc"

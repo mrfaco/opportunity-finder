@@ -7,6 +7,20 @@
   Celery; the worker logs progress to <code class="font-mono text-xs">docker compose logs celery_worker</code>.
 </p>
 
+{% if messages %}
+  <div class="mb-6 space-y-2">
+    {% for msg in messages %}
+      {% if msg.tags == "error" %}
+        <div class="rounded-md px-4 py-3 text-sm" style="background:rgba(239,68,68,0.1);color:#fca5a5;box-shadow:inset 0 0 0 1px rgba(239,68,68,0.3);">{{ msg }}</div>
+      {% elif msg.tags == "warning" %}
+        <div class="rounded-md px-4 py-3 text-sm" style="background:rgba(245,158,11,0.1);color:#fcd34d;box-shadow:inset 0 0 0 1px rgba(245,158,11,0.3);">{{ msg }}</div>
+      {% else %}
+        <div class="rounded-md px-4 py-3 text-sm" style="background:rgba(16,185,129,0.1);color:#6ee7b7;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);">{{ msg }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+
 {% if rows %}
   <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
     <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
@@ -29,19 +43,28 @@
             <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.items_seen }}</td>
             <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.opportunities_found }}</td>
             <td class="px-4 py-2 text-sm whitespace-nowrap">
-              <form method="post" action="/admin/ingestion/operations/{{ row.source }}/ingest/" class="inline mr-3">
-                {% csrf_token %}
-                <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Run incremental</button>
-              </form>
-              <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline-flex items-center gap-2">
-                {% csrf_token %}
-                <label class="text-xs text-base-600 dark:text-base-300">Backfill
-                  <input type="number" name="days" value="30" min="1" max="365"
-                         class="ml-1 w-16 rounded-md border-base-300 dark:border-base-700 dark:bg-base-900 dark:text-base-100 text-xs px-2 py-0.5">
-                  days
-                </label>
-                <button type="submit" class="inline-flex items-center rounded-md bg-base-600 hover:bg-base-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Go</button>
-              </form>
+              <div class="flex items-center gap-2 flex-wrap">
+                <form method="post" action="/admin/ingestion/operations/{{ row.source }}/ingest/" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm">Run incremental</button>
+                </form>
+                <span class="text-xs text-base-500 dark:text-base-400 ml-1">Backfill</span>
+                <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="days" value="7">
+                  <button type="submit" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border border-base-300 dark:border-base-600 bg-white dark:bg-base-800 text-base-800 dark:text-base-100 hover:bg-base-100 dark:hover:bg-base-700 shadow-sm">7d</button>
+                </form>
+                <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="days" value="15">
+                  <button type="submit" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border border-base-300 dark:border-base-600 bg-white dark:bg-base-800 text-base-800 dark:text-base-100 hover:bg-base-100 dark:hover:bg-base-700 shadow-sm">15d</button>
+                </form>
+                <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="days" value="30">
+                  <button type="submit" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border border-base-300 dark:border-base-600 bg-white dark:bg-base-800 text-base-800 dark:text-base-100 hover:bg-base-100 dark:hover:bg-base-700 shadow-sm">30d</button>
+                </form>
+              </div>
             </td>
           </tr>
         {% endfor %}
@@ -50,6 +73,57 @@
   </div>
 {% else %}
   {% include "admin/_ux/_empty_state.html" with title="No source adapters registered" body="Register an adapter under ingestion/adapters/ to see it here." %}
+{% endif %}
+
+<h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mt-10 mb-3">Recent ingestion runs</h2>
+<p class="text-sm text-base-600 dark:text-base-300 mb-3">Last {{ task_runs|length }} Celery tasks from <code class="font-mono text-xs">ingestion.tasks</code>, newest first.</p>
+{% if task_runs %}
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Status</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Task</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Args</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Started</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Result / Error</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for tr in task_runs %}
+          <tr>
+            <td class="px-4 py-2 text-sm whitespace-nowrap">
+              {% if tr.status == "SUCCESS" %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.12);color:#34d399;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);white-space:nowrap;">success</span>
+              {% elif tr.status == "FAILURE" %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.12);color:#f87171;box-shadow:inset 0 0 0 1px rgba(239,68,68,0.3);white-space:nowrap;">failed</span>
+              {% elif tr.status == "STARTED" %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(59,130,246,0.12);color:#60a5fa;box-shadow:inset 0 0 0 1px rgba(59,130,246,0.3);white-space:nowrap;">running</span>
+              {% elif tr.status == "RETRY" %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(245,158,11,0.12);color:#fbbf24;box-shadow:inset 0 0 0 1px rgba(245,158,11,0.3);white-space:nowrap;">retry</span>
+              {% else %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(148,163,184,0.12);color:#cbd5e1;box-shadow:inset 0 0 0 1px rgba(148,163,184,0.3);white-space:nowrap;">{{ tr.status|lower }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-sm font-mono text-xs text-base-800 dark:text-base-100">{{ tr.task_name|cut:"ingestion.tasks." }}</td>
+            <td class="px-4 py-2 text-sm font-mono text-xs text-base-700 dark:text-base-200">{{ tr.task_args|default:"—" }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ tr.date_created|date:"Y-m-d H:i:s" }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">
+              {% if tr.status == "FAILURE" %}
+                <code class="font-mono text-xs text-red-300" title="{{ tr.traceback|default:'' }}">{{ tr.result|truncatechars:120 }}</code>
+              {% elif tr.status == "STARTED" %}
+                <span class="text-base-500 dark:text-base-400 italic">running…</span>
+              {% else %}
+                <code class="font-mono text-xs">{{ tr.result|truncatechars:120 }}</code>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  {% include "admin/_ux/_empty_state.html" with title="No ingestion runs yet" body="Trigger a Run incremental or backfill to populate this list." %}
 {% endif %}
 
 <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mt-10 mb-3">Latest ingested items</h2>

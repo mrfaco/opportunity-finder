@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     "django_celery_beat",
+    "django_celery_results",
     "pgvector.django",
     "core",
     "clusters",
@@ -171,7 +172,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ---------------------------------------------------------------------------
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
 CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
+# Store task results in Postgres via django-celery-results so the ops admin
+# can list finished/in-progress/failed runs. Redis result-backend was fine
+# for fire-and-forget but offered no audit trail.
+CELERY_RESULT_BACKEND = "django-db"
+# Mark tasks as STARTED in the result table the moment the worker picks
+# them up — without this, in-progress tasks would simply be missing from
+# the listing (only SUCCESS/FAILURE states are stored by default).
+CELERY_TASK_TRACK_STARTED = True
+# Persist task name + args + kwargs so the ops admin can show "backfill
+# github 30d" rather than a bare task id.
+CELERY_RESULT_EXTENDED = True
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_TIMEZONE = "UTC"
 
