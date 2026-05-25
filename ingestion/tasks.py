@@ -13,6 +13,7 @@ from agents.cost import compute_cost
 from ingestion.adapters.base import SourceAdapter
 from ingestion.adapters.github import GitHubAdapter
 from ingestion.adapters.hacker_news import HackerNewsAdapter
+from ingestion.adapters.stack_overflow import StackOverflowAdapter
 from ingestion.backfill import backfill_from_adapter
 from ingestion.filter import classify_content
 from ingestion.metrics import compute_metrics, compute_metrics_by_tier
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 ADAPTERS: dict[str, type[SourceAdapter]] = {
     HackerNewsAdapter.source: HackerNewsAdapter,
     GitHubAdapter.source: GitHubAdapter,
+    StackOverflowAdapter.source: StackOverflowAdapter,
 }
 
 

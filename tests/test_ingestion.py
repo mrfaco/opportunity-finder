@@ -300,6 +300,195 @@ def test_github_adapter_403_without_ratelimit_headers_raises_loudly(monkeypatch)
 
 
 # ---------------------------------------------------------------------------
+# StackOverflowAdapter — mocked Stack Exchange API response
+# ---------------------------------------------------------------------------
+from ingestion.adapters.stack_overflow import (  # noqa: E402
+    StackExchangeRateLimitError,
+    StackOverflowAdapter,
+)
+
+
+def _se_question(
+    qid: int,
+    title: str,
+    body: str,
+    *,
+    tags: list[str] | None = None,
+    created_at: int = 1_780_000_000,
+) -> dict:
+    return {
+        "question_id": qid,
+        "title": title,
+        "body": body,
+        "link": f"https://stackoverflow.com/q/{qid}",
+        "creation_date": created_at,
+        "owner": {"display_name": "someone"},
+        "tags": tags or [],
+        "score": 3,
+        "view_count": 42,
+        "answer_count": 0,
+        "is_answered": False,
+    }
+
+
+def test_stackoverflow_adapter_parses_hits(monkeypatch):
+    payload = {
+        "items": [_se_question(101, "Why is X so slow", "<p>I keep hitting Y</p>", tags=["x"])],
+        "has_more": False,
+    }
+    captured = {}
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        captured["params"] = params
+        return _fake_response(200, json_data=payload)
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    items = list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert len(items) == 1
+    item = items[0]
+    assert item.source == "stack_overflow"
+    assert item.source_item_id == "101"
+    assert item.url == "https://stackoverflow.com/q/101"
+    assert item.title == "Why is X so slow"
+    assert "hitting Y" in item.raw_text
+    assert item.author == "someone"
+    assert item.metadata["tags"] == ["x"]
+    # The query was built with the configured site + withbody filter, sorted
+    # newest-first.
+    assert captured["params"]["site"] == "stackoverflow"
+    assert captured["params"]["filter"] == "withbody"
+    assert captured["params"]["sort"] == "creation"
+    assert captured["params"]["order"] == "desc"
+    assert captured["params"]["fromdate"] == int(datetime(2026, 1, 1, tzinfo=UTC).timestamp())
+
+
+def test_stackoverflow_adapter_paginates(monkeypatch):
+    # Two pages with ``has_more=True``, then a final page with ``has_more=False``.
+    pages = {
+        1: {
+            "items": [_se_question(i, f"t{i}", "b") for i in range(1, 101)],
+            "has_more": True,
+        },
+        2: {
+            "items": [_se_question(i, f"t{i}", "b") for i in range(101, 201)],
+            "has_more": True,
+        },
+        3: {
+            "items": [_se_question(201, "t201", "b")],
+            "has_more": False,
+        },
+    }
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        return _fake_response(200, json_data=pages[params["page"]])
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    items = list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert len(items) == 201
+
+
+def test_stackoverflow_adapter_sends_key_when_set(monkeypatch, settings):
+    settings.STACKEXCHANGE_KEY = "se-key-xyz"
+    captured = {}
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        captured["params"] = params
+        return _fake_response(200, json_data={"items": [], "has_more": False})
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert captured["params"]["key"] == "se-key-xyz"
+
+
+def test_stackoverflow_adapter_omits_key_when_blank(monkeypatch, settings):
+    settings.STACKEXCHANGE_KEY = ""
+    captured = {}
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        captured["params"] = params
+        return _fake_response(200, json_data={"items": [], "has_more": False})
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert "key" not in captured["params"]
+
+
+def test_stackoverflow_adapter_passes_tag_filter_when_set(monkeypatch, settings):
+    settings.INGEST_STACKEXCHANGE_TAGS = "python;django"
+    captured = {}
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        captured["params"] = params
+        return _fake_response(200, json_data={"items": [], "has_more": False})
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert captured["params"]["tagged"] == "python;django"
+
+
+def test_stackoverflow_adapter_honors_response_backoff_between_pages(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.time.sleep", lambda s: sleeps.append(s))
+    pages = iter(
+        [
+            {
+                "items": [_se_question(1, "t", "b")],
+                "has_more": True,
+                "backoff": 4,
+            },
+            {"items": [_se_question(2, "t", "b")], "has_more": False},
+        ]
+    )
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        return _fake_response(200, json_data=next(pages))
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    items = list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert len(items) == 2
+    # Between the two pages we honored backoff=4.
+    assert 4.0 in sleeps
+
+
+def test_stackoverflow_adapter_retries_on_429_with_retry_after(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.time.sleep", lambda s: sleeps.append(s))
+    responses = iter(
+        [
+            _fake_response(429, headers={"Retry-After": "3"}),
+            _fake_response(200, json_data={"items": [], "has_more": False}),
+        ]
+    )
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        return next(responses)
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert sleeps == [3.0]
+
+
+def test_stackoverflow_adapter_raises_when_backoff_exceeds_cap(monkeypatch):
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        return _fake_response(503, headers={"Retry-After": "3600"})
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    with pytest.raises(StackExchangeRateLimitError, match="3600"):
+        list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+
+
+def test_stackoverflow_adapter_raises_after_retry_exhaustion(monkeypatch):
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.time.sleep", lambda s: None)
+
+    def fake_get(url, params, timeout, headers):  # noqa: ARG001
+        return _fake_response(429, headers={"Retry-After": "1"})
+
+    monkeypatch.setattr("ingestion.adapters.stack_overflow.httpx.get", fake_get)
+    with pytest.raises(StackExchangeRateLimitError, match="still rate-limiting"):
+        list(StackOverflowAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+
+
+# ---------------------------------------------------------------------------
 # Pipeline — mocked adapter / classifier / embeddings
 # ---------------------------------------------------------------------------
 class _FakeAdapter:

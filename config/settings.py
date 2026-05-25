@@ -243,6 +243,15 @@ INGEST_GITHUB_QUERY = env(
     "INGEST_GITHUB_QUERY",
     default="label:enhancement is:open",
 )
+# Stack Exchange — site name (one of stackoverflow, softwareengineering,
+# serverfault, askubuntu, superuser, etc.). ``softwareengineering`` tends
+# to have more design + tooling discussion (i.e. opportunity-flavored)
+# than mainline stackoverflow which leans how-do-I.
+INGEST_STACKEXCHANGE_SITE = env("INGEST_STACKEXCHANGE_SITE", default="stackoverflow")
+INGEST_STACKEXCHANGE_INITIAL_DAYS = env.int("INGEST_STACKEXCHANGE_INITIAL_DAYS", default=2)
+# Optional tag filter — semicolon-separated. Example: "python;django".
+# Empty means "no tag filter" (all recent questions on the site).
+INGEST_STACKEXCHANGE_TAGS = env("INGEST_STACKEXCHANGE_TAGS", default="")
 
 # ---------------------------------------------------------------------------
 # Default budgets for agent runs
