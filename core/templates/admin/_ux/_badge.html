@@ -1,0 +1,23 @@
+{% comment %}
+Colored pill badge.
+
+Args:
+  label: text to display
+  tone: success | danger | warning | info | neutral
+
+Usage:
+  {% include "admin/_ux/_badge.html" with label=run.status tone=run.status|status_tone %}
+{% endcomment %}
+{% spaceless %}
+{% if tone == "success" %}
+  <span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-500/10 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 ring-1 ring-inset ring-green-600/20 dark:ring-green-500/30">{{ label }}</span>
+{% elif tone == "danger" %}
+  <span class="inline-flex items-center rounded-md bg-red-50 dark:bg-red-500/10 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 ring-1 ring-inset ring-red-600/20 dark:ring-red-500/30">{{ label }}</span>
+{% elif tone == "warning" %}
+  <span class="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-600/20 dark:ring-amber-500/30">{{ label }}</span>
+{% elif tone == "info" %}
+  <span class="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-600/20 dark:ring-blue-500/30">{{ label }}</span>
+{% else %}
+  <span class="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-500/10 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 ring-1 ring-inset ring-slate-500/20 dark:ring-slate-500/30">{{ label }}</span>
+{% endif %}
+{% endspaceless %}
