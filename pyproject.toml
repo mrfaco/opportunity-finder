@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
 dependencies = [
-    "django>=5.1,<6.0",
+    "django>=5.1,<7.0",
     "django-environ>=0.11",
     "psycopg[binary]>=3.2",
     "pgvector>=0.3",
