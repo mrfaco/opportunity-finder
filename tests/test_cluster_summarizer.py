@@ -14,9 +14,6 @@ The Anthropic SDK is mocked throughout — no live network calls.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 import pytest
 from django.utils import timezone
 
@@ -66,14 +63,24 @@ def _make_cluster(*, size: int = 2, title: str | None = None) -> Cluster:
     return cluster
 
 
-def _fake_response(title: str, summary: str) -> SimpleNamespace:
+def _fake_response(title: str, summary: str):
+    """Return a ``CheapModelResponse`` for the summarizer's callsite."""
     from clusters.summarizer import _ModelResponse  # noqa: PLC0415
+    from core.llm import CheapModelResponse  # noqa: PLC0415
 
-    return SimpleNamespace(
-        parsed_output=_ModelResponse(title=title, summary=summary),
-        usage=SimpleNamespace(input_tokens=210, output_tokens=42, cache_read_input_tokens=0),
-        stop_reason="end_turn",
+    return CheapModelResponse(
+        parsed=_ModelResponse(title=title, summary=summary),
+        model_used="claude-haiku-4-5",
+        provider="anthropic",
+        input_tokens=210,
+        output_tokens=42,
+        cached_tokens=0,
+        latency_ms=37,
     )
+
+
+def _patch_summarizer(monkeypatch, response):
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", lambda **_kw: response)
 
 
 # ---------------------------------------------------------------------------
@@ -97,13 +104,18 @@ def test_cluster_summary_prompt_loads_with_frontmatter():
 @pytest.mark.django_db
 def test_generate_title_and_summary_parses_mocked_response(monkeypatch):
     cluster = _make_cluster(size=3)
+    captured = {}
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        title="Self-hosted Stripe alternative for solo SaaS",
-        summary="Solo founders want a self-hosted payments stack without per-transaction lock-in.",
-    )
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
+    def _fake_call(**kwargs):
+        captured.update(kwargs)
+        return _fake_response(
+            title="Self-hosted Stripe alternative for solo SaaS",
+            summary=(
+                "Solo founders want a self-hosted payments stack without per-transaction lock-in."
+            ),
+        )
+
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", _fake_call)
 
     result = generate_title_and_summary(cluster)
     assert isinstance(result, TitleSummary)
@@ -112,23 +124,19 @@ def test_generate_title_and_summary_parses_mocked_response(monkeypatch):
     assert result.input_tokens == 210
     assert result.item_count_used == 3
     assert len(result.prompt_hash) == 64
-
-    # Cache_control breakpoint is set on the system prompt.
-    _, kwargs = fake_client.messages.parse.call_args
-    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+    # Dispatcher receives the prompt + user content + the output schema.
+    assert "system_prompt" in captured
+    assert captured["output_schema"].__name__ == "_ModelResponse"
 
 
 @pytest.mark.django_db
-def test_generate_raises_when_model_returns_no_parsed_output(monkeypatch):
+def test_generate_raises_when_dispatcher_raises(monkeypatch):
     cluster = _make_cluster(size=2)
 
-    bad = _fake_response("ignored title", "ignored body — long enough for validation")
-    bad.parsed_output = None
-    bad.stop_reason = "refusal"
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = bad
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
+    def _fake_call(**kwargs):
+        raise RuntimeError("dispatcher returned no parsed output")
 
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", _fake_call)
     with pytest.raises(RuntimeError, match="no parsed output"):
         generate_title_and_summary(cluster)
 
@@ -166,11 +174,15 @@ def test_refine_titles_multi_item_clusters_only(monkeypatch, settings):
     multi = _make_cluster(size=3)
     singleton = _make_cluster(size=1)
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        title="The labeled need", summary="A one-sentence summary of the need."
+    _patch_summarizer(
+        monkeypatch,
+        _fake_response(title="The labeled need", summary="A one-sentence summary of the need."),
     )
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
+    judge_calls = {"count": 0}
+    monkeypatch.setattr(
+        "clusters.tasks.judge_merge",
+        lambda **_kw: judge_calls.__setitem__("count", judge_calls["count"] + 1) or None,
+    )
 
     stats = refine_clusters_nightly()
     # Exactly one cluster was titled (the multi-item one); the singleton was
@@ -197,14 +209,19 @@ def test_refine_skips_clusters_with_unchanged_size(monkeypatch):
     cluster.last_titled_size = 4
     cluster.save(update_fields=["last_titled_size"])
 
-    fake_client = MagicMock()
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
+    call_log = {"count": 0}
+
+    def _fake_call(**_kw):
+        call_log["count"] += 1
+        return _fake_response("ignored", "ignored ignored ignored ignored")
+
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", _fake_call)
 
     stats = refine_clusters_nightly()
     assert stats["titles_regenerated"] == 0
     assert stats["titles_skipped_size_unchanged"] >= 1
     # Crucial: the model was NOT invoked.
-    fake_client.messages.parse.assert_not_called()
+    assert call_log["count"] == 0
 
 
 @pytest.mark.django_db
@@ -214,11 +231,13 @@ def test_refine_regenerates_when_size_drifted_past_threshold(monkeypatch):
     cluster.last_titled_size = 4
     cluster.save(update_fields=["last_titled_size"])
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        title="Fresh title at size 5", summary="Updated summary reflecting new members."
+    _patch_summarizer(
+        monkeypatch,
+        _fake_response(
+            title="Fresh title at size 5",
+            summary="Updated summary reflecting new members.",
+        ),
     )
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
 
     stats = refine_clusters_nightly()
     assert stats["titles_regenerated"] == 1
@@ -234,12 +253,17 @@ def test_refine_skips_small_drift_within_threshold(monkeypatch):
     cluster.last_titled_size = 10
     cluster.save(update_fields=["last_titled_size"])
 
-    fake_client = MagicMock()
-    monkeypatch.setattr("clusters.summarizer.get_client", lambda: fake_client)
+    call_log = {"count": 0}
+
+    def _fake_call(**_kw):
+        call_log["count"] += 1
+        return _fake_response("ignored", "ignored ignored ignored ignored")
+
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", _fake_call)
 
     stats = refine_clusters_nightly()
     assert stats["titles_regenerated"] == 0
-    fake_client.messages.parse.assert_not_called()
+    assert call_log["count"] == 0
 
 
 # ---------------------------------------------------------------------------

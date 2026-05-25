@@ -12,13 +12,11 @@ verdict so eval runs can be keyed by prompt version.
 from __future__ import annotations
 
 import json
-import time
 
-from django.conf import settings
 from pydantic import BaseModel, Field
 
 from agents import prompts as prompt_loader
-from core.anthropic_client import get_client
+from core.llm import call_cheap_model
 
 # Classification needs little room — a boolean, a float, one or two sentences.
 _MAX_TOKENS = 512
@@ -77,46 +75,23 @@ def classify_content(
     """
     if prompt is None:
         prompt = prompt_loader.load_prompt("filter", "classifier")
-    client = get_client()
-    model = settings.MODEL_FILTER
 
-    started = time.monotonic()
-    response = client.messages.parse(
-        model=model,
+    response = call_cheap_model(
+        system_prompt=prompt.content,
+        user_content=_build_user_content(content, context),
+        output_schema=ClassifierResponse,
         max_tokens=_MAX_TOKENS,
-        # System prompt is stable across every call — cache it. (Caching only
-        # kicks in once the prompt exceeds the model's minimum cacheable
-        # prefix; the breakpoint is harmless below that.)
-        system=[
-            {
-                "type": "text",
-                "text": prompt.content,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": _build_user_content(content, context)}],
-        output_format=ClassifierResponse,
     )
-    latency_ms = int((time.monotonic() - started) * 1000)
-
-    parsed = response.parsed_output
-    if parsed is None:
-        # Structured output is enforced server-side; a None here means the
-        # model refused or the response was truncated. Fail loud.
-        raise RuntimeError(
-            f"Classifier returned no parsed output (stop_reason="
-            f"{response.stop_reason!r}). Item left unclassified."
-        )
-
-    usage = response.usage
+    parsed = response.parsed
+    assert isinstance(parsed, ClassifierResponse)
     return FilterVerdict(
         is_opportunity=parsed.is_opportunity,
         confidence=parsed.confidence,
         reason=parsed.reason,
         prompt_hash=prompt.hash,
-        model=model,
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        cached_tokens=getattr(usage, "cache_read_input_tokens", 0) or 0,
-        latency_ms=latency_ms,
+        model=response.model_used,
+        input_tokens=response.input_tokens,
+        output_tokens=response.output_tokens,
+        cached_tokens=response.cached_tokens,
+        latency_ms=response.latency_ms,
     )

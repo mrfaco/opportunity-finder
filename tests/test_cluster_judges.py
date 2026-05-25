@@ -13,9 +13,6 @@ The Anthropic SDK is mocked throughout — no live network calls.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 import pytest
 from django.utils import timezone
 
@@ -82,14 +79,46 @@ def _fake_response(
     verdict: bool,
     confidence: float = 0.87,
     reasoning: str = "they describe the same workflow being broken",
-) -> SimpleNamespace:
+):
+    """Return a ``CheapModelResponse`` for the judge's callsite."""
     from clusters.judges import _MergeResponse  # noqa: PLC0415
+    from core.llm import CheapModelResponse  # noqa: PLC0415
 
-    return SimpleNamespace(
-        parsed_output=_MergeResponse(verdict=verdict, confidence=confidence, reasoning=reasoning),
-        usage=SimpleNamespace(input_tokens=420, output_tokens=58, cache_read_input_tokens=0),
-        stop_reason="end_turn",
+    return CheapModelResponse(
+        parsed=_MergeResponse(verdict=verdict, confidence=confidence, reasoning=reasoning),
+        model_used="claude-haiku-4-5",
+        provider="anthropic",
+        input_tokens=420,
+        output_tokens=58,
+        cached_tokens=0,
+        latency_ms=53,
     )
+
+
+def _patch_judge(monkeypatch, response):
+    monkeypatch.setattr("clusters.judges.call_cheap_model", lambda **_kw: response)
+
+
+def _patch_summarizer(
+    monkeypatch,
+    title="stubbed cluster title",
+    summary="stubbed cluster summary used in tests only.",
+):
+    """Helper for tests that exercise refinement (step 5 calls the summarizer
+    on multi-item clusters and we don't want it to actually hit the API)."""
+    from clusters.summarizer import _ModelResponse  # noqa: PLC0415
+    from core.llm import CheapModelResponse  # noqa: PLC0415
+
+    response = CheapModelResponse(
+        parsed=_ModelResponse(title=title, summary=summary),
+        model_used="claude-haiku-4-5",
+        provider="anthropic",
+        input_tokens=10,
+        output_tokens=10,
+        cached_tokens=0,
+        latency_ms=20,
+    )
+    monkeypatch.setattr("clusters.summarizer.call_cheap_model", lambda **_kw: response)
 
 
 # ---------------------------------------------------------------------------
@@ -115,13 +144,17 @@ def test_judge_merge_parses_positive_verdict(monkeypatch):
     a = _make_cluster(title="approval queues for AI agents", seed=0.01)
     b = _make_cluster(title="human-in-the-loop gates for agent runs", seed=0.011)
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        verdict=True,
-        confidence=0.91,
-        reasoning="Both describe operator approval flows for production agents.",
-    )
-    monkeypatch.setattr("clusters.judges.get_client", lambda: fake_client)
+    captured = {}
+
+    def _fake_call(**kwargs):
+        captured.update(kwargs)
+        return _fake_response(
+            verdict=True,
+            confidence=0.91,
+            reasoning="Both describe operator approval flows for production agents.",
+        )
+
+    monkeypatch.setattr("clusters.judges.call_cheap_model", _fake_call)
 
     result = judge_merge(a, b, centroid_similarity=0.86)
     assert isinstance(result, MergeVerdict)
@@ -129,10 +162,10 @@ def test_judge_merge_parses_positive_verdict(monkeypatch):
     assert result.confidence == 0.91
     assert result.input_tokens == 420
     assert len(result.prompt_hash) == 64
-    # cache_control breakpoint is set on the system prompt (matches the
-    # filter + summarizer call patterns).
-    _, kwargs = fake_client.messages.parse.call_args
-    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+    # The dispatcher receives both the system prompt and the user content.
+    # Provider-specific concerns (cache_control etc.) live in test_llm.py.
+    assert "system_prompt" in captured
+    assert captured["output_schema"].__name__ == "_MergeResponse"
 
 
 @pytest.mark.django_db
@@ -140,13 +173,14 @@ def test_judge_merge_parses_negative_verdict(monkeypatch):
     a = _make_cluster(title="deployment cost dashboards", seed=0.02)
     b = _make_cluster(title="local-dev environment switching", seed=0.021)
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        verdict=False,
-        confidence=0.78,
-        reasoning="A is about deploys, B is about local dev — different workflows.",
+    _patch_judge(
+        monkeypatch,
+        _fake_response(
+            verdict=False,
+            confidence=0.78,
+            reasoning="A is about deploys, B is about local dev — different workflows.",
+        ),
     )
-    monkeypatch.setattr("clusters.judges.get_client", lambda: fake_client)
 
     result = judge_merge(a, b, centroid_similarity=0.83)
     assert result.verdict is False
@@ -154,17 +188,14 @@ def test_judge_merge_parses_negative_verdict(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_judge_merge_raises_when_model_returns_no_parsed_output(monkeypatch):
+def test_judge_merge_raises_when_dispatcher_raises(monkeypatch):
     a = _make_cluster(seed=0.03)
     b = _make_cluster(seed=0.031)
 
-    bad = _fake_response(verdict=True)
-    bad.parsed_output = None
-    bad.stop_reason = "refusal"
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = bad
-    monkeypatch.setattr("clusters.judges.get_client", lambda: fake_client)
+    def _fake_call(**_kw):
+        raise RuntimeError("dispatcher returned no parsed output")
 
+    monkeypatch.setattr("clusters.judges.call_cheap_model", _fake_call)
     with pytest.raises(RuntimeError, match="no parsed output"):
         judge_merge(a, b, centroid_similarity=0.85)
 
@@ -209,32 +240,17 @@ def test_refine_runs_merge_judge_and_persists_verdict(monkeypatch, settings):
     a.save(update_fields=["category_tags"])
     b.save(update_fields=["category_tags"])
 
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(
-        verdict=True,
-        confidence=0.92,
-        reasoning="Both describe the same operator-approval need.",
-    )
-    monkeypatch.setattr("clusters.judges.get_client", lambda: fake_client)
-    # Also stub the summarizer's client — step 5 fires on multi-item clusters.
-    monkeypatch.setattr(
-        "clusters.summarizer.get_client",
-        lambda: MagicMock(
-            messages=MagicMock(
-                parse=MagicMock(
-                    return_value=SimpleNamespace(
-                        parsed_output=SimpleNamespace(
-                            title="X", summary="Y is a one-sentence summary."
-                        ),
-                        usage=SimpleNamespace(
-                            input_tokens=10, output_tokens=10, cache_read_input_tokens=0
-                        ),
-                        stop_reason="end_turn",
-                    )
-                )
-            )
+    _patch_judge(
+        monkeypatch,
+        _fake_response(
+            verdict=True,
+            confidence=0.92,
+            reasoning="Both describe the same operator-approval need.",
         ),
     )
+    # Step 5 of refinement calls the summarizer on multi-item clusters;
+    # stub that too so we don't hit the API.
+    _patch_summarizer(monkeypatch)
 
     stats = refine_clusters_nightly()
     assert stats["merge_proposals_queued"] >= 1
@@ -263,27 +279,15 @@ def test_refine_skips_judge_when_proposal_already_pending(monkeypatch, settings)
         status=ProposalStatus.PENDING_REVIEW,
     )
 
-    fake_client = MagicMock()
-    monkeypatch.setattr("clusters.judges.get_client", lambda: fake_client)
-    monkeypatch.setattr(
-        "clusters.summarizer.get_client",
-        lambda: MagicMock(
-            messages=MagicMock(
-                parse=MagicMock(
-                    return_value=SimpleNamespace(
-                        parsed_output=SimpleNamespace(
-                            title="X", summary="Y is a one-sentence summary."
-                        ),
-                        usage=SimpleNamespace(
-                            input_tokens=10, output_tokens=10, cache_read_input_tokens=0
-                        ),
-                        stop_reason="end_turn",
-                    )
-                )
-            )
-        ),
-    )
+    judge_calls = {"count": 0}
+
+    def _fake_judge(**_kw):
+        judge_calls["count"] += 1
+        return _fake_response(verdict=True)
+
+    monkeypatch.setattr("clusters.judges.call_cheap_model", _fake_judge)
+    _patch_summarizer(monkeypatch)
 
     stats = refine_clusters_nightly()
     assert stats["merge_proposals_queued"] == 0
-    fake_client.messages.parse.assert_not_called()
+    assert judge_calls["count"] == 0

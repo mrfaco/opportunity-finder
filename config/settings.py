@@ -211,6 +211,15 @@ MODEL_FILTER = env("MODEL_FILTER", default="claude-haiku-4-5")
 MODEL_INVESTIGATION = env("MODEL_INVESTIGATION", default="claude-sonnet-4-6")
 MODEL_IDEATION = env("MODEL_IDEATION", default="claude-sonnet-4-6")
 
+# Optional cheap-tier fallback via OpenRouter. ``core.llm.call_cheap_model``
+# picks Anthropic when ANTHROPIC_API_KEY is set; otherwise falls back to
+# OpenRouter (default model: DeepSeek-V3, ~4x cheaper than Haiku at the
+# volumes the classifier/summarizer/judge produce). Only the cheap tier
+# routes through here — the investigation/ideation agent loop stays on
+# Anthropic for the tool-use + prompt-caching semantics.
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
+OPENROUTER_MODEL_FILTER = env("OPENROUTER_MODEL_FILTER", default="deepseek/deepseek-chat")
+
 # ---------------------------------------------------------------------------
 # Embeddings — Voyage AI. voyage-3.5 outputs 1024-dim vectors natively,
 # matching the pgvector columns in clusters.models (EMBEDDING_DIM).

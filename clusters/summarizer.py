@@ -21,14 +21,12 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 
-from django.conf import settings
 from pydantic import BaseModel, Field
 
 from agents import prompts as prompt_loader
 from clusters.models import Cluster, ClusterItem
-from core.anthropic_client import get_client
+from core.llm import call_cheap_model
 
 logger = logging.getLogger(__name__)
 
@@ -104,41 +102,22 @@ def generate_title_and_summary(cluster: Cluster) -> TitleSummary:
         raise ValueError(f"Cluster {cluster.id} has no items — nothing to summarize.")
 
     prompt = prompt_loader.load_prompt("cluster_summary", "system")
-    client = get_client()
-    model = settings.MODEL_FILTER  # cheap-model tier; same as the classifier
-
-    started = time.monotonic()
-    response = client.messages.parse(
-        model=model,
+    response = call_cheap_model(
+        system_prompt=prompt.content,
+        user_content=_build_user_content(cluster, items),
+        output_schema=_ModelResponse,
         max_tokens=_MAX_TOKENS,
-        system=[
-            {
-                "type": "text",
-                "text": prompt.content,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": _build_user_content(cluster, items)}],
-        output_format=_ModelResponse,
     )
-    latency_ms = int((time.monotonic() - started) * 1000)
-
-    parsed = response.parsed_output
-    if parsed is None:
-        raise RuntimeError(
-            f"Cluster summarizer returned no parsed output for cluster "
-            f"{cluster.id} (stop_reason={response.stop_reason!r})."
-        )
-
-    usage = response.usage
+    parsed = response.parsed
+    assert isinstance(parsed, _ModelResponse)
     return TitleSummary(
         title=parsed.title.strip(),
         summary=parsed.summary.strip(),
         prompt_hash=prompt.hash,
-        model=model,
+        model=response.model_used,
         item_count_used=len(items),
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        cached_tokens=getattr(usage, "cache_read_input_tokens", 0) or 0,
-        latency_ms=latency_ms,
+        input_tokens=response.input_tokens,
+        output_tokens=response.output_tokens,
+        cached_tokens=response.cached_tokens,
+        latency_ms=response.latency_ms,
     )

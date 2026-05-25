@@ -5,9 +5,6 @@ The live Anthropic call is mocked everywhere — these tests never hit the API.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 import pytest
 from django.core.management import call_command
 
@@ -101,20 +98,36 @@ def test_load_eval_set_is_idempotent():
 # ---------------------------------------------------------------------------
 # classify_content — mocked Anthropic client
 # ---------------------------------------------------------------------------
-def _fake_response(is_opportunity: bool) -> SimpleNamespace:
-    return SimpleNamespace(
-        parsed_output=ClassifierResponse(
+def _fake_cheap_response(is_opportunity: bool):
+    """Return a ``CheapModelResponse`` shape that the callsite expects.
+
+    The dispatcher's provider selection is exercised in ``test_llm.py``;
+    these tests just inject the final result at the callsite import
+    binding, keeping them small and provider-agnostic.
+    """
+    from core.llm import CheapModelResponse  # noqa: PLC0415
+
+    return CheapModelResponse(
+        parsed=ClassifierResponse(
             is_opportunity=is_opportunity, confidence=0.88, reason="mocked reason"
         ),
-        usage=SimpleNamespace(input_tokens=140, output_tokens=22, cache_read_input_tokens=0),
-        stop_reason="end_turn",
+        model_used="claude-haiku-4-5",
+        provider="anthropic",
+        input_tokens=140,
+        output_tokens=22,
+        cached_tokens=0,
+        latency_ms=42,
     )
 
 
 def test_classify_content_parses_verdict(monkeypatch):
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = _fake_response(is_opportunity=True)
-    monkeypatch.setattr("ingestion.filter.get_client", lambda: fake_client)
+    captured = {}
+
+    def _fake_call(**kwargs):
+        captured.update(kwargs)
+        return _fake_cheap_response(is_opportunity=True)
+
+    monkeypatch.setattr("ingestion.filter.call_cheap_model", _fake_call)
 
     verdict = classify_content("I wish a tool existed that did X.")
 
@@ -124,19 +137,21 @@ def test_classify_content_parses_verdict(monkeypatch):
     assert verdict.input_tokens == 140
     assert verdict.output_tokens == 22
     assert len(verdict.prompt_hash) == 64
-    # The system prompt should be sent with a cache_control breakpoint.
-    _, kwargs = fake_client.messages.parse.call_args
-    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+    # The dispatcher receives the loaded prompt content as system_prompt
+    # and the rendered user content separately — Anthropic-specific
+    # cache_control wiring is covered in test_llm.py.
+    assert "system_prompt" in captured
+    assert captured["output_schema"] is ClassifierResponse
 
 
-def test_classify_content_raises_when_no_parsed_output(monkeypatch):
-    bad = _fake_response(is_opportunity=True)
-    bad.parsed_output = None
-    bad.stop_reason = "refusal"
-    fake_client = MagicMock()
-    fake_client.messages.parse.return_value = bad
-    monkeypatch.setattr("ingestion.filter.get_client", lambda: fake_client)
+def test_classify_content_raises_when_dispatcher_raises(monkeypatch):
+    """The dispatcher's loud-fail (no parsed output, schema mismatch, etc.)
+    propagates verbatim — this callsite has no fallback path."""
 
+    def _fake_call(**kwargs):
+        raise RuntimeError("dispatcher returned no parsed output")
+
+    monkeypatch.setattr("ingestion.filter.call_cheap_model", _fake_call)
     with pytest.raises(RuntimeError, match="no parsed output"):
         classify_content("something")
 
