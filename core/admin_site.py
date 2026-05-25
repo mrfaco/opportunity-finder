@@ -30,6 +30,36 @@ class PainMinerAdminSite(AdminSite):
 
         return ClusterAdmin(Cluster, self).triage_view(request)
 
+    def get_app_list(self, request, app_label=None):
+        """Prepend a Dashboards section so the triage queue is one click
+        away from any admin page via the left sidebar.
+
+        Synthetic ``app`` + ``model`` dicts mirror Django's
+        ``app_list`` shape so the standard sidebar template renders them
+        as any other section — name, link, permission flags.
+        """
+        app_list = super().get_app_list(request, app_label)
+        if app_label is not None:
+            # Filtered single-app view (used by some internal paths) —
+            # don't inject the shortcut there.
+            return app_list
+        dashboards = {
+            "name": "Dashboards",
+            "app_label": "_dashboards",
+            "app_url": "/admin/clusters/triage/",
+            "has_module_perms": True,
+            "models": [
+                {
+                    "name": "Triage queue",
+                    "object_name": "Triage",
+                    "admin_url": "/admin/clusters/triage/",
+                    "view_only": True,
+                    "perms": {"view": True},
+                },
+            ],
+        }
+        return [dashboards, *app_list]
+
     def get_urls(self):
         # Deferred by necessity: this module is imported to *construct* the
         # admin site, while agents/admin.py and ingestion/admin.py register

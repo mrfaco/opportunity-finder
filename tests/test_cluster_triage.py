@@ -252,3 +252,14 @@ def test_admin_root_serves_triage(admin_client):
     body = response.content.decode("utf-8")
     assert "Cluster triage" in body
     assert "lands-on-triage" in body
+
+
+@pytest.mark.django_db
+def test_sidebar_includes_triage_shortcut(admin_client):
+    """The left nav on any admin page should link to the triage queue."""
+    # Use a model admin changelist (any page that renders the sidebar).
+    response = admin_client.get("/admin/agents/agentrun/")
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Triage queue" in body
+    assert "/admin/clusters/triage/" in body
