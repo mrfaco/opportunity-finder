@@ -20,6 +20,7 @@ dependencies = [
     "pyyaml>=6.0",
     "markdown>=3.6",
     "numpy>=1.26",
+    "django-unfold>=0.94,<0.95",
 ]
 
 [project.optional-dependencies]

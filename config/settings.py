@@ -19,6 +19,9 @@ DEBUG = env.bool("DEBUG", default=True)
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "core.admin_apps.PainMinerAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -46,6 +49,75 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "Pain-Miner",
+    "SITE_HEADER": "Pain-Miner",
+    "SITE_SUBHEADER": "Operational dashboards",
+    "SITE_URL": "/admin/",
+    "THEME": "dark",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "COLORS": {
+        "primary": {
+            "50": "248 250 252",
+            "100": "241 245 249",
+            "200": "226 232 240",
+            "300": "203 213 225",
+            "400": "148 163 184",
+            "500": "100 116 139",
+            "600": "71  85 105",
+            "700": "51  65  85",
+            "800": "30  41  59",
+            "900": "15  23  42",
+            "950": "2   6  23",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "Dashboards",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Triage queue",
+                        "icon": "playlist_play",
+                        "link": "/admin/clusters/triage/",
+                    },
+                    {
+                        "title": "Latest investigations",
+                        "icon": "search",
+                        "link": "/admin/investigations/latest/",
+                    },
+                    {
+                        "title": "Latest ideations",
+                        "icon": "lightbulb",
+                        "link": "/admin/ideation/latest/",
+                    },
+                    {
+                        "title": "Ingestion ops",
+                        "icon": "cloud_download",
+                        "link": "/admin/ingestion/operations/",
+                    },
+                    {
+                        "title": "Cost dashboard",
+                        "icon": "payments",
+                        "link": "/admin/agents/cost-dashboard/",
+                    },
+                    {"title": "Prompts", "icon": "description", "link": "/admin/agents/prompts/"},
+                    {
+                        "title": "Filter labeling",
+                        "icon": "label",
+                        "link": "/admin/ingestion/filter-labeling/",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 ROOT_URLCONF = "config.urls"
 
