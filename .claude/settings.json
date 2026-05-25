@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/check-claude-md-on-push.sh",
+            "if": "Bash(git push*)",
+            "timeout": 45,
+            "statusMessage": "Auditing CLAUDE.md freshness…"
+          }
+        ]
+      }
+    ]
+  }
+}
