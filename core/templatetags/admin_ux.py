@@ -39,7 +39,7 @@ _TONE_BY_STATUS = {
 
 
 @register.filter(name="json_pretty")
-def json_pretty(value):
+def json_pretty(value: object) -> object:
     """Pretty-print a JSON string; pass non-JSON through unchanged.
 
     Never raises — admin pages must keep rendering even with malformed input.
@@ -55,7 +55,7 @@ def json_pretty(value):
 
 
 @register.filter(name="status_tone")
-def status_tone(value) -> str:
+def status_tone(value: object) -> str:
     """Map a status string to a badge tone. Defaults to ``"neutral"``."""
     if not value:
         return "neutral"
