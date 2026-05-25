@@ -4,6 +4,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils import timezone
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from ideation.orchestrator import start_ideation
 from investigations.models import Investigation, InvestigationStatus, StaleReason
@@ -12,7 +13,7 @@ _LATEST_LIMIT = 50
 
 
 @admin.register(Investigation)
-class InvestigationAdmin(admin.ModelAdmin):
+class InvestigationAdmin(UnfoldModelAdmin):
     """Triage queue for generated briefs.
 
     The list view defaults to "awaiting review" ordered newest-first. The

@@ -4,6 +4,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from ingestion import tasks
 from ingestion.models import (
@@ -16,7 +17,7 @@ from ingestion.models import (
 
 
 @admin.register(IngestionCheckpoint)
-class IngestionCheckpointAdmin(admin.ModelAdmin):
+class IngestionCheckpointAdmin(UnfoldModelAdmin):
     list_display = (
         "source",
         "last_item_posted_at",
@@ -91,7 +92,7 @@ class IngestionCheckpointAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterClassification)
-class FilterClassificationAdmin(admin.ModelAdmin):
+class FilterClassificationAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "model",
@@ -114,7 +115,7 @@ class FilterClassificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalSet)
-class FilterEvalSetAdmin(admin.ModelAdmin):
+class FilterEvalSetAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "human_label",
@@ -175,7 +176,7 @@ class FilterEvalSetAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalRun)
-class FilterEvalRunAdmin(admin.ModelAdmin):
+class FilterEvalRunAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "run_at",
@@ -206,7 +207,7 @@ class FilterEvalRunAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalClassification)
-class FilterEvalClassificationAdmin(admin.ModelAdmin):
+class FilterEvalClassificationAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "eval_run",

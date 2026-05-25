@@ -13,6 +13,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path, reverse
 from django.utils import timezone
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from ideation.models import Ideation, IdeationStatus
 from ideation.orchestrator import start_ideation
@@ -22,7 +23,7 @@ _LATEST_LIMIT = 50
 
 
 @admin.register(Ideation)
-class IdeationAdmin(admin.ModelAdmin):
+class IdeationAdmin(UnfoldModelAdmin):
     change_form_template = "admin/ideation/ideation/review.html"
 
     list_display = (

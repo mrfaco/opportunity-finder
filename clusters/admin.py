@@ -9,6 +9,8 @@ from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.admin import TabularInline as UnfoldTabularInline
 
 from agents.orchestrator import start_run
 from clusters import clustering
@@ -29,7 +31,7 @@ _RECENCY_HALF_LIFE_DAYS = 7.0
 _HIGHLIGHT_TOP_N = 3
 
 
-class ClusterItemInline(admin.TabularInline):
+class ClusterItemInline(UnfoldTabularInline):
     """Read-only inline showing the items inside a cluster.
 
     Renders each item's title as a link to the original article (the HN
@@ -59,7 +61,7 @@ class ClusterItemInline(admin.TabularInline):
 
 
 @admin.register(Cluster)
-class ClusterAdmin(admin.ModelAdmin):
+class ClusterAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "title",
@@ -188,7 +190,7 @@ class ClusterAdmin(admin.ModelAdmin):
 
 
 @admin.register(ClusterItem)
-class ClusterItemAdmin(admin.ModelAdmin):
+class ClusterItemAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "source",
@@ -220,7 +222,7 @@ class ClusterItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ClusterMergeProposal)
-class ClusterMergeProposalAdmin(admin.ModelAdmin):
+class ClusterMergeProposalAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "cluster_a",
@@ -282,7 +284,7 @@ class ClusterMergeProposalAdmin(admin.ModelAdmin):
 
 
 @admin.register(ClusterSplitProposal)
-class ClusterSplitProposalAdmin(admin.ModelAdmin):
+class ClusterSplitProposalAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "cluster",
