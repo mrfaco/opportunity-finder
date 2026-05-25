@@ -167,6 +167,88 @@ def test_triage_ranks_by_priority(admin_client):
 
 
 # ---------------------------------------------------------------------------
+# Column sort toggle
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_triage_sort_by_max_conf_desc(admin_client):
+    # Three clusters whose priority ordering would put "small-fresh-strong"
+    # on top; sorting by max_conf desc must put the highest-conf cluster
+    # there instead.
+    _make_cluster(size=10, avg_conf=0.55, last_seen_days_ago=14, title="big-stale-low-conf")
+    _make_cluster(size=2, avg_conf=0.92, last_seen_days_ago=0.1, title="small-fresh-high-conf")
+    _make_cluster(size=4, avg_conf=0.78, last_seen_days_ago=3, title="medium-medium")
+
+    body = admin_client.get(_TRIAGE_URL + "?sort=max_conf&dir=desc").content.decode("utf-8")
+    positions = [
+        ("small-fresh-high-conf", body.find("small-fresh-high-conf")),
+        ("medium-medium", body.find("medium-medium")),
+        ("big-stale-low-conf", body.find("big-stale-low-conf")),
+    ]
+    assert all(p > 0 for _, p in positions)
+    assert positions == sorted(
+        positions, key=lambda x: x[1]
+    ), f"max_conf desc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+
+
+@pytest.mark.django_db
+def test_triage_sort_by_avg_conf_asc(admin_client):
+    _make_cluster(size=5, avg_conf=0.55, last_seen_days_ago=2, title="low-avg")
+    _make_cluster(size=5, avg_conf=0.78, last_seen_days_ago=2, title="med-avg")
+    _make_cluster(size=5, avg_conf=0.92, last_seen_days_ago=2, title="high-avg")
+
+    body = admin_client.get(_TRIAGE_URL + "?sort=avg_conf&dir=asc").content.decode("utf-8")
+    positions = [
+        ("low-avg", body.find("low-avg")),
+        ("med-avg", body.find("med-avg")),
+        ("high-avg", body.find("high-avg")),
+    ]
+    assert all(p > 0 for _, p in positions)
+    assert positions == sorted(
+        positions, key=lambda x: x[1]
+    ), f"avg_conf asc order wrong: {[n for n, _ in sorted(positions, key=lambda x: x[1])]}"
+
+
+@pytest.mark.django_db
+def test_triage_invalid_sort_falls_back_to_priority(admin_client):
+    # Garbage in the sort param must not break the page or trigger an error;
+    # falls back silently to priority desc (the documented default).
+    _make_cluster(size=2, avg_conf=0.9, last_seen_days_ago=0.1, title="best")
+    _make_cluster(size=10, avg_conf=0.6, last_seen_days_ago=10, title="worst")
+
+    resp = admin_client.get(_TRIAGE_URL + "?sort=' OR 1=1; --&dir=lol")
+    assert resp.status_code == 200
+    body = resp.content.decode("utf-8")
+    # Priority ranking puts "best" first (small but very fresh + high conf).
+    assert body.find("best") < body.find("worst")
+
+
+@pytest.mark.django_db
+def test_triage_sort_header_renders_toggle_link(admin_client):
+    _make_cluster(size=2, avg_conf=0.8, last_seen_days_ago=1, title="one")
+
+    body = admin_client.get(_TRIAGE_URL + "?sort=max_conf&dir=desc").content.decode("utf-8")
+    # The header for max_conf should be a link that toggles to asc, with
+    # a visible direction indicator (we use ↓ for desc).
+    assert "sort=max_conf&amp;dir=asc" in body
+    assert "↓" in body
+    # And the avg_conf header should still be a link offering desc as the
+    # default-on-click direction.
+    assert "sort=avg_conf&amp;dir=desc" in body
+
+
+@pytest.mark.django_db
+def test_triage_sort_preserves_show_all(admin_client):
+    _make_cluster(size=2, avg_conf=0.8, last_seen_days_ago=1, title="row")
+    body = admin_client.get(_TRIAGE_URL + "?show=all&sort=size&dir=desc").content.decode("utf-8")
+    # Each sort link must carry show=all forward, otherwise toggling sort
+    # would silently flip the operator back to "hide investigated".
+    assert "show=all&amp;sort=size&amp;dir=asc" in body
+    assert "show=all&amp;sort=priority&amp;dir=desc" in body
+
+
+# ---------------------------------------------------------------------------
 # Investigate action
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db

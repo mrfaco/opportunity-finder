@@ -21,12 +21,12 @@
       <thead class="bg-base-50 dark:bg-base-800 sticky top-0 z-10">
         <tr>
           <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Title</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Size</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Avg conf</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Max conf</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Last seen</th>
+          {% include "admin/clusters/_sort_th.html" with col="size" label="Size" %}
+          {% include "admin/clusters/_sort_th.html" with col="avg_conf" label="Avg conf" %}
+          {% include "admin/clusters/_sort_th.html" with col="max_conf" label="Max conf" %}
+          {% include "admin/clusters/_sort_th.html" with col="last_seen" label="Last seen" %}
           <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Status</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Priority</th>
+          {% include "admin/clusters/_sort_th.html" with col="priority" label="Priority" %}
           <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Action</th>
         </tr>
       </thead>

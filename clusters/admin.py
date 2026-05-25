@@ -106,8 +106,29 @@ class ClusterAdmin(UnfoldModelAdmin):
     # Triage dashboard — ranks un-investigated clusters so a human can
     # decide which one is worth burning an investigation budget on.
     # ------------------------------------------------------------------
+    # Whitelist of sortable column keys for the triage view → the lambda
+    # that pulls the comparison value out of a row dict. Anything not in
+    # this map is silently rejected back to the default (priority desc),
+    # so query-string fiddling can't break the sort.
+    _TRIAGE_SORT_KEYS = {
+        "priority": lambda r: float(r["priority"]),
+        "size": lambda r: r["size"],
+        "avg_conf": lambda r: r["avg_conf"],
+        "max_conf": lambda r: r["max_conf"],
+        # last_seen sorts by recency: desc = "most recently seen first".
+        # ``days_since`` is None for clusters with no items; treat as
+        # infinitely stale so it sinks under any real timestamp.
+        "last_seen": lambda r: float("inf") if r["days_since"] is None else r["days_since"],
+    }
+
     def triage_view(self, request):
         show_all = request.GET.get("show") == "all"
+        sort_key = request.GET.get("sort") or "priority"
+        if sort_key not in self._TRIAGE_SORT_KEYS:
+            sort_key = "priority"
+        direction = request.GET.get("dir") or "desc"
+        if direction not in ("asc", "desc"):
+            direction = "desc"
 
         # Annotate aggregates the agent doesn't already cache on Cluster.
         # ``first_item_title`` falls back to the highest-confidence item's
@@ -158,7 +179,14 @@ class ClusterAdmin(UnfoldModelAdmin):
                     "priority": priority,
                 }
             )
-        rows.sort(key=lambda r: float(r["priority"]), reverse=True)  # type: ignore[arg-type]
+        # last_seen is recency-flavored: "desc" should mean "most recent
+        # first", which is ascending order on days_since. Flip the
+        # reverse flag for that one column so the UX matches the label.
+        key_fn = self._TRIAGE_SORT_KEYS[sort_key]
+        reverse = direction == "desc"
+        if sort_key == "last_seen":
+            reverse = not reverse
+        rows.sort(key=key_fn, reverse=reverse)
         for i, row in enumerate(rows):
             row["highlight"] = i < _HIGHLIGHT_TOP_N
 
@@ -166,6 +194,8 @@ class ClusterAdmin(UnfoldModelAdmin):
             **self.admin_site.each_context(request),
             "title": "Cluster triage",
             "rows": rows,
+            "sort_key": sort_key,
+            "sort_dir": direction,
             "show_all": show_all,
         }
         return render(request, "admin/clusters/triage.html", context)

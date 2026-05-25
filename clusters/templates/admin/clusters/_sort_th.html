@@ -1,0 +1,38 @@
+{# Sortable column header for the triage table. #}
+{# Inputs (passed via {% include with %}): #}
+{#   col   — sort key (must match clusters.admin.ClusterAdmin._TRIAGE_SORT_KEYS) #}
+{#   label — visible header text #}
+{# Reads from parent context: sort_key, sort_dir, show_all #}
+{% spaceless %}
+{% if sort_key == col %}
+  {% if sort_dir == "desc" %}
+    {% with new_dir="asc" arrow="↓" %}
+      <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">
+        <a href="?{% if show_all %}show=all&amp;{% endif %}sort={{ col }}&amp;dir={{ new_dir }}"
+           class="inline-flex items-center gap-1 hover:text-base-900 dark:hover:text-base-50"
+           title="Sorted descending — click to flip">
+          {{ label }} <span class="text-base-900 dark:text-base-50">{{ arrow }}</span>
+        </a>
+      </th>
+    {% endwith %}
+  {% else %}
+    {% with new_dir="desc" arrow="↑" %}
+      <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">
+        <a href="?{% if show_all %}show=all&amp;{% endif %}sort={{ col }}&amp;dir={{ new_dir }}"
+           class="inline-flex items-center gap-1 hover:text-base-900 dark:hover:text-base-50"
+           title="Sorted ascending — click to flip">
+          {{ label }} <span class="text-base-900 dark:text-base-50">{{ arrow }}</span>
+        </a>
+      </th>
+    {% endwith %}
+  {% endif %}
+{% else %}
+  <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">
+    <a href="?{% if show_all %}show=all&amp;{% endif %}sort={{ col }}&amp;dir=desc"
+       class="inline-flex items-center gap-1 hover:text-base-900 dark:hover:text-base-50 opacity-70 hover:opacity-100"
+       title="Click to sort by {{ label }}">
+      {{ label }}
+    </a>
+  </th>
+{% endif %}
+{% endspaceless %}
