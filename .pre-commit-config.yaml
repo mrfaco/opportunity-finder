@@ -65,6 +65,19 @@ repos:
         # Prompts are load-bearing; malformed frontmatter would fail at
         # run-start. Catch it at commit time instead.
 
+      - id: admin-ui-legibility
+        name: admin UI dark-mode legibility (soft warn)
+        entry: python scripts/check_admin_ui_legibility.py
+        language: system
+        files: ^.+/templates/admin/.*\.html$
+        pass_filenames: true
+        verbose: true
+        # Soft hook (exits 0): flags Tailwind classes that don't render in
+        # Unfold's CSS bundle and would fall back to white-on-dark — slate-*
+        # colors, /<N> opacity modifiers, prose-* typography classes, and
+        # bg-white without a paired dark: variant. Suppress a single line
+        # with `<!-- ui-legibility: ok -->`. Pass --strict to enforce in CI.
+
       - id: missing-migrations
         name: Django models in sync with migrations
         entry: scripts/check_missing_migrations.sh
