@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from django.utils import timezone
 
@@ -84,7 +85,7 @@ def test_hn_adapter_paginates(monkeypatch):
 # ---------------------------------------------------------------------------
 # GitHubAdapter — mocked Search API response
 # ---------------------------------------------------------------------------
-from ingestion.adapters.github import GitHubAdapter  # noqa: E402
+from ingestion.adapters.github import GitHubAdapter, GitHubRateLimitError  # noqa: E402
 
 
 def _github_hit(
@@ -112,6 +113,31 @@ def _github_hit(
     }
 
 
+def _fake_response(
+    status_code: int = 200,
+    *,
+    json_data: dict | None = None,
+    headers: dict[str, str] | None = None,
+):
+    """Lightweight stand-in for ``httpx.Response`` used by the fake_get hook."""
+    response_headers = headers or {}
+
+    def raise_for_status():
+        if status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"HTTP {status_code}",
+                request=httpx.Request("GET", "https://api.github.com/search/issues"),
+                response=httpx.Response(status_code, headers=response_headers),
+            )
+
+    return SimpleNamespace(
+        status_code=status_code,
+        headers=response_headers,
+        json=lambda: json_data or {},
+        raise_for_status=raise_for_status,
+    )
+
+
 def test_github_adapter_parses_hits(monkeypatch):
     payload = {
         "items": [
@@ -124,7 +150,7 @@ def test_github_adapter_parses_hits(monkeypatch):
     def fake_get(url, params, headers, timeout):  # noqa: ARG001
         captured["params"] = params
         captured["headers"] = headers
-        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: payload)
+        return _fake_response(200, json_data=payload)
 
     monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
     items = list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
@@ -157,7 +183,7 @@ def test_github_adapter_paginates(monkeypatch):
     }
 
     def fake_get(url, params, headers, timeout):  # noqa: ARG001
-        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: pages[params["page"]])
+        return _fake_response(200, json_data=pages[params["page"]])
 
     monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
     items = list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
@@ -170,7 +196,7 @@ def test_github_adapter_sends_auth_header_when_token_set(monkeypatch, settings):
 
     def fake_get(url, params, headers, timeout):  # noqa: ARG001
         captured["headers"] = headers
-        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"items": []})
+        return _fake_response(200, json_data={"items": []})
 
     monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
     list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
@@ -183,11 +209,94 @@ def test_github_adapter_omits_auth_header_when_token_blank(monkeypatch, settings
 
     def fake_get(url, params, headers, timeout):  # noqa: ARG001
         captured["headers"] = headers
-        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"items": []})
+        return _fake_response(200, json_data={"items": []})
 
     monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
     list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
     assert "Authorization" not in captured["headers"]
+
+
+def test_github_adapter_retries_on_429_with_retry_after(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.github.time.sleep", lambda s: sleeps.append(s))
+
+    responses = iter(
+        [
+            _fake_response(429, headers={"Retry-After": "2"}),
+            _fake_response(200, json_data={"items": []}),
+        ]
+    )
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        return next(responses)
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert sleeps == [2.0]
+
+
+def test_github_adapter_retries_on_403_with_ratelimit_reset(monkeypatch):
+    monkeypatch.setattr("ingestion.adapters.github.time.time", lambda: 1_000_000.0)
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.github.time.sleep", lambda s: sleeps.append(s))
+
+    responses = iter(
+        [
+            _fake_response(
+                403,
+                headers={
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(1_000_005),  # 5s after the patched clock
+                },
+            ),
+            _fake_response(200, json_data={"items": []}),
+        ]
+    )
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        return next(responses)
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert sleeps == [5.0]
+
+
+def test_github_adapter_raises_when_backoff_exceeds_cap(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.github.time.sleep", lambda s: sleeps.append(s))
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        return _fake_response(429, headers={"Retry-After": "3600"})  # 1h > 60s cap
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    with pytest.raises(GitHubRateLimitError, match="3600"):
+        list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert sleeps == []  # never slept — bailed before backoff
+
+
+def test_github_adapter_raises_after_retry_exhaustion(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("ingestion.adapters.github.time.sleep", lambda s: sleeps.append(s))
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        return _fake_response(429, headers={"Retry-After": "1"})
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    with pytest.raises(GitHubRateLimitError, match="still rate-limiting"):
+        list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    # 2 retries → slept twice; third attempt also throttled → raises.
+    assert sleeps == [1.0, 1.0]
+
+
+def test_github_adapter_403_without_ratelimit_headers_raises_loudly(monkeypatch):
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        # Permission/auth 403 — no rate-limit headers. Must NOT be silently
+        # retried; should propagate as HTTPStatusError.
+        return _fake_response(403, headers={})
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    with pytest.raises(httpx.HTTPStatusError):
+        list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
 
 
 # ---------------------------------------------------------------------------

@@ -16,6 +16,8 @@ through 10/min in seconds.
 
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
@@ -24,11 +26,46 @@ from django.conf import settings
 
 from ingestion.adapters.base import IngestedItem, SourceAdapter
 
+logger = logging.getLogger(__name__)
+
 _SEARCH_URL = "https://api.github.com/search/issues"
 _HITS_PER_PAGE = 100
 # GitHub search caps results at 1000; 10 pages × 100 covers the whole window.
 _MAX_PAGES = 10
 _REQUEST_TIMEOUT_S = 20.0
+
+# Rate-limit handling. GitHub signals throttling two ways:
+#   * Primary: 403 with ``X-RateLimit-Remaining: 0`` and ``X-RateLimit-Reset``
+#     (unix timestamp). Resets hourly for the search API.
+#   * Secondary / abuse: 403 or 429 with ``Retry-After`` (seconds).
+# A bare 403 with neither header is a permission error and must still raise.
+_RATE_LIMIT_STATUSES = frozenset({403, 429})
+_MAX_RETRIES = 2  # 3 attempts total per page
+_MAX_WAIT_S = 60.0  # longer waits → raise so Celery worker isn't pinned
+
+
+class GitHubRateLimitError(RuntimeError):
+    """GitHub asked us to back off for longer than we're willing to wait."""
+
+
+def _rate_limit_wait(response: httpx.Response) -> float | None:
+    """Return seconds to wait if this is a rate-limit response, else None.
+
+    Honors ``Retry-After`` (secondary limit) first, then falls back to
+    ``X-RateLimit-Reset`` (primary limit). A status in the rate-limit set
+    without either header is a permission/auth error — return None so the
+    caller raises.
+    """
+    if response.status_code not in _RATE_LIMIT_STATUSES:
+        return None
+    retry_after = response.headers.get("Retry-After")
+    if retry_after is not None:
+        return max(0.0, float(retry_after))
+    if response.headers.get("X-RateLimit-Remaining") == "0":
+        reset = response.headers.get("X-RateLimit-Reset")
+        if reset is not None:
+            return max(0.0, float(reset) - time.time())
+    return None
 
 
 class GitHubAdapter(SourceAdapter):
@@ -48,21 +85,52 @@ class GitHubAdapter(SourceAdapter):
         return headers
 
     def _search(self, query: str, page: int) -> dict:
-        """One page of the ``/search/issues`` endpoint (newest first)."""
-        response = httpx.get(
-            _SEARCH_URL,
-            params={
-                "q": query,
-                "sort": "created",
-                "order": "desc",
-                "per_page": _HITS_PER_PAGE,
-                "page": page,
-            },
-            headers=self._headers(),
-            timeout=_REQUEST_TIMEOUT_S,
-        )
-        response.raise_for_status()
-        return response.json()
+        """One page of the ``/search/issues`` endpoint (newest first).
+
+        Retries up to ``_MAX_RETRIES`` times on 403/429 rate-limit responses,
+        honoring ``Retry-After`` / ``X-RateLimit-Reset``. Bails loudly if the
+        requested wait exceeds ``_MAX_WAIT_S`` — the scheduled run will pick
+        up from the checkpoint next tick.
+        """
+        params: dict[str, str | int] = {
+            "q": query,
+            "sort": "created",
+            "order": "desc",
+            "per_page": _HITS_PER_PAGE,
+            "page": page,
+        }
+        for attempt in range(_MAX_RETRIES + 1):
+            response = httpx.get(
+                _SEARCH_URL,
+                params=params,
+                headers=self._headers(),
+                timeout=_REQUEST_TIMEOUT_S,
+            )
+            wait_s = _rate_limit_wait(response)
+            if wait_s is None:
+                response.raise_for_status()
+                return response.json()
+            if wait_s > _MAX_WAIT_S:
+                raise GitHubRateLimitError(
+                    f"GitHub asked for {wait_s:.0f}s backoff (status "
+                    f"{response.status_code}); cap is {_MAX_WAIT_S:.0f}s"
+                )
+            if attempt == _MAX_RETRIES:
+                raise GitHubRateLimitError(
+                    f"GitHub still rate-limiting after {_MAX_RETRIES + 1} attempts "
+                    f"(status {response.status_code})"
+                )
+            logger.warning(
+                "github rate-limited (status=%s, page=%s); sleeping %.1fs (attempt %s/%s)",
+                response.status_code,
+                page,
+                wait_s,
+                attempt + 1,
+                _MAX_RETRIES + 1,
+            )
+            time.sleep(wait_s)
+        # Loop always returns or raises; this line satisfies mypy.
+        raise AssertionError("unreachable")
 
     def _to_item(self, hit: dict) -> IngestedItem:
         # ``owner/repo#number`` is the stable identifier — survives forks/renames
