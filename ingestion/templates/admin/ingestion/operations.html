@@ -91,8 +91,9 @@
       </thead>
       <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
         {% for tr in task_runs %}
-          <tr>
+          <tr data-expand-trigger style="cursor:pointer" class="hover:bg-base-100 dark:hover:bg-base-800">
             <td class="px-4 py-2 text-sm whitespace-nowrap">
+              <span data-expand-caret style="display:inline-block;width:10px;color:#94a3b8;margin-right:4px;transition:transform 120ms;">▶</span>
               {% if tr.status == "SUCCESS" %}
                 <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.12);color:#34d399;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);white-space:nowrap;">success</span>
               {% elif tr.status == "FAILURE" %}
@@ -110,7 +111,7 @@
             <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ tr.date_created|date:"Y-m-d H:i:s" }}</td>
             <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">
               {% if tr.status == "FAILURE" %}
-                <code class="font-mono text-xs text-red-300" title="{{ tr.traceback|default:'' }}">{{ tr.result|truncatechars:120 }}</code>
+                <code class="font-mono text-xs text-red-300">{{ tr.result|truncatechars:120 }}</code>
               {% elif tr.status == "STARTED" %}
                 <span class="text-base-500 dark:text-base-400 italic">running…</span>
               {% else %}
@@ -118,10 +119,59 @@
               {% endif %}
             </td>
           </tr>
+          <tr data-expand-panel hidden>
+            <td colspan="5" class="px-4 py-4 bg-base-50 dark:bg-base-800/50">
+              <dl class="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
+                <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Task ID</dt>
+                <dd class="font-mono text-xs text-base-800 dark:text-base-100 break-all">{{ tr.task_id }}</dd>
+
+                <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Kwargs</dt>
+                <dd class="font-mono text-xs text-base-800 dark:text-base-100">{{ tr.task_kwargs|default:"{}" }}</dd>
+
+                <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Worker</dt>
+                <dd class="font-mono text-xs text-base-800 dark:text-base-100">{{ tr.worker|default:"—" }}</dd>
+
+                <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Done at</dt>
+                <dd class="text-xs text-base-800 dark:text-base-100">{{ tr.date_done|date:"Y-m-d H:i:s"|default:"—" }}</dd>
+
+                {% if tr.result %}
+                  <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Result</dt>
+                  <dd>
+                    <pre class="font-mono text-xs leading-relaxed text-base-800 dark:text-base-100 p-3 rounded bg-base-100 dark:bg-base-900 overflow-auto" style="max-height:240px;white-space:pre-wrap;word-break:break-word;">{{ tr.result }}</pre>
+                  </dd>
+                {% endif %}
+
+                {% if tr.traceback %}
+                  <dt class="text-xs uppercase tracking-wider font-semibold text-red-500 dark:text-red-400">Traceback</dt>
+                  <dd>
+                    <pre class="font-mono text-xs leading-relaxed text-red-200 p-3 rounded overflow-auto" style="background:rgba(239,68,68,0.08);max-height:400px;white-space:pre-wrap;word-break:break-word;">{{ tr.traceback }}</pre>
+                  </dd>
+                {% endif %}
+              </dl>
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  <script>
+    (function(){
+      document.querySelectorAll('tr[data-expand-trigger]').forEach(function(row){
+        row.addEventListener('click', function(){
+          var panel = row.nextElementSibling;
+          if (!panel || !panel.hasAttribute('data-expand-panel')) return;
+          var caret = row.querySelector('[data-expand-caret]');
+          if (panel.hasAttribute('hidden')) {
+            panel.removeAttribute('hidden');
+            if (caret) caret.style.transform = 'rotate(90deg)';
+          } else {
+            panel.setAttribute('hidden', '');
+            if (caret) caret.style.transform = '';
+          }
+        });
+      });
+    })();
+  </script>
 {% else %}
   {% include "admin/_ux/_empty_state.html" with title="No ingestion runs yet" body="Trigger a Run incremental or backfill to populate this list." %}
 {% endif %}
