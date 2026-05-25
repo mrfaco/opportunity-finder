@@ -98,7 +98,9 @@ Replace with:
 
 ```python
 INSTALLED_APPS = [
-    "unfold",
+    # Use BasicAppConfig (not the default), so Unfold doesn't hijack
+    # admin.site away from PainMinerAdminConfig's default_site.
+    "unfold.apps.BasicAppConfig",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "core.admin_apps.PainMinerAdminConfig",
@@ -106,6 +108,8 @@ INSTALLED_APPS = [
 ```
 
 The three `unfold*` entries MUST precede `core.admin_apps.PainMinerAdminConfig` so Unfold's templates win the search path against Django's.
+
+**Important:** use `unfold.apps.BasicAppConfig`, NOT the bare `"unfold"`. The default Unfold AppConfig (`DefaultAppConfig.ready()`) directly reassigns `admin.site = UnfoldAdminSite()`, which bypasses `PainMinerAdminConfig.default_site` and drops every custom URL. `BasicAppConfig` skips that reassignment, so our `PainMinerAdminSite` (subclass of `UnfoldAdminSite` per Task 2) stays as `admin.site`.
 
 - [ ] **Step 1.5 — Add the `UNFOLD` configuration dict**
 
