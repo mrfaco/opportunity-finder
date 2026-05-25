@@ -206,6 +206,15 @@ STACKEXCHANGE_KEY = env("STACKEXCHANGE_KEY", default="")
 # On the first ingestion run for a source (no checkpoint yet), how far back to
 # reach. Subsequent runs only pull items newer than the stored checkpoint.
 INGEST_HN_INITIAL_DAYS = env.int("INGEST_HN_INITIAL_DAYS", default=7)
+INGEST_GITHUB_INITIAL_DAYS = env.int("INGEST_GITHUB_INITIAL_DAYS", default=2)
+# GitHub Search query for the ingestion adapter. Bias toward feature
+# requests ("I wish X did Y") because they read as unmet needs. Override
+# via env to widen or narrow the funnel — e.g. add ``reactions:>5`` to
+# only pull issues with social proof, or ``label:bug`` for bug reports.
+INGEST_GITHUB_QUERY = env(
+    "INGEST_GITHUB_QUERY",
+    default="label:enhancement is:open",
+)
 
 # ---------------------------------------------------------------------------
 # Default budgets for agent runs

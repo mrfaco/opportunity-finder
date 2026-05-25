@@ -11,6 +11,7 @@ from celery import shared_task
 from agents import prompts as prompt_loader
 from agents.cost import compute_cost
 from ingestion.adapters.base import SourceAdapter
+from ingestion.adapters.github import GitHubAdapter
 from ingestion.adapters.hacker_news import HackerNewsAdapter
 from ingestion.backfill import backfill_from_adapter
 from ingestion.filter import classify_content
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 # duplicating the mapping.
 ADAPTERS: dict[str, type[SourceAdapter]] = {
     HackerNewsAdapter.source: HackerNewsAdapter,
+    GitHubAdapter.source: GitHubAdapter,
 }
 
 

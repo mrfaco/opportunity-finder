@@ -82,6 +82,112 @@ def test_hn_adapter_paginates(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# GitHubAdapter — mocked Search API response
+# ---------------------------------------------------------------------------
+from ingestion.adapters.github import GitHubAdapter  # noqa: E402
+
+
+def _github_hit(
+    number: int,
+    repo: str,
+    title: str,
+    body: str,
+    *,
+    created_at: str = "2026-05-01T12:00:00Z",
+    reactions: int = 0,
+    labels: tuple[str, ...] = ("enhancement",),
+) -> dict:
+    return {
+        "number": number,
+        "title": title,
+        "body": body,
+        "html_url": f"https://github.com/{repo}/issues/{number}",
+        "repository_url": f"https://api.github.com/repos/{repo}",
+        "created_at": created_at,
+        "user": {"login": "someone"},
+        "comments": 3,
+        "state": "open",
+        "reactions": {"total_count": reactions},
+        "labels": [{"name": lab} for lab in labels],
+    }
+
+
+def test_github_adapter_parses_hits(monkeypatch):
+    payload = {
+        "items": [
+            _github_hit(42, "acme/tool", "Add CSV export", "Users want CSV exports of the report."),
+        ],
+        "total_count": 1,
+    }
+    captured = {}
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        captured["params"] = params
+        captured["headers"] = headers
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: payload)
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    items = list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+
+    assert len(items) == 1
+    item = items[0]
+    assert item.source == "github"
+    assert item.source_item_id == "acme/tool#42"
+    assert item.url == "https://github.com/acme/tool/issues/42"
+    assert item.title == "Add CSV export"
+    assert "CSV exports" in item.raw_text
+    assert item.author == "someone"
+    assert item.metadata["repo"] == "acme/tool"
+    assert item.metadata["labels"] == ["enhancement"]
+    # Query string was assembled with the configured base + created window.
+    assert "created:>2026-01-01" in captured["params"]["q"]
+    assert captured["params"]["sort"] == "created"
+    assert captured["params"]["order"] == "desc"
+
+
+def test_github_adapter_paginates(monkeypatch):
+    # Two pages of 100 each, then one short page that ends the loop.
+    pages = {
+        1: {"items": [_github_hit(i, "acme/tool", f"t{i}", "b") for i in range(1, 101)]},
+        2: {"items": [_github_hit(i, "acme/tool", f"t{i}", "b") for i in range(101, 201)]},
+        3: {"items": [_github_hit(201, "acme/tool", "t201", "b")]},  # short page → stop
+    }
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: pages[params["page"]])
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    items = list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert len(items) == 201
+
+
+def test_github_adapter_sends_auth_header_when_token_set(monkeypatch, settings):
+    settings.GITHUB_TOKEN = "test-pat-xyz"
+    captured = {}
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        captured["headers"] = headers
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"items": []})
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert captured["headers"]["Authorization"] == "Bearer test-pat-xyz"
+
+
+def test_github_adapter_omits_auth_header_when_token_blank(monkeypatch, settings):
+    settings.GITHUB_TOKEN = ""
+    captured = {}
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        captured["headers"] = headers
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"items": []})
+
+    monkeypatch.setattr("ingestion.adapters.github.httpx.get", fake_get)
+    list(GitHubAdapter().fetch_new_items(since=datetime(2026, 1, 1, tzinfo=UTC)))
+    assert "Authorization" not in captured["headers"]
+
+
+# ---------------------------------------------------------------------------
 # Pipeline — mocked adapter / classifier / embeddings
 # ---------------------------------------------------------------------------
 class _FakeAdapter:
