@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from django.contrib import admin, messages
+from django.shortcuts import render
 from django.utils import timezone
 
 from investigations.models import Investigation, InvestigationStatus, StaleReason
+
+_LATEST_LIMIT = 50
 
 
 @admin.register(Investigation)
@@ -94,3 +97,45 @@ class InvestigationAdmin(admin.ModelAdmin):
     def promote_to_eval_set(self, request, queryset):
         n = queryset.update(in_eval_set=True)
         messages.success(request, f"Added {n} to the eval set.")
+
+    # ------------------------------------------------------------------
+    # Latest investigations dashboard — newest-first list of generated
+    # briefs with headline/confidence/cost pulled out for scanning.
+    # The standard changelist defaults to "awaiting review" only; this
+    # view includes all statuses (filter via ?status=...) and surfaces
+    # the brief's interesting bits without one-by-one drill-down.
+    # ------------------------------------------------------------------
+    def latest_view(self, request):
+        status_filter = request.GET.get("status")
+        qs = Investigation.objects.select_related("cluster", "primary_run").order_by("-created_at")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        rows = []
+        for inv in qs[:_LATEST_LIMIT]:
+            brief = inv.brief or {}
+            rows.append(
+                {
+                    "investigation": inv,
+                    "headline": brief.get("headline") or "(no headline)",
+                    "problem": (brief.get("problem_statement") or "")[:160],
+                    "confidence": brief.get("confidence"),
+                    "target_user": (brief.get("target_user") or "")[:120],
+                    "cluster": inv.cluster,
+                    "run": inv.primary_run,
+                    "cost_usd": inv.primary_run.cost_used_usd,
+                    "steps": inv.primary_run.steps_used,
+                    "created_at": inv.created_at,
+                    "status": inv.status,
+                }
+            )
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Latest investigations",
+            "rows": rows,
+            "status_choices": InvestigationStatus.choices,
+            "current_status": status_filter,
+            "limit": _LATEST_LIMIT,
+        }
+        return render(request, "admin/investigations/latest.html", context)

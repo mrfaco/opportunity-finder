@@ -56,6 +56,13 @@ class PainMinerAdminSite(AdminSite):
                     "view_only": True,
                     "perms": {"view": True},
                 },
+                {
+                    "name": "Latest investigations",
+                    "object_name": "LatestInvestigations",
+                    "admin_url": "/admin/investigations/latest/",
+                    "view_only": True,
+                    "perms": {"view": True},
+                },
             ],
         }
         return [dashboards, *app_list]
@@ -70,12 +77,15 @@ class PainMinerAdminSite(AdminSite):
         from clusters.models import Cluster  # noqa: PLC0415
         from ingestion.admin import FilterEvalSetAdmin  # noqa: PLC0415
         from ingestion.models import FilterEvalSet  # noqa: PLC0415
+        from investigations.admin import InvestigationAdmin  # noqa: PLC0415
+        from investigations.models import Investigation  # noqa: PLC0415
 
         # Reuse the views already defined on the ModelAdmins so we don't
         # duplicate logic between the model namespace and the app namespace.
         agents_admin = AgentRunAdmin(AgentRun, self)
         clusters_admin = ClusterAdmin(Cluster, self)
         ingestion_admin = FilterEvalSetAdmin(FilterEvalSet, self)
+        investigations_admin = InvestigationAdmin(Investigation, self)
 
         custom = [
             path(
@@ -112,6 +122,11 @@ class PainMinerAdminSite(AdminSite):
                 "ingestion/filter-eval-history/",
                 self.admin_view(ingestion_admin.eval_history_view),
                 name="ingestion-filter-eval-history",
+            ),
+            path(
+                "investigations/latest/",
+                self.admin_view(investigations_admin.latest_view),
+                name="investigations-latest",
             ),
         ]
         return custom + super().get_urls()

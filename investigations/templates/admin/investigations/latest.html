@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Latest investigations</h1>
+
+<p style="margin:0.5em 0; color:#666">
+  Newest first, up to {{ limit }} rows. Filter:
+  <a href="?">all</a>
+  {% for value, label in status_choices %}
+    | <a href="?status={{ value }}" {% if current_status == value %}style="font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Created</th>
+      <th>Headline</th>
+      <th>Conf</th>
+      <th>Cluster</th>
+      <th>Status</th>
+      <th>Cost</th>
+      <th>Steps</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.created_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <a href="/admin/investigations/investigation/{{ row.investigation.id }}/change/">
+            <strong>{{ row.headline|truncatechars:90 }}</strong>
+          </a>
+          {% if row.problem %}<div style="color:#666; font-size:0.9em">{{ row.problem }}{% if row.problem|length >= 160 %}…{% endif %}</div>{% endif %}
+          {% if row.target_user %}<div style="color:#888; font-size:0.85em">→ {{ row.target_user }}</div>{% endif %}
+        </td>
+        <td>{% if row.confidence is not None %}{{ row.confidence|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td>
+          <a href="/admin/clusters/cluster/{{ row.cluster.id }}/change/">
+            {{ row.cluster.title|default:row.cluster.id|truncatechars:40 }}
+          </a>
+        </td>
+        <td>{{ row.status }}</td>
+        <td>${{ row.cost_usd|default:"0" }}</td>
+        <td>{{ row.steps }}</td>
+        <td>
+          <a href="/admin/agents/run/{{ row.run.id }}/trajectory/">trajectory</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center; padding:1em">
+          No investigations yet. Pick a cluster from the
+          <a href="/admin/clusters/triage/">triage queue</a> and click Investigate.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
