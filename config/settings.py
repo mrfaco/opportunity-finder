@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "ingestion",
     "agents",
     "investigations",
+    "ideation",
     "notifications",
 ]
 
@@ -106,6 +107,7 @@ CELERY_TIMEZONE = "UTC"
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
 MODEL_FILTER = env("MODEL_FILTER", default="claude-haiku-4-5")
 MODEL_INVESTIGATION = env("MODEL_INVESTIGATION", default="claude-sonnet-4-6")
+MODEL_IDEATION = env("MODEL_IDEATION", default="claude-sonnet-4-6")
 
 # ---------------------------------------------------------------------------
 # Embeddings — Voyage AI. voyage-3.5 outputs 1024-dim vectors natively,

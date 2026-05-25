@@ -185,13 +185,15 @@ Add `"ideation"` entry to `AGENT_TOOLSETS` in `agents/tools/__init__.py`:
     "fetch_url",
     "search_hacker_news",
     "fetch_hn_item",
-    "query_known_competitors",
-    "query_trustmrr",
+    "search_github_issues",     # competitor research — issues reveal pain in incumbents
+    "search_stack_overflow",    # same
     "record_ideation",          # NEW — terminal tool, analogous to record_brief
 ],
 ```
 
-All tools other than `record_ideation` already exist in the registry. Only `record_ideation` is new (new entry in `agents/tools/stubs.py` registering the `Ideation` Pydantic schema as input, intercepted by the loop similarly to `record_brief`).
+`query_known_competitors` and `query_trustmrr` were initially considered but are currently `NotImplementedError` stubs (see `agents/tools/stubs.py`); they cannot be exposed until they have real implementations. The investigation prompt mentions them but they are not in `AGENT_TOOLSETS["investigation"]` either — the registry exposes only implemented tools to the agent. When either lands a real impl, add it to the ideation toolset alongside investigation.
+
+All other tools already exist in the registry. Only `record_ideation` is new (new entry in `agents/tools/stubs.py` registering the `IdeationOutput` Pydantic schema as input, intercepted by the loop similarly to `record_brief`).
 
 **No specialized tools in v1.** `check_github_repo` and `check_pricing_page` are explicitly deferred — `fetch_url` covers both for now.
 

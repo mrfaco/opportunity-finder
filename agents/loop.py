@@ -1,14 +1,21 @@
-"""Investigation agent loop.
+"""Agent loop — investigation and ideation.
 
 The loop is intentionally split from the orchestrator. The orchestrator owns
 persistence + budget enforcement + tool dispatch + trajectory logging; the
 loop's only job is to consume snapshots, drive the model, and decide when to
-emit a final brief.
+emit a final structured artifact.
 
 ``_call_model`` is a live Anthropic call (system + tools cached as the
-stable prefix). The agent signals termination by calling the ``record_brief``
-tool; the loop intercepts that call, persists the brief on the ``AgentRun``,
-creates the ``Investigation`` row, and exits.
+stable prefix). The agent signals termination by calling its terminal tool:
+``record_brief`` for the investigation agent, ``record_ideation`` for the
+ideation agent. The loop intercepts that call, persists the output on the
+``AgentRun``, updates the corresponding artifact row, and exits.
+
+Behavior diverges between the two agents at three points only — initial
+history, model-selection key, and terminal-tool persistence. Everything
+else (tool dispatch, budget enforcement, trajectory logging, retries) is
+shared. The branches are kept in this single file rather than split into
+two loops; if the divergence grows past a few small forks, extract.
 """
 
 from __future__ import annotations
@@ -38,6 +45,7 @@ from agents.models import (
     ToolStatus,
 )
 from core.anthropic_client import get_client
+from ideation.models import Ideation, IdeationStatus
 from investigations.models import Investigation
 
 logger = logging.getLogger(__name__)
@@ -57,10 +65,9 @@ class LoopAbort(Exception):
 def _build_initial_history(run: AgentRun) -> list[dict[str, Any]]:
     """Construct the model's starting conversation from the run snapshot.
 
-    Includes the system + procedural prompts and a structured "here's your
-    cluster" first user turn. Just-in-time loading: only the cluster summary
-    is included up front; the agent fetches full member content via
-    ``query_cluster`` if it needs detail.
+    Includes the system + procedural prompts and a structured first user
+    turn whose content depends on the agent: investigation gets a cluster
+    summary; ideation gets the investigation brief + guidance.
     """
     snapshot_prompts = run.config_snapshot.get("prompts", {})
     history: list[dict[str, Any]] = []
@@ -70,6 +77,38 @@ def _build_initial_history(run: AgentRun) -> list[dict[str, Any]]:
         history.append({"role": "system", "content": system})
     if procedural:
         history.append({"role": "user", "content": procedural})
+
+    if run.agent_name == "ideation":
+        ideation_input = run.config_snapshot.get("ideation_input", {})
+        inv = ideation_input.get("investigation", {})
+        brief = inv.get("brief", {})
+        cluster = run.cluster_snapshot
+        guidance = ideation_input.get("guidance", "")
+        guidance_block = f"\nHuman guidance for this re-ideation:\n{guidance}\n" if guidance else ""
+        history.append(
+            {
+                "role": "user",
+                "content": (
+                    f"Ideate on investigation {inv.get('id')} "
+                    f"(cluster {cluster.get('id')}).\n"
+                    f"investigation_id (copy verbatim into output): {inv.get('id')}\n"
+                    f"ideation_id (do not include in output; for the loop): "
+                    f"{ideation_input.get('ideation_id')}\n"
+                    f"{guidance_block}"
+                    "The investigation brief (your starting point — do not "
+                    "re-litigate whether the pain is real):\n"
+                    f"```json\n{json.dumps(brief, indent=2)}\n```\n\n"
+                    "Cluster summary for orientation:\n"
+                    f"Title: {cluster.get('title') or '(none yet)'}\n"
+                    f"Summary: {cluster.get('summary') or '(none yet)'}\n"
+                    f"Size: {cluster.get('size')} · Sources: {cluster.get('sources')}\n"
+                    "Call query_cluster if you need the original user voice "
+                    "from the cluster items."
+                ),
+            }
+        )
+        return history
+
     cluster = run.cluster_snapshot
     history.append(
         {
@@ -216,7 +255,7 @@ def run_loop(run_id: UUID | str) -> None:
         hard_duration_limit_s=run.budget_max_duration_s,
     )
     history = _build_initial_history(run)
-    model_name = run.config_snapshot["model_selection"].get("investigation")
+    model_name = run.config_snapshot["model_selection"].get(run.agent_name)
     tool_defs = tool_registry.export_mcp_definitions(run.agent_name)
     start_time = time.monotonic()
     event_seq = 0
@@ -292,10 +331,11 @@ def run_loop(run_id: UUID | str) -> None:
 
             # Dispatch every tool the model called this turn. Collect the
             # results into one user message of tool_result blocks (also the
-            # Anthropic-required shape). Record any record_brief input as
+            # Anthropic-required shape). Record any terminal-tool input as
             # the run's final output and break the loop after the turn.
             tool_results: list[dict[str, Any]] = []
             brief_to_record: dict[str, Any] | None = None
+            ideation_to_record: dict[str, Any] | None = None
 
             for call in response["tool_calls"]:
                 tool_name = call["name"]
@@ -350,13 +390,14 @@ def run_loop(run_id: UUID | str) -> None:
                 )
                 if tool_name == "record_brief" and output.get("status") == "success":
                     brief_to_record = tool_input
+                if tool_name == "record_ideation" and output.get("status") == "success":
+                    ideation_to_record = tool_input
 
             if tool_results:
                 history.append({"role": "user", "content": tool_results})
 
             if brief_to_record is not None:
-                # The agent's "I'm done" signal. Persist the brief, create
-                # the Investigation row, and break the loop.
+                # The investigation agent's "I'm done" signal.
                 run.final_output = brief_to_record
                 run.termination_reason = TerminationReason.AGENT_DECIDED_DONE
                 run.status = AgentRunStatus.COMPLETED
@@ -365,6 +406,23 @@ def run_loop(run_id: UUID | str) -> None:
                     primary_run=run,
                     brief=brief_to_record,
                     cluster_snapshot=run.cluster_snapshot,
+                )
+                break
+
+            if ideation_to_record is not None:
+                # The ideation agent's "I'm done" signal. Persist the
+                # output onto the existing Ideation row that the
+                # ideation orchestrator pre-created, and flip to
+                # awaiting_review.
+                run.final_output = ideation_to_record
+                run.termination_reason = TerminationReason.AGENT_DECIDED_DONE
+                run.status = AgentRunStatus.COMPLETED
+                ideation_id = run.config_snapshot.get("ideation_input", {}).get("ideation_id")
+                Ideation.objects.filter(pk=ideation_id).update(
+                    output=ideation_to_record,
+                    output_schema_version=ideation_to_record.get("schema_version", "1.0"),
+                    primary_run=run,
+                    status=IdeationStatus.AWAITING_REVIEW,
                 )
                 break
 

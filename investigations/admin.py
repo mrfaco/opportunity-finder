@@ -4,6 +4,7 @@ from django.contrib import admin, messages
 from django.shortcuts import render
 from django.utils import timezone
 
+from ideation.orchestrator import start_ideation
 from investigations.models import Investigation, InvestigationStatus, StaleReason
 
 _LATEST_LIMIT = 50
@@ -64,15 +65,25 @@ class InvestigationAdmin(admin.ModelAdmin):
                 extra["brief"] = obj.brief
         return super().changeform_view(request, object_id, form_url, extra)
 
-    @admin.action(description="Promote selected investigations")
+    @admin.action(description="Promote selected investigations (and ideate)")
     def promote(self, request, queryset):
-        n = queryset.filter(status=InvestigationStatus.AWAITING_REVIEW).update(
+        # Snapshot the awaiting-review subset before mutating status so we
+        # can enqueue ideation for exactly the rows we promoted.
+        to_promote = list(
+            queryset.filter(status=InvestigationStatus.AWAITING_REVIEW).values_list("id", flat=True)
+        )
+        n = Investigation.objects.filter(pk__in=to_promote).update(
             status=InvestigationStatus.PROMOTED,
             decided_by_user=request.user,
             decided_at=timezone.now(),
             finalized_at=timezone.now(),
         )
-        messages.success(request, f"Promoted {n} investigation(s).")
+        for inv_id in to_promote:
+            start_ideation(investigation_id=inv_id, guidance="", trigger="promote")
+        messages.success(
+            request,
+            f"Promoted {n} investigation(s) and enqueued ideation runs.",
+        )
 
     @admin.action(description="Reject selected investigations")
     def reject(self, request, queryset):

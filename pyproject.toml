@@ -36,7 +36,7 @@ dev = [
 ]
 
 [tool.coverage.run]
-source = ["core", "clusters", "ingestion", "agents", "investigations", "notifications"]
+source = ["core", "clusters", "ingestion", "agents", "investigations", "ideation", "notifications"]
 omit = ["*/migrations/*", "*/tests/*"]
 
 [tool.coverage.report]
@@ -85,6 +85,7 @@ packages = [
     "ingestion",
     "agents",
     "investigations",
+    "ideation",
     "notifications",
 ]
 
@@ -94,7 +95,7 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 # Pre-push hook runs `pytest --cov` against this threshold. Bump the number
 # (never down) as more code lands. See AGENTS.md for the ratchet rule.
-addopts = "--cov --cov-report=term-missing --cov-fail-under=81"
+addopts = "--cov --cov-report=term-missing --cov-fail-under=84"
 
 [tool.ruff]
 line-length = 100

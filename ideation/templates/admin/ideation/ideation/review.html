@@ -1,0 +1,102 @@
+{% extends "admin/change_form.html" %}
+{% block content %}
+{% if ideation %}
+<div style="margin-bottom:1.5em">
+  <p>
+    <strong>Investigation:</strong>
+    <a href="/admin/investigations/investigation/{{ investigation.id }}/change/">
+      {{ investigation.id|slice:":8" }} — {{ investigation.brief.headline|default:"(no headline)" }}
+    </a>
+  </p>
+  <p><strong>Status:</strong> {{ ideation.status }} · created {{ ideation.created_at }}</p>
+  {% if ideation.guidance %}
+    <p><strong>Guidance:</strong> {{ ideation.guidance }}</p>
+  {% endif %}
+  {% if primary_run %}
+    <p>
+      Run <a href="/admin/agents/agentrun/{{ primary_run.id }}/change/">{{ primary_run.id|slice:":8" }}</a>
+      · ${{ primary_run.cost_used_usd }} · {{ primary_run.steps_used }} steps
+      · <a href="/admin/agents/run/{{ primary_run.id }}/trajectory/">trajectory</a>
+    </p>
+  {% endif %}
+  <p>
+    <a href="{{ re_ideate_url }}" class="button">Re-ideate with guidance →</a>
+  </p>
+</div>
+
+{% if concepts %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:1.5em">
+    {% for c in concepts %}
+      <section style="border:1px solid #ddd;padding:1em;background:#fafafa">
+        <h2 style="margin-top:0">{{ c.name }}</h2>
+        <p style="font-size:0.85em;color:#666"><strong>bet axis:</strong> {{ c.bet_axis }}</p>
+        <p><em>{{ c.one_liner }}</em></p>
+
+        <h4>Core features</h4>
+        <ul>{% for f in c.core_features %}<li>{{ f }}</li>{% endfor %}</ul>
+
+        <h4>Explicitly NOT included</h4>
+        <ul>{% for f in c.explicitly_not_included %}<li>{{ f }}</li>{% endfor %}</ul>
+
+        <p><strong>Buyer:</strong> {{ c.buyer }}</p>
+        <p><strong>Pricing hypothesis:</strong> {{ c.rough_pricing_hypothesis }}</p>
+
+        <h4>Competitive landscape</h4>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#eee">
+              <th style="text-align:left;padding:4px">Name</th>
+              <th style="text-align:left;padding:4px">Threat</th>
+              <th style="text-align:left;padding:4px">Overlap / evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for comp in c.competitive_landscape %}
+              <tr style="border-top:1px solid #ddd">
+                <td style="padding:4px">
+                  {% if comp.url %}<a href="{{ comp.url }}">{{ comp.name }}</a>{% else %}{{ comp.name }}{% endif %}
+                </td>
+                <td style="padding:4px">{{ comp.threat_level }}</td>
+                <td style="padding:4px">{{ comp.overlap }} — {{ comp.evidence }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3" style="padding:4px;color:#999">No competitors listed.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <h4>MVP scope · {{ c.mvp_scope.build_size }}</h4>
+        <p style="font-size:0.9em">{{ c.mvp_scope.build_estimate_assumptions }}</p>
+        <p><strong>Minimum features for test:</strong></p>
+        <ul>{% for f in c.mvp_scope.minimum_features_for_test %}<li>{{ f }}</li>{% endfor %}</ul>
+        <p><strong>Deferred to v2:</strong></p>
+        <ul>{% for f in c.mvp_scope.explicitly_deferred_to_v2 %}<li>{{ f }}</li>{% endfor %}</ul>
+
+        <p><strong>First validation test:</strong> {{ c.first_validation_test }}</p>
+
+        <h4>Kill criteria</h4>
+        <ul>{% for k in c.kill_criteria %}<li>{{ k }}</li>{% endfor %}</ul>
+
+        <h4>Fit to builder</h4>
+        <p><strong>Distribution:</strong> {{ c.fit_to_builder.distribution_fit }}</p>
+        <p><strong>Skill:</strong> {{ c.fit_to_builder.skill_fit }}</p>
+        <p><strong>Capital:</strong> {{ c.fit_to_builder.capital_fit }}</p>
+      </section>
+    {% endfor %}
+  </div>
+{% else %}
+  <p style="padding:1em;background:#fff3cd;border:1px solid #ffeaa7">
+    No concepts yet — the agent run is still draft or has not produced output.
+  </p>
+{% endif %}
+
+{% if ideation_notes %}
+  <section style="margin-top:1.5em;padding:1em;background:#f7f7f7;border:1px solid #ddd">
+    <h3>Ideation notes</h3>
+    <p>{{ ideation_notes }}</p>
+  </section>
+{% endif %}
+{% endif %}
+
+{{ block.super }}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Re-ideate investigation</h1>
+<p>
+  <strong>Investigation:</strong>
+  <a href="/admin/investigations/investigation/{{ investigation.id }}/change/">
+    {{ investigation.id|slice:":8" }} — {{ brief.headline|default:"(no headline)" }}
+  </a>
+</p>
+{% if brief.problem_statement %}<p><em>{{ brief.problem_statement }}</em></p>{% endif %}
+
+<form method="post" style="margin-top:1em">
+  {% csrf_token %}
+  <p>
+    <label for="guidance"><strong>Guidance (optional):</strong></label><br>
+    <textarea id="guidance" name="guidance" rows="5" cols="80"
+              placeholder="e.g. 'try a smaller wedge', 'consider an open-source play', 'reframe around the engineer as buyer'"></textarea>
+  </p>
+  <p>
+    <button type="submit" class="default">Run ideation →</button>
+    <a href="/admin/ideation/ideation/" style="margin-left:1em">Cancel</a>
+  </p>
+</form>
+
+<p style="margin-top:2em;color:#666;font-size:0.9em">
+  Submitting creates a new <em>draft</em> ideation and enqueues the agent run.
+  The ideation will flip to <em>awaiting review</em> when the agent finishes.
+</p>
+{% endblock %}
