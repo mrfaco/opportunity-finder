@@ -17,6 +17,19 @@ class PainMinerAdminSite(AdminSite):
     site_title = "Pain-Miner"
     index_title = "Operational dashboards"
 
+    def index(self, request, extra_context=None):
+        """Land on the cluster triage queue instead of the model directory.
+
+        The triage table is what the operator actually wants to see when
+        they open the admin — a ranked list of clusters worth investigating.
+        The full app/model directory is still reachable from the sidebar
+        on every admin page.
+        """
+        from clusters.admin import ClusterAdmin  # noqa: PLC0415
+        from clusters.models import Cluster  # noqa: PLC0415
+
+        return ClusterAdmin(Cluster, self).triage_view(request)
+
     def get_urls(self):
         # Deferred by necessity: this module is imported to *construct* the
         # admin site, while agents/admin.py and ingestion/admin.py register

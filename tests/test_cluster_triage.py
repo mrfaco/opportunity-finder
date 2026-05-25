@@ -234,3 +234,17 @@ def test_cluster_item_detail_page_renders(admin_client):
     assert response.status_code == 200
     body = response.content.decode("utf-8")
     assert "-dim:" in body
+
+
+# ---------------------------------------------------------------------------
+# Admin landing page — /admin/ should serve the triage queue, not the
+# default Django app/model directory.
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+def test_admin_root_serves_triage(admin_client):
+    _make_cluster(size=2, avg_conf=0.8, last_seen_days_ago=1, title="lands-on-triage")
+    response = admin_client.get("/admin/")
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Cluster triage" in body
+    assert "lands-on-triage" in body
