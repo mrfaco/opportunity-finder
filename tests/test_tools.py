@@ -362,3 +362,135 @@ def test_fetch_url_marks_truncated_when_oversized(monkeypatch):
     out = get_tool("fetch_url").dispatch({"url": "https://example.com/p"})
     assert out.status == "success"
     assert out.content_truncated is True
+
+
+# ---------------------------------------------------------------------------
+# web_search (Tavily)
+# ---------------------------------------------------------------------------
+def _fake_post_response(payload: dict) -> SimpleNamespace:
+    return SimpleNamespace(status_code=200, raise_for_status=lambda: None, json=lambda: payload)
+
+
+def test_web_search_parses_hits(monkeypatch, settings):
+    settings.TAVILY_API_KEY = "test-key"
+    payload = {
+        "results": [
+            {
+                "url": "https://example.com/a",
+                "title": "A page",
+                "content": "Snippet about A",
+                "score": 0.95,
+            },
+            {
+                "url": "https://example.com/b",
+                "title": "B page",
+                "content": "Snippet about B",
+                "score": 0.82,
+            },
+        ],
+        "answer": "irrelevant — we don't use it",
+    }
+    monkeypatch.setattr(
+        "agents.tools.stubs.httpx.post",
+        lambda *a, **k: _fake_post_response(payload),
+    )
+    out = get_tool("web_search").dispatch({"query": "django migrations", "limit": 5})
+    assert out.status == "success"
+    assert [h.url for h in out.results] == ["https://example.com/a", "https://example.com/b"]
+    assert out.results[0].snippet == "Snippet about A"
+    assert out.results[0].score == 0.95
+
+
+def test_web_search_missing_key_raises(monkeypatch, settings):
+    settings.TAVILY_API_KEY = ""
+    with pytest.raises(RuntimeError, match="TAVILY_API_KEY"):
+        get_tool("web_search").dispatch({"query": "anything"})
+
+
+# ---------------------------------------------------------------------------
+# search_github_issues
+# ---------------------------------------------------------------------------
+def test_search_github_issues_parses_hits(monkeypatch, settings):
+    settings.GITHUB_TOKEN = "test-pat"
+    payload = {
+        "items": [
+            {
+                "html_url": "https://github.com/django/django/issues/1234",
+                "title": "Squashed migrations break on rollback",
+                "state": "open",
+                "comments": 12,
+                "repository_url": "https://api.github.com/repos/django/django",
+                "created_at": "2024-01-01T00:00:00Z",
+                "body": "When we run rollback after squashing the migrations fail because…",
+            },
+        ]
+    }
+    monkeypatch.setattr(
+        "agents.tools.stubs.httpx.get",
+        lambda *a, **k: SimpleNamespace(raise_for_status=lambda: None, json=lambda: payload),
+    )
+    out = get_tool("search_github_issues").dispatch(
+        {"query": "migration squash rollback", "limit": 10}
+    )
+    assert out.status == "success"
+    assert len(out.results) == 1
+    hit = out.results[0]
+    assert hit.url.endswith("/issues/1234")
+    assert hit.repo == "django/django"
+    assert hit.state == "open"
+    assert hit.comments == 12
+    assert hit.snippet.startswith("When we run rollback")
+
+
+def test_search_github_issues_missing_token_raises(monkeypatch, settings):
+    settings.GITHUB_TOKEN = ""
+    with pytest.raises(RuntimeError, match="GITHUB_TOKEN"):
+        get_tool("search_github_issues").dispatch({"query": "anything"})
+
+
+# ---------------------------------------------------------------------------
+# search_stack_overflow
+# ---------------------------------------------------------------------------
+def test_search_stack_overflow_parses_hits(monkeypatch, settings):
+    settings.STACKEXCHANGE_KEY = "test-key"
+    payload = {
+        "items": [
+            {
+                "link": "https://stackoverflow.com/q/42",
+                "title": "How do I squash migrations?",
+                "score": 17,
+                "answer_count": 3,
+                "is_answered": True,
+                "tags": ["django", "migrations"],
+                "creation_date": 1_700_000_000,
+            },
+        ]
+    }
+    monkeypatch.setattr(
+        "agents.tools.stubs.httpx.get",
+        lambda *a, **k: SimpleNamespace(raise_for_status=lambda: None, json=lambda: payload),
+    )
+    out = get_tool("search_stack_overflow").dispatch({"query": "squash migrations"})
+    assert out.status == "success"
+    assert len(out.results) == 1
+    hit = out.results[0]
+    assert hit.url == "https://stackoverflow.com/q/42"
+    assert hit.is_answered is True
+    assert "django" in hit.tags
+    assert hit.creation_date.startswith("2023-")  # 1_700_000_000 → late 2023
+
+
+def test_search_stack_overflow_works_without_key(monkeypatch, settings):
+    settings.STACKEXCHANGE_KEY = ""
+    captured: dict = {}
+
+    def fake_get(url, params, headers, timeout):  # noqa: ARG001
+        captured["params"] = params
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"items": []})
+
+    monkeypatch.setattr("agents.tools.stubs.httpx.get", fake_get)
+    out = get_tool("search_stack_overflow").dispatch({"query": "anything"})
+    assert out.status == "success"
+    assert out.results == []
+    # Anonymous request — no `key` query param attached.
+    assert "key" not in captured["params"]

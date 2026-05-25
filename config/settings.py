@@ -115,6 +115,16 @@ VOYAGE_API_KEY = env("VOYAGE_API_KEY", default="")
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="voyage-3.5")
 
 # ---------------------------------------------------------------------------
+# External research APIs used by investigation tools.
+# All three are blank-safe: the agent only sees a tool in its toolset if it
+# has a working impl. Missing keys raise loud at first call (see stubs.py)
+# rather than silently degrading.
+# ---------------------------------------------------------------------------
+TAVILY_API_KEY = env("TAVILY_API_KEY", default="")
+GITHUB_TOKEN = env("GITHUB_TOKEN", default="")
+STACKEXCHANGE_KEY = env("STACKEXCHANGE_KEY", default="")
+
+# ---------------------------------------------------------------------------
 # Ingestion
 # ---------------------------------------------------------------------------
 # On the first ingestion run for a source (no checkpoint yet), how far back to

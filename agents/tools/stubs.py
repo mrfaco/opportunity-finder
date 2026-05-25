@@ -12,6 +12,7 @@ import re
 from datetime import UTC, datetime
 
 import httpx
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from pgvector.django import CosineDistance
 from pydantic import BaseModel
@@ -23,6 +24,7 @@ from core.html import html_to_text
 from investigations.schemas import Brief
 
 _HN_TIMEOUT_S = 20.0
+_EXTERNAL_API_TIMEOUT_S = 20.0
 
 
 # ---------------------------------------------------------------------------
@@ -424,15 +426,68 @@ class SearchGitHubIssuesInput(ToolInput):
     limit: int = 20
 
 
+class GitHubIssueHit(BaseModel):
+    url: str
+    title: str
+    state: str
+    comments: int
+    repo: str
+    created_at: str
+    snippet: str
+
+
 class SearchGitHubIssuesOutput(ToolOutput):
-    results: list[dict] = []
+    results: list[GitHubIssueHit] = []
 
 
-def _search_github_issues(_inp: SearchGitHubIssuesInput) -> SearchGitHubIssuesOutput:
-    # Blocked: needs a GitHub PAT (settings.GITHUB_TOKEN). Then a single
-    # call to GET https://api.github.com/search/issues with the query, mapping
-    # each item to a structured result. Rate limit: 30 req/min authenticated.
-    raise NotImplementedError("search_github_issues needs a GITHUB_TOKEN; not configured.")
+_GITHUB_SEARCH_URL = "https://api.github.com/search/issues"
+_GITHUB_SNIPPET_CHARS = 240
+
+
+def _search_github_issues(inp: SearchGitHubIssuesInput) -> SearchGitHubIssuesOutput:
+    """Search GitHub issues for evidence of the same pain.
+
+    Uses the public ``/search/issues`` endpoint. Restricted to issues
+    (excludes PRs) via the ``type:issue`` qualifier. Requires a
+    ``GITHUB_TOKEN`` for the 30 req/min authenticated rate (unauthenticated
+    is 10 req/min — too slow for an agent burst).
+    """
+    token = settings.GITHUB_TOKEN
+    if not token:
+        raise RuntimeError(
+            "GITHUB_TOKEN is not set. Configure it in .env "
+            "(https://github.com/settings/tokens — public_repo scope)."
+        )
+    response = httpx.get(
+        _GITHUB_SEARCH_URL,
+        params={"q": f"{inp.query} type:issue", "per_page": inp.limit},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "opportunity-finder/0.1",
+        },
+        timeout=_EXTERNAL_API_TIMEOUT_S,
+    )
+    response.raise_for_status()
+    data = response.json()
+    hits: list[GitHubIssueHit] = []
+    for item in data.get("items", []):
+        repo_url = item.get("repository_url", "")
+        # repository_url is .../repos/owner/name — last two segments are the slug.
+        repo = "/".join(repo_url.rsplit("/", 2)[-2:]) if repo_url else ""
+        body = item.get("body") or ""
+        hits.append(
+            GitHubIssueHit(
+                url=item["html_url"],
+                title=item["title"],
+                state=item.get("state", ""),
+                comments=item.get("comments", 0),
+                repo=repo,
+                created_at=item.get("created_at", ""),
+                snippet=body[:_GITHUB_SNIPPET_CHARS],
+            )
+        )
+    return SearchGitHubIssuesOutput(status="success", results=hits)
 
 
 register(
@@ -453,17 +508,62 @@ class SearchStackOverflowInput(ToolInput):
     limit: int = 20
 
 
+class StackOverflowHit(BaseModel):
+    url: str
+    title: str
+    score: int
+    answer_count: int
+    is_answered: bool
+    tags: list[str]
+    creation_date: str
+
+
 class SearchStackOverflowOutput(ToolOutput):
-    results: list[dict] = []
+    results: list[StackOverflowHit] = []
 
 
-def _search_stack_overflow(_inp: SearchStackOverflowInput) -> SearchStackOverflowOutput:
-    # Blocked: Stack Exchange API works key-less at low quota (300/day) and
-    # at 10000/day with a STACKEXCHANGE_KEY. Use /2.3/search/advanced with
-    # site=stackoverflow + the query; map to results with snippet from body_markdown.
-    raise NotImplementedError(
-        "search_stack_overflow needs a STACKEXCHANGE_KEY (optional, recommended for quota)."
+_STACK_EXCHANGE_SEARCH_URL = "https://api.stackexchange.com/2.3/search/advanced"
+
+
+def _search_stack_overflow(inp: SearchStackOverflowInput) -> SearchStackOverflowOutput:
+    """Search Stack Overflow for evidence and workarounds.
+
+    Stack Exchange's anonymous quota is 300 req/day; setting
+    ``STACKEXCHANGE_KEY`` raises that to 10,000/day. The key is genuinely
+    optional — the API works without it — so unlike GitHub we don't fail
+    loud when it's missing.
+    """
+    params: dict[str, str | int] = {
+        "site": "stackoverflow",
+        "q": inp.query,
+        "pagesize": inp.limit,
+        "order": "desc",
+        "sort": "relevance",
+    }
+    key = settings.STACKEXCHANGE_KEY
+    if key:
+        params["key"] = key
+    response = httpx.get(
+        _STACK_EXCHANGE_SEARCH_URL,
+        params=params,
+        headers={"User-Agent": "opportunity-finder/0.1"},
+        timeout=_EXTERNAL_API_TIMEOUT_S,
     )
+    response.raise_for_status()
+    data = response.json()
+    hits = [
+        StackOverflowHit(
+            url=item["link"],
+            title=html_to_text(item.get("title", "")),
+            score=item.get("score", 0),
+            answer_count=item.get("answer_count", 0),
+            is_answered=item.get("is_answered", False),
+            tags=item.get("tags", []),
+            creation_date=datetime.fromtimestamp(item["creation_date"], tz=UTC).isoformat(),
+        )
+        for item in data.get("items", [])
+    ]
+    return SearchStackOverflowOutput(status="success", results=hits)
 
 
 register(
@@ -546,18 +646,58 @@ class WebSearchInput(ToolInput):
     limit: int = 10
 
 
+class WebSearchHit(BaseModel):
+    url: str
+    title: str
+    snippet: str
+    score: float
+
+
 class WebSearchOutput(ToolOutput):
-    results: list[dict] = []
+    results: list[WebSearchHit] = []
 
 
-def _web_search(_inp: WebSearchInput) -> WebSearchOutput:
-    # Blocked: needs a provider decision before keys are wired.
-    # Candidates: Brave Search API (paid, no scraping), Tavily (LLM-tuned,
-    # cheap), Anthropic's server-side `web_search_20260209` tool (cleanest —
-    # Claude handles the search itself; would remove this client tool entirely).
-    raise NotImplementedError(
-        "web_search needs a provider decision (Brave / Tavily / Anthropic server-side)."
+_TAVILY_SEARCH_URL = "https://api.tavily.com/search"
+
+
+def _web_search(inp: WebSearchInput) -> WebSearchOutput:
+    """General-purpose web search via Tavily.
+
+    Tavily returns LLM-friendly cleaned snippets in the ``content`` field
+    plus a relevance ``score``. We skip ``include_answer`` because the
+    investigation agent does its own synthesis and the answer paragraph
+    would just inflate the context.
+    """
+    key = settings.TAVILY_API_KEY
+    if not key:
+        raise RuntimeError(
+            "TAVILY_API_KEY is not set. Configure it in .env "
+            "(https://tavily.com/ — 1000 free credits/month)."
+        )
+    response = httpx.post(
+        _TAVILY_SEARCH_URL,
+        json={
+            "api_key": key,
+            "query": inp.query,
+            "max_results": inp.limit,
+            "search_depth": "basic",
+            "include_answer": False,
+        },
+        headers={"User-Agent": "opportunity-finder/0.1"},
+        timeout=_EXTERNAL_API_TIMEOUT_S,
     )
+    response.raise_for_status()
+    data = response.json()
+    hits = [
+        WebSearchHit(
+            url=item["url"],
+            title=item.get("title", ""),
+            snippet=item.get("content", ""),
+            score=float(item.get("score", 0.0)),
+        )
+        for item in data.get("results", [])
+    ]
+    return WebSearchOutput(status="success", results=hits)
 
 
 register(
