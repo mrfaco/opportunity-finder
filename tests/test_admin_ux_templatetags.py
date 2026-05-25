@@ -36,6 +36,33 @@ class TestJsonPretty:
     def test_non_string_passes_through(self):
         assert json_pretty(42) == 42
 
+    def test_python_repr_dict_is_pretty_printed(self):
+        """Agent tool I/O is often ``str(some_dict)`` — single-quoted literals."""
+        raw = "{'b': 2, 'a': 1, 'nested': {'k': 'v'}}"
+        out = json_pretty(raw)
+        assert out.startswith("{\n")
+        assert '"a": 1' in out
+        assert '"nested"' in out
+
+    def test_python_repr_list_is_pretty_printed(self):
+        raw = "[1, 2, 'three', None]"
+        out = json_pretty(raw)
+        assert out.startswith("[\n")
+        assert '"three"' in out
+        assert "null" in out
+
+    def test_dict_input_is_pretty_printed(self):
+        """JSONField returns a Python dict, not a JSON string."""
+        out = json_pretty({"b": 2, "a": 1})
+        assert out.startswith("{\n")
+        assert '"a": 1' in out
+
+    def test_list_input_is_pretty_printed(self):
+        out = json_pretty([1, "two", None])
+        assert out.startswith("[\n")
+        assert '"two"' in out
+        assert "null" in out
+
 
 class TestStatusTone:
     @pytest.mark.parametrize(
