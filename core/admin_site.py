@@ -64,6 +64,13 @@ class PainMinerAdminSite(AdminSite):
                     "perms": {"view": True},
                 },
                 {
+                    "name": "Latest ideations",
+                    "object_name": "LatestIdeations",
+                    "admin_url": "/admin/ideation/latest/",
+                    "view_only": True,
+                    "perms": {"view": True},
+                },
+                {
                     "name": "Ingestion ops",
                     "object_name": "IngestionOps",
                     "admin_url": "/admin/ingestion/operations/",
@@ -82,6 +89,8 @@ class PainMinerAdminSite(AdminSite):
         from agents.models import AgentRun  # noqa: PLC0415
         from clusters.admin import ClusterAdmin  # noqa: PLC0415
         from clusters.models import Cluster  # noqa: PLC0415
+        from ideation.admin import IdeationAdmin  # noqa: PLC0415
+        from ideation.models import Ideation  # noqa: PLC0415
         from ingestion.admin import FilterEvalSetAdmin, IngestionCheckpointAdmin  # noqa: PLC0415
         from ingestion.models import FilterEvalSet, IngestionCheckpoint  # noqa: PLC0415
         from investigations.admin import InvestigationAdmin  # noqa: PLC0415
@@ -91,6 +100,7 @@ class PainMinerAdminSite(AdminSite):
         # duplicate logic between the model namespace and the app namespace.
         agents_admin = AgentRunAdmin(AgentRun, self)
         clusters_admin = ClusterAdmin(Cluster, self)
+        ideation_admin = IdeationAdmin(Ideation, self)
         ingestion_admin = FilterEvalSetAdmin(FilterEvalSet, self)
         ingestion_ops_admin = IngestionCheckpointAdmin(IngestionCheckpoint, self)
         investigations_admin = InvestigationAdmin(Investigation, self)
@@ -150,6 +160,16 @@ class PainMinerAdminSite(AdminSite):
                 "investigations/latest/",
                 self.admin_view(investigations_admin.latest_view),
                 name="investigations-latest",
+            ),
+            path(
+                "investigations/<uuid:investigation_id>/promote/",
+                self.admin_view(investigations_admin.promote_from_latest_view),
+                name="investigations-promote-from-latest",
+            ),
+            path(
+                "ideation/latest/",
+                self.admin_view(ideation_admin.latest_view),
+                name="ideation-latest",
             ),
         ]
         return custom + super().get_urls()

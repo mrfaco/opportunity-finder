@@ -403,6 +403,72 @@ def test_promote_action_enqueues_ideation(monkeypatch, admin_user, settings):
 
 
 @pytest.mark.django_db
+def test_promote_from_latest_view_promotes_and_enqueues_ideation(
+    monkeypatch, admin_user, client, settings
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    from agents import orchestrator as agents_orchestrator
+
+    class _NoOpTask:
+        def delay(self, *_a, **_kw):
+            return None
+
+    monkeypatch.setattr(agents_orchestrator, "run_agent_loop", _NoOpTask())
+
+    cluster = _make_cluster()
+    inv = _make_investigation(cluster)
+    inv.status = InvestigationStatus.AWAITING_REVIEW
+    inv.save(update_fields=["status"])
+
+    client.force_login(admin_user)
+    resp = client.post(f"/admin/investigations/{inv.id}/promote/")
+
+    assert resp.status_code == 302
+    assert resp.url == "/admin/investigations/latest/"
+
+    inv.refresh_from_db()
+    assert inv.status == InvestigationStatus.PROMOTED
+    assert Ideation.objects.filter(investigation=inv, status=IdeationStatus.DRAFT).exists()
+
+
+@pytest.mark.django_db
+def test_promote_from_latest_view_rejects_get(admin_user, client):
+    cluster = _make_cluster()
+    inv = _make_investigation(cluster)
+    client.force_login(admin_user)
+    resp = client.get(f"/admin/investigations/{inv.id}/promote/")
+    assert resp.status_code == 405  # method not allowed
+
+
+@pytest.mark.django_db
+def test_promote_from_latest_view_noops_when_not_awaiting_review(
+    monkeypatch, admin_user, client, settings
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    from agents import orchestrator as agents_orchestrator
+
+    class _NoOpTask:
+        def delay(self, *_a, **_kw):
+            return None
+
+    monkeypatch.setattr(agents_orchestrator, "run_agent_loop", _NoOpTask())
+
+    cluster = _make_cluster()
+    inv = _make_investigation(cluster)
+    # _make_investigation already sets status=PROMOTED — perfect setup for the no-op path.
+    assert inv.status == InvestigationStatus.PROMOTED
+
+    client.force_login(admin_user)
+    resp = client.post(f"/admin/investigations/{inv.id}/promote/")
+
+    assert resp.status_code == 302
+    inv.refresh_from_db()
+    # Still promoted, no new Ideation enqueued by this endpoint.
+    assert inv.status == InvestigationStatus.PROMOTED
+    assert not Ideation.objects.filter(investigation=inv).exists()
+
+
+@pytest.mark.django_db
 def test_re_ideate_view_creates_new_ideation_with_guidance(
     monkeypatch, admin_user, client, settings
 ):
@@ -534,6 +600,66 @@ def test_re_ideate_view_get_renders_form(admin_user, client):
     assert resp.status_code == 200
     assert b"Re-ideate investigation" in resp.content
     assert b'name="guidance"' in resp.content
+
+
+# ---------------------------------------------------------------------------
+# Latest ideations dashboard
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+def test_latest_ideations_view_renders_empty(admin_user, client):
+    client.force_login(admin_user)
+    resp = client.get("/admin/ideation/latest/")
+    assert resp.status_code == 200
+    assert b"Latest ideations" in resp.content
+    assert b"No ideations yet" in resp.content
+
+
+@pytest.mark.django_db
+def test_latest_ideations_view_renders_rows_with_concepts(admin_user, client):
+    cluster = _make_cluster()
+    inv = _make_investigation(cluster)
+    output = _valid_ideation_output(str(inv.id))
+    Ideation.objects.create(
+        investigation=inv,
+        status=IdeationStatus.AWAITING_REVIEW,
+        output=output,
+        guidance="try a smaller wedge",
+    )
+
+    client.force_login(admin_user)
+    resp = client.get("/admin/ideation/latest/")
+    assert resp.status_code == 200
+    content = resp.content.decode()
+    # Investigation headline, concept names, guidance, and detail link all surface.
+    assert "Operator GUI for AI-agent power users" in content
+    assert "Alpha" in content and "Bravo" in content and "Charlie" in content
+    assert "try a smaller wedge" in content
+    assert "/admin/ideation/ideation/" in content
+
+
+@pytest.mark.django_db
+def test_latest_ideations_view_filters_by_status(admin_user, client):
+    cluster = _make_cluster()
+    inv = _make_investigation(cluster)
+    Ideation.objects.create(
+        investigation=inv,
+        status=IdeationStatus.ACCEPTED,
+        output=_valid_ideation_output(str(inv.id)),
+    )
+    Ideation.objects.create(
+        investigation=inv,
+        status=IdeationStatus.REJECTED,
+        output=_valid_ideation_output(str(inv.id)),
+    )
+
+    client.force_login(admin_user)
+    resp = client.get("/admin/ideation/latest/?status=accepted")
+    assert resp.status_code == 200
+    # The accepted row exists, the rejected one is filtered out — both share
+    # the same concept names so we use the status column instead.
+    content = resp.content.decode()
+    assert content.count("<td>accepted</td>") == 1
+    assert "<td>rejected</td>" not in content
 
 
 # ---------------------------------------------------------------------------

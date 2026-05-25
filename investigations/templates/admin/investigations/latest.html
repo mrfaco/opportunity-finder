@@ -45,6 +45,14 @@
         <td>{{ row.steps }}</td>
         <td>
           <a href="/admin/agents/run/{{ row.run.id }}/trajectory/">trajectory</a>
+          {% if row.status == awaiting_review_status %}
+            <form method="post"
+                  action="/admin/investigations/{{ row.investigation.id }}/promote/"
+                  style="display:inline; margin-left:0.5em">
+              {% csrf_token %}
+              <button type="submit" class="button" style="padding:2px 8px">Promote</button>
+            </form>
+          {% endif %}
         </td>
       </tr>
     {% empty %}

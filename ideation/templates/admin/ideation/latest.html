@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Latest ideations</h1>
+
+<p style="margin:0.5em 0; color:#666">
+  Newest first, up to {{ limit }} rows. Filter:
+  <a href="?">all</a>
+  {% for value, label in status_choices %}
+    | <a href="?status={{ value }}" {% if current_status == value %}style="font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Created</th>
+      <th>Investigation</th>
+      <th>Status</th>
+      <th>Guidance</th>
+      <th>Concepts</th>
+      <th>Cost</th>
+      <th>Steps</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.created_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          {% if row.investigation %}
+            <a href="/admin/investigations/investigation/{{ row.investigation.id }}/change/">
+              <strong>{{ row.headline|truncatechars:90 }}</strong>
+            </a>
+          {% else %}
+            <em>(no investigation)</em>
+          {% endif %}
+        </td>
+        <td>{{ row.status }}</td>
+        <td style="max-width:240px">
+          {% if row.guidance %}
+            <span style="color:#444">{{ row.guidance|truncatechars:120 }}</span>
+          {% else %}
+            <span style="color:#bbb">—</span>
+          {% endif %}
+        </td>
+        <td style="max-width:280px">
+          {% if row.concept_names %}
+            <span style="color:#444">{{ row.concept_names|join:" · " }}</span>
+          {% else %}
+            <span style="color:#bbb">(none yet)</span>
+          {% endif %}
+        </td>
+        <td>{% if row.cost_usd is not None %}${{ row.cost_usd }}{% else %}—{% endif %}</td>
+        <td>{% if row.steps is not None %}{{ row.steps }}{% else %}—{% endif %}</td>
+        <td>
+          <a href="/admin/ideation/ideation/{{ row.ideation.id }}/change/">detail</a>
+          {% if row.run %}
+            · <a href="/admin/agents/run/{{ row.run.id }}/trajectory/">trajectory</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center; padding:1em">
+          No ideations yet. Promote an investigation from the
+          <a href="/admin/investigations/latest/">latest investigations</a> view
+          to kick one off.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

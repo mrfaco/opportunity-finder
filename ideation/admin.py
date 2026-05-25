@@ -18,6 +18,8 @@ from ideation.models import Ideation, IdeationStatus
 from ideation.orchestrator import start_ideation
 from investigations.models import Investigation
 
+_LATEST_LIMIT = 50
+
 
 @admin.register(Ideation)
 class IdeationAdmin(admin.ModelAdmin):
@@ -136,3 +138,48 @@ class IdeationAdmin(admin.ModelAdmin):
             "brief": inv.brief or {},
         }
         return render(request, "admin/ideation/ideation/re_ideate.html", context)
+
+    # ------------------------------------------------------------------
+    # Latest ideations dashboard — newest-first scan of generated
+    # ideations with the investigation headline, guidance, status,
+    # concept names, cost/steps, and a drill-in link to the detail view.
+    # Mirrors the latest investigations dashboard.
+    # ------------------------------------------------------------------
+    def latest_view(self, request):
+        status_filter = request.GET.get("status")
+        qs = Ideation.objects.select_related("investigation", "primary_run").order_by("-created_at")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        rows = []
+        for ideation in qs[:_LATEST_LIMIT]:
+            output = ideation.output or {}
+            concepts = output.get("concepts") or []
+            inv = ideation.investigation
+            brief = (inv.brief or {}) if inv else {}
+            run = ideation.primary_run
+            rows.append(
+                {
+                    "ideation": ideation,
+                    "investigation": inv,
+                    "headline": brief.get("headline") or "(no headline)",
+                    "status": ideation.status,
+                    "guidance": ideation.guidance,
+                    "concept_names": [c.get("name", "?") for c in concepts],
+                    "concept_count": len(concepts),
+                    "run": run,
+                    "cost_usd": run.cost_used_usd if run else None,
+                    "steps": run.steps_used if run else None,
+                    "created_at": ideation.created_at,
+                }
+            )
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Latest ideations",
+            "rows": rows,
+            "status_choices": IdeationStatus.choices,
+            "current_status": status_filter,
+            "limit": _LATEST_LIMIT,
+        }
+        return render(request, "admin/ideation/latest.html", context)
