@@ -1,0 +1,32 @@
+{% extends "unfold/layouts/base_simple.html" %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-1">Create API key</h1>
+<p class="text-sm text-base-600 dark:text-base-300 mb-6">
+  A new key is bound to your user account ({{ request.user.username }}).
+  The raw key is shown <strong>once</strong> on the next page — save it then.
+</p>
+
+{% if messages %}
+  <div class="mb-6 space-y-2">
+    {% for msg in messages %}
+      <div class="rounded-md px-4 py-3 text-sm" style="background:rgba(16,185,129,0.1);color:#6ee7b7;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);">{{ msg|safe }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" class="space-y-4 max-w-md">
+  {% csrf_token %}
+  <div>
+    <label for="id_label" class="block text-sm font-medium text-base-700 dark:text-base-200 mb-1">Label</label>
+    {{ form.label }}
+    <p class="text-xs text-base-500 dark:text-base-400 mt-1">{{ form.label.help_text }}</p>
+    {% if form.label.errors %}
+      <p class="text-xs text-red-500 mt-1">{{ form.label.errors|join:", " }}</p>
+    {% endif %}
+  </div>
+  <button type="submit" class="rounded-md px-4 py-2 text-sm font-medium" style="background:#1e293b;color:#f1f5f9;">
+    Create key
+  </button>
+</form>
+{% endblock %}

@@ -219,8 +219,7 @@ def main(argv: list[str]) -> int:
         print(f"  {path}", file=sys.stderr)
         for item in items:
             print(
-                f"    L{item.lineno}  [{item.rule}]  {item.snippet!r}\n"
-                f"           ↳ {item.hint}",
+                f"    L{item.lineno}  [{item.rule}]  {item.snippet!r}\n           ↳ {item.hint}",
                 file=sys.stderr,
             )
         print(file=sys.stderr)

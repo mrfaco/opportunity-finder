@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.http import HttpResponseRedirect
-from django.urls import path
+from django.urls import include, path
 
 
 def root(_request):
@@ -10,4 +10,5 @@ def root(_request):
 urlpatterns = [
     path("", root),
     path("admin/", admin.site.urls),
+    path("api/v1/", include("api.urls")),
 ]

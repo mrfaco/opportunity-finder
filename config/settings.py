@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     "investigations",
     "ideation",
     "notifications",
+    "rest_framework",
+    "api",
 ]
 
 MIDDLEWARE = [
@@ -185,6 +187,21 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_RESULT_EXTENDED = True
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_TIMEZONE = "UTC"
+
+# ---------------------------------------------------------------------------
+# REST API — DRF config. Auth is API-key only (see api.auth); session/basic
+# auth would let the browser piggyback on a logged-in admin session and
+# defeat the point of having a key. Permission is enforced per-view via
+# IsAuthenticated; no global IsAuthenticated default because the schema
+# view (if added later) needs to stay open.
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["api.auth.ApiKeyAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "EXCEPTION_HANDLER": "api.exceptions.api_exception_handler",
+}
 
 # ---------------------------------------------------------------------------
 # Anthropic / model config

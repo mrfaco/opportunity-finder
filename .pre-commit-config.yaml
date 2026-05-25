@@ -78,6 +78,20 @@ repos:
         # bg-white without a paired dark: variant. Suppress a single line
         # with `<!-- ui-legibility: ok -->`. Pass --strict to enforce in CI.
 
+      - id: api-parity
+        name: API parity (soft warn — new admin actions / Celery tasks)
+        entry: python scripts/check_api_parity.py
+        language: system
+        types: [python]
+        pass_filenames: false
+        verbose: true
+        # Soft hook (exits 0): when a commit adds a @shared_task or a new
+        # entry to an admin class's actions = [...], this checks whether
+        # api/views.py + api/urls.py reference the new symbol. If not, it
+        # nags. The API is the way external automation drives this system;
+        # adding operator buttons without API parity quietly limits it to
+        # admin-only. Pass --strict to enforce in CI.
+
       - id: missing-migrations
         name: Django models in sync with migrations
         entry: scripts/check_missing_migrations.sh
