@@ -40,6 +40,7 @@ class _StubSchema(BaseModel):
 def test_raises_when_no_provider_configured(settings):
     settings.ANTHROPIC_API_KEY = ""
     settings.OPENROUTER_API_KEY = ""
+    settings.CHEAP_LLM_PROVIDER = "auto"
     with pytest.raises(RuntimeError, match="No LLM provider configured"):
         call_cheap_model(system_prompt="hi", user_content="hello", output_schema=_StubSchema)
 
@@ -47,6 +48,7 @@ def test_raises_when_no_provider_configured(settings):
 def test_anthropic_wins_when_both_keys_set(monkeypatch, settings):
     settings.ANTHROPIC_API_KEY = "ant-key"
     settings.OPENROUTER_API_KEY = "or-key"
+    settings.CHEAP_LLM_PROVIDER = "auto"
     called = {"provider": None}
 
     def _stub_anthropic(*_a, **_kw):
@@ -81,6 +83,7 @@ def test_anthropic_wins_when_both_keys_set(monkeypatch, settings):
 def test_openrouter_used_when_only_openrouter_configured(monkeypatch, settings):
     settings.ANTHROPIC_API_KEY = ""
     settings.OPENROUTER_API_KEY = "or-key"
+    settings.CHEAP_LLM_PROVIDER = "auto"
 
     def _stub_openrouter(*_a, **_kw):
         return CheapModelResponse(
@@ -95,6 +98,61 @@ def test_openrouter_used_when_only_openrouter_configured(monkeypatch, settings):
     monkeypatch.setattr("core.llm._call_openrouter", _stub_openrouter)
     result = call_cheap_model(system_prompt="hi", user_content="hello", output_schema=_StubSchema)
     assert result.provider == "openrouter"
+
+
+def test_explicit_openrouter_override_wins_over_auto(monkeypatch, settings):
+    """The realistic ``cut costs without breaking the loop`` config: both
+    keys set, but ``CHEAP_LLM_PROVIDER=openrouter`` forces this tier to
+    route through OpenRouter while the agent loop keeps using Anthropic."""
+    settings.ANTHROPIC_API_KEY = "ant-key"
+    settings.OPENROUTER_API_KEY = "or-key"
+    settings.CHEAP_LLM_PROVIDER = "openrouter"
+
+    called = {"provider": None}
+
+    def _stub_openrouter(*_a, **_kw):
+        called["provider"] = "openrouter"
+        return CheapModelResponse(
+            parsed=_StubSchema(verdict=True, confidence=0.6),
+            model_used="deepseek/deepseek-chat",
+            provider="openrouter",
+            input_tokens=10,
+            output_tokens=2,
+            latency_ms=1,
+        )
+
+    def _stub_anthropic(*_a, **_kw):
+        called["provider"] = "anthropic"
+        raise AssertionError("anthropic path should not be entered")
+
+    monkeypatch.setattr("core.llm._call_openrouter", _stub_openrouter)
+    monkeypatch.setattr("core.llm._call_anthropic", _stub_anthropic)
+    call_cheap_model(system_prompt="hi", user_content="hello", output_schema=_StubSchema)
+    assert called["provider"] == "openrouter"
+
+
+def test_explicit_anthropic_override_raises_if_key_missing(settings):
+    settings.ANTHROPIC_API_KEY = ""
+    settings.OPENROUTER_API_KEY = "or-key"
+    settings.CHEAP_LLM_PROVIDER = "anthropic"
+    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY is not set"):
+        call_cheap_model(system_prompt="x", user_content="y", output_schema=_StubSchema)
+
+
+def test_explicit_openrouter_override_raises_if_key_missing(settings):
+    settings.ANTHROPIC_API_KEY = "ant-key"
+    settings.OPENROUTER_API_KEY = ""
+    settings.CHEAP_LLM_PROVIDER = "openrouter"
+    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"):
+        call_cheap_model(system_prompt="x", user_content="y", output_schema=_StubSchema)
+
+
+def test_unknown_provider_choice_raises(settings):
+    settings.ANTHROPIC_API_KEY = "ant-key"
+    settings.OPENROUTER_API_KEY = "or-key"
+    settings.CHEAP_LLM_PROVIDER = "deepmind"
+    with pytest.raises(RuntimeError, match="not recognized"):
+        call_cheap_model(system_prompt="x", user_content="y", output_schema=_StubSchema)
 
 
 # ---------------------------------------------------------------------------

@@ -219,6 +219,14 @@ MODEL_IDEATION = env("MODEL_IDEATION", default="claude-sonnet-4-6")
 # Anthropic for the tool-use + prompt-caching semantics.
 OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
 OPENROUTER_MODEL_FILTER = env("OPENROUTER_MODEL_FILTER", default="deepseek/deepseek-chat")
+# Explicit override for cheap-tier provider selection. Default ``auto``:
+# Anthropic wins when both keys are set (matches the agent loop, which
+# always uses Anthropic, so you don't end up with "cheap tier works but
+# loop doesn't"). Set to ``openrouter`` to route this tier through OR
+# while keeping Anthropic for the agent loop — the realistic config for
+# cutting the cheap-tier bill without breaking anything else. Allowed:
+# ``auto`` | ``anthropic`` | ``openrouter``.
+CHEAP_LLM_PROVIDER = env("CHEAP_LLM_PROVIDER", default="auto")
 
 # ---------------------------------------------------------------------------
 # Embeddings — Voyage AI. voyage-3.5 outputs 1024-dim vectors natively,

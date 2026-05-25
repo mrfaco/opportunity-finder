@@ -6,20 +6,22 @@ Three modules need a single structured cheap-model call:
 * ``clusters/judges.py`` — merge judge
 
 This module wraps both supported providers behind one
-``call_cheap_model()`` function so those callers don't carry vendor
-choice logic. Selection precedence (per the user's spec):
+``call_cheap_model()`` function. Selection rules:
 
-1. ``ANTHROPIC_API_KEY`` set → Anthropic with ``settings.MODEL_FILTER``
-   (default ``claude-haiku-4-5``).
-2. ``OPENROUTER_API_KEY`` set (and Anthropic not set) → OpenRouter with
-   ``settings.OPENROUTER_MODEL_FILTER`` (default ``deepseek/deepseek-chat``).
-3. Both set → Anthropic (per user preference: when in doubt, the
-   higher-quality provider wins).
-4. Neither set → raise ``RuntimeError``. No fallback.
+1. ``settings.CHEAP_LLM_PROVIDER == "anthropic"`` → Anthropic
+   (``MODEL_FILTER``, default ``claude-haiku-4-5``).
+2. ``settings.CHEAP_LLM_PROVIDER == "openrouter"`` → OpenRouter
+   (``OPENROUTER_MODEL_FILTER``, default ``deepseek/deepseek-chat``).
+3. ``settings.CHEAP_LLM_PROVIDER == "auto"`` (default) — pick by which
+   key is set; Anthropic wins when both are set, since the agent loop
+   (``agents/loop.py``) also requires Anthropic and consistency between
+   tiers avoids "cheap tier works but loop doesn't" footguns.
+4. Provider chosen but the corresponding key is missing → raise.
+5. Neither key set in auto mode → raise.
 
-The agent loop (``agents/loop.py``) keeps using Anthropic directly — its
-tool-use + prompt-caching semantics aren't worth the rewrite at this
-scale (see commit history for "Tier 1 vs Tier 2" discussion).
+Realistic "cut the cheap-tier bill" config: keep ``ANTHROPIC_API_KEY``
+set (so the agent loop works), set ``OPENROUTER_API_KEY``, and set
+``CHEAP_LLM_PROVIDER=openrouter`` to explicitly route this tier there.
 """
 
 from __future__ import annotations
@@ -85,12 +87,45 @@ def call_cheap_model(
             for agent-loop callers; the cheap-tier callers just let it
             propagate.
     """
-    if settings.ANTHROPIC_API_KEY:
+    provider = _select_provider()
+    if provider == "anthropic":
         return _call_anthropic(system_prompt, user_content, output_schema, max_tokens)
-    if settings.OPENROUTER_API_KEY:
+    if provider == "openrouter":
         return _call_openrouter(system_prompt, user_content, output_schema, max_tokens)
+    # ``_select_provider`` raises on bad config; this is unreachable.
+    raise AssertionError(f"unreachable: provider={provider!r}")
+
+
+def _select_provider() -> str:
+    """Resolve ``settings.CHEAP_LLM_PROVIDER`` against the available keys.
+
+    Returns ``"anthropic"`` or ``"openrouter"``. Raises ``RuntimeError``
+    on misconfiguration (unknown value, key not set for chosen provider,
+    or neither key set in auto mode).
+    """
+    choice = (settings.CHEAP_LLM_PROVIDER or "auto").lower()
+    if choice == "anthropic":
+        if not settings.ANTHROPIC_API_KEY:
+            raise RuntimeError("CHEAP_LLM_PROVIDER=anthropic but ANTHROPIC_API_KEY is not set.")
+        return "anthropic"
+    if choice == "openrouter":
+        if not settings.OPENROUTER_API_KEY:
+            raise RuntimeError("CHEAP_LLM_PROVIDER=openrouter but OPENROUTER_API_KEY is not set.")
+        return "openrouter"
+    if choice != "auto":
+        raise RuntimeError(
+            f"CHEAP_LLM_PROVIDER={choice!r} is not recognized. "
+            "Allowed values: auto, anthropic, openrouter."
+        )
+    # ``auto``: prefer Anthropic when set (matches the agent loop), else
+    # fall back to OpenRouter, else fail.
+    if settings.ANTHROPIC_API_KEY:
+        return "anthropic"
+    if settings.OPENROUTER_API_KEY:
+        return "openrouter"
     raise RuntimeError(
-        "No LLM provider configured. Set ANTHROPIC_API_KEY or OPENROUTER_API_KEY in .env."
+        "No LLM provider configured. Set ANTHROPIC_API_KEY or "
+        "OPENROUTER_API_KEY in .env (or set CHEAP_LLM_PROVIDER explicitly)."
     )
 
 
