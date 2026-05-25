@@ -19,7 +19,9 @@ DEBUG = env.bool("DEBUG", default=True)
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
-    "unfold",
+    # Use BasicAppConfig (not the default), so Unfold doesn't hijack
+    # ``admin.site`` away from PainMinerAdminConfig's ``default_site``.
+    "unfold.apps.BasicAppConfig",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "core.admin_apps.PainMinerAdminConfig",
