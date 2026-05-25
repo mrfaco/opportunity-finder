@@ -1,28 +1,30 @@
-{% extends "admin/base_site.html" %}
+{% extends "unfold/layouts/base_simple.html" %}
+
 {% block content %}
-<h1>Re-ideate investigation</h1>
-<p>
-  <strong>Investigation:</strong>
-  <a href="/admin/investigations/investigation/{{ investigation.id }}/change/">
-    {{ investigation.id|slice:":8" }} — {{ brief.headline|default:"(no headline)" }}
+<h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-2">Re-ideate investigation</h1>
+<p class="text-sm text-slate-700 dark:text-slate-300 mb-1">
+  <strong class="text-slate-900 dark:text-slate-100">Investigation:</strong>
+  <a href="/admin/investigations/investigation/{{ investigation.id }}/change/" class="text-blue-600 dark:text-blue-400 hover:underline">
+    <span class="font-mono text-xs">{{ investigation.id|slice:":8" }}</span> — {{ brief.headline|default:"(no headline)" }}
   </a>
 </p>
-{% if brief.problem_statement %}<p><em>{{ brief.problem_statement }}</em></p>{% endif %}
+{% if brief.problem_statement %}<p class="italic text-sm text-slate-600 dark:text-slate-400 mb-6">{{ brief.problem_statement }}</p>{% endif %}
 
-<form method="post" style="margin-top:1em">
+<form method="post" class="mt-4 max-w-2xl">
   {% csrf_token %}
-  <p>
-    <label for="guidance"><strong>Guidance (optional):</strong></label><br>
-    <textarea id="guidance" name="guidance" rows="5" cols="80"
+  <div class="mb-4">
+    <label for="guidance" class="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Guidance (optional)</label>
+    <textarea id="guidance" name="guidance" rows="5"
+              class="block w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 shadow-sm text-sm font-mono px-3 py-2"
               placeholder="e.g. 'try a smaller wedge', 'consider an open-source play', 'reframe around the engineer as buyer'"></textarea>
-  </p>
-  <p>
-    <button type="submit" class="default">Run ideation →</button>
-    <a href="/admin/ideation/ideation/" style="margin-left:1em">Cancel</a>
-  </p>
+  </div>
+  <div class="flex items-center gap-3">
+    <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm">Run ideation →</button>
+    <a href="/admin/ideation/ideation/" class="text-sm text-slate-600 dark:text-slate-400 hover:underline">Cancel</a>
+  </div>
 </form>
 
-<p style="margin-top:2em;color:#666;font-size:0.9em">
+<p class="mt-8 text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
   Submitting creates a new <em>draft</em> ideation and enqueues the agent run.
   The ideation will flip to <em>awaiting review</em> when the agent finishes.
 </p>

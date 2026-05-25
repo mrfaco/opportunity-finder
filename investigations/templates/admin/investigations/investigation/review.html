@@ -1,53 +1,37 @@
 {% extends "admin/change_form.html" %}
+{% load admin_ux %}
+
 {% block content %}
 {% if investigation %}
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5em;margin-bottom:2em">
-  <section>
-    <h2>Brief</h2>
-    {% if brief.headline %}<h3>{{ brief.headline }}</h3>{% endif %}
-    {% if brief.problem_statement %}
-      <p><strong>Problem:</strong> {{ brief.problem_statement }}</p>
-    {% endif %}
-    {% if brief.target_user %}
-      <p><strong>Target user:</strong> {{ brief.target_user }}</p>
-    {% endif %}
-    {% if brief.evidence_summary %}
-      <p><strong>Evidence summary:</strong> {{ brief.evidence_summary }}</p>
-    {% endif %}
-    {% if brief.competitors %}
-      <h4>Competitors</h4>
-      <ul>
-        {% for c in brief.competitors %}
-          <li><a href="{{ c.url|default:'#' }}">{{ c.name }}</a> — {{ c.revenue_signal|default:"-" }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% if brief.differentiators %}
-      <h4>Differentiators</h4>
-      <ul>{% for d in brief.differentiators %}<li>{{ d }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if brief.risks %}
-      <h4>Risks</h4>
-      <ul>{% for r in brief.risks %}<li>{{ r }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if brief.recommended_next_step %}
-      <p><strong>Recommended next step:</strong> {{ brief.recommended_next_step }}</p>
-    {% endif %}
-    {% if brief.confidence %}
-      <p><strong>Agent confidence:</strong> {{ brief.confidence }}</p>
-    {% endif %}
+<div class="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <section class="lg:col-span-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">Brief</h2>
+    {% if brief.headline %}<h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-3">{{ brief.headline }}</h3>{% endif %}
+    <article class="prose dark:prose-invert max-w-none text-sm">
+      {% if brief.problem_statement %}<p><strong>Problem:</strong> {{ brief.problem_statement }}</p>{% endif %}
+      {% if brief.target_user %}<p><strong>Target user:</strong> {{ brief.target_user }}</p>{% endif %}
+      {% if brief.evidence_summary %}<p><strong>Evidence summary:</strong> {{ brief.evidence_summary }}</p>{% endif %}
+      {% if brief.competitors %}
+        <h4>Competitors</h4>
+        <ul>{% for c in brief.competitors %}<li><a href="{{ c.url|default:'#' }}">{{ c.name }}</a> — {{ c.revenue_signal|default:"-" }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if brief.differentiators %}<h4>Differentiators</h4><ul>{% for d in brief.differentiators %}<li>{{ d }}</li>{% endfor %}</ul>{% endif %}
+      {% if brief.risks %}<h4>Risks</h4><ul>{% for r in brief.risks %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+      {% if brief.recommended_next_step %}<p><strong>Recommended next step:</strong> {{ brief.recommended_next_step }}</p>{% endif %}
+      {% if brief.confidence %}<p><strong>Agent confidence:</strong> {% include "admin/_ux/_badge.html" with label=brief.confidence tone=brief.confidence|status_tone %}</p>{% endif %}
+    </article>
   </section>
-  <aside style="background:#f7f7f7;padding:1em;border:1px solid #ddd">
-    <h2>Context</h2>
-    <p><strong>Cluster:</strong> {{ cluster.title|default:cluster.id }}</p>
-    <p><strong>Size:</strong> {{ cluster.size }} items</p>
-    <p><strong>Sources:</strong> {{ cluster.sources|join:", " }}</p>
-    <p><strong>Classifier score:</strong> {{ cluster.classifier_score }}</p>
-    <hr>
-    <h3>Agent run</h3>
-    <p><a href="/admin/agents/agentrun/{{ primary_run.id }}/change/">{{ primary_run.id|slice:":8" }}</a></p>
-    <p>Cost: ${{ primary_run.cost_used_usd }} · {{ primary_run.steps_used }} steps</p>
-    <p><a href="/admin/agents/run/{{ primary_run.id }}/trajectory/">View trajectory →</a></p>
+  <aside class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 text-sm">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">Context</h2>
+    <p class="mb-1"><strong>Cluster:</strong> {{ cluster.title|default:cluster.id }}</p>
+    <p class="mb-1"><strong>Size:</strong> {{ cluster.size }} items</p>
+    <p class="mb-1"><strong>Sources:</strong> {{ cluster.sources|join:", " }}</p>
+    <p class="mb-3"><strong>Classifier score:</strong> {{ cluster.classifier_score }}</p>
+    <hr class="my-3 border-slate-300 dark:border-slate-700">
+    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">Agent run</h3>
+    <p class="mb-1"><a href="/admin/agents/agentrun/{{ primary_run.id }}/change/" class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">{{ primary_run.id|slice:":8" }}</a></p>
+    <p class="mb-1 tabular-nums">Cost: ${{ primary_run.cost_used_usd }} · {{ primary_run.steps_used }} steps</p>
+    <p><a href="/admin/agents/run/{{ primary_run.id }}/trajectory/" class="text-blue-600 dark:text-blue-400 hover:underline">View trajectory →</a></p>
   </aside>
 </div>
 {% endif %}
