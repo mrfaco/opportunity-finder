@@ -81,6 +81,8 @@ def _snapshot_prompts(agent_name: str) -> tuple[dict[str, Any], dict[str, str]]:
 def _model_selection(agent_name: str) -> dict[str, str]:
     if agent_name == "investigation":
         return {"investigation": settings.MODEL_INVESTIGATION}
+    if agent_name == "ideation":
+        return {"ideation": settings.MODEL_IDEATION}
     if agent_name == "filter":
         return {"filter": settings.MODEL_FILTER}
     return {}
@@ -91,8 +93,17 @@ def start_run(
     agent_name: str,
     trigger: str = "manual",
     budget: BudgetConfig | None = None,
+    extra_snapshot: dict[str, Any] | None = None,
 ) -> UUID:
-    """Snapshot, persist, enqueue. Returns the new run id."""
+    """Snapshot, persist, enqueue. Returns the new run id.
+
+    ``extra_snapshot`` is merged into ``config_snapshot`` and is the seam
+    for agents whose primary input is not the cluster itself — e.g. the
+    ideation agent passes the investigation brief here under the
+    ``ideation_input`` key. The cluster remains the AgentRun FK because
+    every run is still grounded in a cluster (for ideation, it's
+    ``investigation.cluster``).
+    """
     cluster = Cluster.objects.get(pk=cluster_id)
     cfg_budget = budget or BudgetConfig.default()
 
@@ -104,6 +115,8 @@ def start_run(
         "model_selection": _model_selection(agent_name),
         "budgets": cfg_budget.as_dict(),
     }
+    if extra_snapshot:
+        config_snapshot.update(extra_snapshot)
     cluster_snapshot = _snapshot_cluster(cluster)
 
     with transaction.atomic():

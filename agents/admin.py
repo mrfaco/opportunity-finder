@@ -9,6 +9,7 @@ from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, render
 from django.urls import path
 from django.utils.safestring import mark_safe
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from agents import cost as cost_mod
 from agents import prompts as prompt_loader
@@ -16,7 +17,7 @@ from agents.models import AgentEvent, AgentRun, AgentStep
 
 
 @admin.register(AgentRun)
-class AgentRunAdmin(admin.ModelAdmin):
+class AgentRunAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "agent_name",
@@ -151,7 +152,7 @@ class AgentRunAdmin(admin.ModelAdmin):
 
 
 @admin.register(AgentStep)
-class AgentStepAdmin(admin.ModelAdmin):
+class AgentStepAdmin(UnfoldModelAdmin):
     list_display = (
         "run",
         "step_number",
@@ -167,7 +168,7 @@ class AgentStepAdmin(admin.ModelAdmin):
 
 
 @admin.register(AgentEvent)
-class AgentEventAdmin(admin.ModelAdmin):
+class AgentEventAdmin(UnfoldModelAdmin):
     list_display = ("run", "step", "sequence", "event_type", "tool_name", "recorded_at")
     list_filter = ("event_type", "tool_name")
     readonly_fields = tuple(f.name for f in AgentEvent._meta.get_fields() if not f.is_relation)

@@ -38,6 +38,16 @@ AGENT_TOOLSETS: dict[str, list[str]] = {
         "fetch_url",
         "record_brief",
     ],
+    "ideation": [
+        "query_cluster",
+        "search_hacker_news",
+        "fetch_hn_item",
+        "search_github_issues",
+        "search_stack_overflow",
+        "web_search",
+        "fetch_url",
+        "record_ideation",
+    ],
 }
 
 

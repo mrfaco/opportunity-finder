@@ -1,60 +1,62 @@
-{% extends "admin/base_site.html" %}
-{% block content %}
-<h1>Latest investigations</h1>
+{% extends "unfold/layouts/base_simple.html" %}
+{% load admin_ux %}
 
-<p style="margin:0.5em 0; color:#666">
+{% block content %}
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-1">Latest investigations</h1>
+<p class="text-sm text-base-600 dark:text-base-300 mb-6">
   Newest first, up to {{ limit }} rows. Filter:
-  <a href="?">all</a>
+  <a class="text-blue-600 dark:text-blue-400 hover:underline" href="?">all</a>
   {% for value, label in status_choices %}
-    | <a href="?status={{ value }}" {% if current_status == value %}style="font-weight:bold"{% endif %}>{{ label }}</a>
+    <span class="text-base-400 dark:text-base-600">|</span>
+    <a class="text-blue-600 dark:text-blue-400 hover:underline {% if current_status == value %}font-semibold underline{% endif %}" href="?status={{ value }}">{{ label }}</a>
   {% endfor %}
 </p>
 
-<table>
-  <thead>
-    <tr>
-      <th>Created</th>
-      <th>Headline</th>
-      <th>Conf</th>
-      <th>Cluster</th>
-      <th>Status</th>
-      <th>Cost</th>
-      <th>Steps</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in rows %}
-      <tr>
-        <td>{{ row.created_at|date:"Y-m-d H:i" }}</td>
-        <td>
-          <a href="/admin/investigations/investigation/{{ row.investigation.id }}/change/">
-            <strong>{{ row.headline|truncatechars:90 }}</strong>
-          </a>
-          {% if row.problem %}<div style="color:#666; font-size:0.9em">{{ row.problem }}{% if row.problem|length >= 160 %}…{% endif %}</div>{% endif %}
-          {% if row.target_user %}<div style="color:#888; font-size:0.85em">→ {{ row.target_user }}</div>{% endif %}
-        </td>
-        <td>{% if row.confidence is not None %}{{ row.confidence|floatformat:2 }}{% else %}—{% endif %}</td>
-        <td>
-          <a href="/admin/clusters/cluster/{{ row.cluster.id }}/change/">
-            {{ row.cluster.title|default:row.cluster.id|truncatechars:40 }}
-          </a>
-        </td>
-        <td>{{ row.status }}</td>
-        <td>${{ row.cost_usd|default:"0" }}</td>
-        <td>{{ row.steps }}</td>
-        <td>
-          <a href="/admin/agents/run/{{ row.run.id }}/trajectory/">trajectory</a>
-        </td>
-      </tr>
-    {% empty %}
-      <tr>
-        <td colspan="8" style="text-align:center; padding:1em">
-          No investigations yet. Pick a cluster from the
-          <a href="/admin/clusters/triage/">triage queue</a> and click Investigate.
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% if rows %}
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800 sticky top-0 z-10">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Created</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Headline</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Conf</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cluster</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Status</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cost</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Steps</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for row in rows %}
+          <tr data-href="/admin/investigations/investigation/{{ row.investigation.id }}/change/" class="hover:bg-base-50 dark:hover:bg-base-800">
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ row.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="px-4 py-2 text-sm">
+              <a href="/admin/investigations/investigation/{{ row.investigation.id }}/change/" class="font-semibold text-base-900 dark:text-base-100 hover:underline" title="{{ row.headline }}">{{ row.headline|truncatechars:90 }}</a>
+              {% if row.problem %}<div class="text-xs text-base-500 dark:text-base-300 mt-0.5">{{ row.problem }}{% if row.problem|length >= 160 %}…{% endif %}</div>{% endif %}
+              {% if row.target_user %}<div class="text-xs text-base-500 dark:text-base-500 mt-0.5">→ {{ row.target_user }}</div>{% endif %}
+            </td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{% if row.confidence is not None %}{{ row.confidence|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-2 text-sm"><a href="/admin/clusters/cluster/{{ row.cluster.id }}/change/" class="text-blue-600 dark:text-blue-400 hover:underline" title="{{ row.cluster.title|default:row.cluster.id }}">{{ row.cluster.title|default:row.cluster.id|truncatechars:40 }}</a></td>
+            <td class="px-4 py-2 text-sm">{% include "admin/_ux/_badge.html" with label=row.status tone=row.status|status_tone %}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">${{ row.cost_usd|default:"0" }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.steps }}</td>
+            <td class="px-4 py-2 text-sm whitespace-nowrap">
+              <a href="/admin/agents/run/{{ row.run.id }}/trajectory/" class="text-blue-600 dark:text-blue-400 hover:underline mr-2">trajectory</a>
+              {% if row.status == awaiting_review_status %}
+                <form method="post" action="/admin/investigations/{{ row.investigation.id }}/promote/" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Promote</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "admin/_ux/_clickable_rows.html" %}
+{% else %}
+  {% include "admin/_ux/_empty_state.html" with title="No investigations yet" body="Pick a cluster from the triage queue and click Investigate to start one." cta_label="Open triage queue" cta_href="/admin/clusters/triage/" %}
+{% endif %}
 {% endblock %}

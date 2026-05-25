@@ -1,0 +1,112 @@
+{% extends "admin/change_form.html" %}
+{% load admin_ux %}
+
+{% block content %}
+{% if ideation %}
+<div class="mb-6 rounded-lg border border-base-200 dark:border-base-700 bg-white dark:bg-base-900 p-5">
+  <p class="mb-1 text-sm">
+    <strong class="text-base-900 dark:text-base-100">Investigation:</strong>
+    <a href="/admin/investigations/investigation/{{ investigation.id }}/change/" class="text-blue-600 dark:text-blue-400 hover:underline">
+      <span class="font-mono text-xs">{{ investigation.id|slice:":8" }}</span> — {{ investigation.brief.headline|default:"(no headline)" }}
+    </a>
+  </p>
+  <p class="mb-1 text-sm flex items-center gap-2">
+    <strong class="text-base-900 dark:text-base-100">Status:</strong>
+    {% include "admin/_ux/_badge.html" with label=ideation.status tone=ideation.status|status_tone %}
+    <span class="text-base-500 dark:text-base-300">· created {{ ideation.created_at }}</span>
+  </p>
+  {% if ideation.guidance %}
+    <p class="mb-1 text-sm text-base-700 dark:text-base-200"><strong>Guidance:</strong> {{ ideation.guidance }}</p>
+  {% endif %}
+  {% if primary_run %}
+    <p class="mb-3 text-sm text-base-700 dark:text-base-200">
+      Run <a href="/admin/agents/agentrun/{{ primary_run.id }}/change/" class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">{{ primary_run.id|slice:":8" }}</a>
+      <span class="tabular-nums">· ${{ primary_run.cost_used_usd }} · {{ primary_run.steps_used }} steps</span>
+      · <a href="/admin/agents/run/{{ primary_run.id }}/trajectory/" class="text-blue-600 dark:text-blue-400 hover:underline">trajectory</a>
+    </p>
+  {% endif %}
+  <p>
+    <a href="{{ re_ideate_url }}" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm">Re-ideate with guidance →</a>
+  </p>
+</div>
+
+{% if concepts %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {% for c in concepts %}
+      <section class="rounded-lg border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-900 p-5">
+        <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-1">{{ c.name }}</h2>
+        <p class="text-xs text-base-500 dark:text-base-300 mb-2"><strong>bet axis:</strong> {{ c.bet_axis }}</p>
+        <p class="italic text-base-700 dark:text-base-200 mb-4">{{ c.one_liner }}</p>
+
+        <article class="prose dark:prose-invert prose-sm max-w-none">
+          <h4>Core features</h4>
+          <ul>{% for f in c.core_features %}<li>{{ f }}</li>{% endfor %}</ul>
+
+          <h4>Explicitly NOT included</h4>
+          <ul>{% for f in c.explicitly_not_included %}<li>{{ f }}</li>{% endfor %}</ul>
+
+          <p><strong>Buyer:</strong> {{ c.buyer }}</p>
+          <p><strong>Pricing hypothesis:</strong> {{ c.rough_pricing_hypothesis }}</p>
+
+          <h4>Competitive landscape</h4>
+        </article>
+        <div class="overflow-x-auto rounded border border-base-200 dark:border-base-700 my-3">
+          <table class="min-w-full divide-y divide-base-200 dark:divide-base-700 text-sm">
+            <thead class="bg-base-100 dark:bg-base-800">
+              <tr>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Name</th>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Threat</th>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Overlap / evidence</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-base-200 dark:divide-base-800">
+              {% for comp in c.competitive_landscape %}
+                <tr>
+                  <td class="px-3 py-1.5">{% if comp.url %}<a href="{{ comp.url }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ comp.name }}</a>{% else %}{{ comp.name }}{% endif %}</td>
+                  <td class="px-3 py-1.5">{% include "admin/_ux/_badge.html" with label=comp.threat_level tone=comp.threat_level|status_tone %}</td>
+                  <td class="px-3 py-1.5 text-base-700 dark:text-base-200">{{ comp.overlap }} — {{ comp.evidence }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="px-3 py-3 text-center text-base-500 dark:text-base-300">No competitors listed.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <article class="prose dark:prose-invert prose-sm max-w-none">
+          <h4>MVP scope · {{ c.mvp_scope.build_size }}</h4>
+          <p class="text-sm">{{ c.mvp_scope.build_estimate_assumptions }}</p>
+          <p><strong>Minimum features for test:</strong></p>
+          <ul>{% for f in c.mvp_scope.minimum_features_for_test %}<li>{{ f }}</li>{% endfor %}</ul>
+          <p><strong>Deferred to v2:</strong></p>
+          <ul>{% for f in c.mvp_scope.explicitly_deferred_to_v2 %}<li>{{ f }}</li>{% endfor %}</ul>
+
+          <p><strong>First validation test:</strong> {{ c.first_validation_test }}</p>
+
+          <h4>Kill criteria</h4>
+          <ul>{% for k in c.kill_criteria %}<li>{{ k }}</li>{% endfor %}</ul>
+
+          <h4>Fit to builder</h4>
+          <p><strong>Distribution:</strong> {{ c.fit_to_builder.distribution_fit }}</p>
+          <p><strong>Skill:</strong> {{ c.fit_to_builder.skill_fit }}</p>
+          <p><strong>Capital:</strong> {{ c.fit_to_builder.capital_fit }}</p>
+        </article>
+      </section>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+    No concepts yet — the agent run is still draft or has not produced output.
+  </div>
+{% endif %}
+
+{% if ideation_notes %}
+  <section class="mt-6 rounded-lg border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800 p-4">
+    <h3 class="text-sm font-semibold text-base-900 dark:text-base-100 mb-2">Ideation notes</h3>
+    <p class="text-sm text-base-700 dark:text-base-200">{{ ideation_notes }}</p>
+  </section>
+{% endif %}
+{% endif %}
+
+{{ block.super }}
+{% endblock %}

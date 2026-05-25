@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from django.contrib import admin, messages
+from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils import timezone
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
+from ideation.orchestrator import start_ideation
 from investigations.models import Investigation, InvestigationStatus, StaleReason
 
 _LATEST_LIMIT = 50
 
 
 @admin.register(Investigation)
-class InvestigationAdmin(admin.ModelAdmin):
+class InvestigationAdmin(UnfoldModelAdmin):
     """Triage queue for generated briefs.
 
     The list view defaults to "awaiting review" ordered newest-first. The
@@ -64,15 +67,60 @@ class InvestigationAdmin(admin.ModelAdmin):
                 extra["brief"] = obj.brief
         return super().changeform_view(request, object_id, form_url, extra)
 
-    @admin.action(description="Promote selected investigations")
+    @admin.action(description="Promote selected investigations (and ideate)")
     def promote(self, request, queryset):
-        n = queryset.filter(status=InvestigationStatus.AWAITING_REVIEW).update(
+        n = self._promote_ids(
+            request.user,
+            list(
+                queryset.filter(status=InvestigationStatus.AWAITING_REVIEW).values_list(
+                    "id", flat=True
+                )
+            ),
+        )
+        messages.success(
+            request,
+            f"Promoted {n} investigation(s) and enqueued ideation runs.",
+        )
+
+    @staticmethod
+    def _promote_ids(user, investigation_ids):
+        """Flip awaiting-review rows to promoted and enqueue an ideation each.
+
+        Shared between the queryset action and the per-row latest-view button.
+        """
+        n = Investigation.objects.filter(pk__in=investigation_ids).update(
             status=InvestigationStatus.PROMOTED,
-            decided_by_user=request.user,
+            decided_by_user=user,
             decided_at=timezone.now(),
             finalized_at=timezone.now(),
         )
-        messages.success(request, f"Promoted {n} investigation(s).")
+        for inv_id in investigation_ids:
+            start_ideation(investigation_id=inv_id, guidance="", trigger="promote")
+        return n
+
+    def promote_from_latest_view(self, request, investigation_id):
+        """POST-only per-row promote button on the latest-investigations page.
+
+        Redirects back to the latest view so the operator stays in the
+        scanning context after promoting.
+        """
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        inv = Investigation.objects.filter(
+            pk=investigation_id, status=InvestigationStatus.AWAITING_REVIEW
+        ).first()
+        if inv is None:
+            messages.warning(
+                request,
+                f"Investigation {investigation_id} is not in awaiting_review; nothing to do.",
+            )
+        else:
+            self._promote_ids(request.user, [inv.id])
+            messages.success(
+                request,
+                f"Promoted investigation {inv.id} and enqueued ideation.",
+            )
+        return HttpResponseRedirect("/admin/investigations/latest/")
 
     @admin.action(description="Reject selected investigations")
     def reject(self, request, queryset):
@@ -137,5 +185,6 @@ class InvestigationAdmin(admin.ModelAdmin):
             "status_choices": InvestigationStatus.choices,
             "current_status": status_filter,
             "limit": _LATEST_LIMIT,
+            "awaiting_review_status": InvestigationStatus.AWAITING_REVIEW.value,
         }
         return render(request, "admin/investigations/latest.html", context)

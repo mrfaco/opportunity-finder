@@ -1,0 +1,24 @@
+{% comment %}
+Single-file include for the data-href click pattern.
+
+Drop ``{% include "admin/_ux/_clickable_rows.html" %}`` once per page that
+has rows like ``<tr data-href="/admin/foo/123/change/">``. Click on a row
+navigates; clicks on actual ``<a>``/``<button>`` elements inside the row
+still take precedence.
+
+Re-including is harmless: the listener is bound on a custom data attribute
+and the same rows would only re-bind.
+{% endcomment %}
+<script>
+  (function(){
+    document.querySelectorAll('tr[data-href]').forEach(function(tr){
+      if (tr.dataset.clickableBound) return;
+      tr.dataset.clickableBound = '1';
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', function(ev){
+        if (ev.target.closest('a,button,input,select,label,form')) return;
+        window.location = tr.dataset.href;
+      });
+    });
+  })();
+</script>

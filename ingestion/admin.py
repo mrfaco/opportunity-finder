@@ -4,6 +4,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from ingestion import tasks
 from ingestion.models import (
@@ -16,7 +17,7 @@ from ingestion.models import (
 
 
 @admin.register(IngestionCheckpoint)
-class IngestionCheckpointAdmin(admin.ModelAdmin):
+class IngestionCheckpointAdmin(UnfoldModelAdmin):
     list_display = (
         "source",
         "last_item_posted_at",
@@ -38,6 +39,10 @@ class IngestionCheckpointAdmin(admin.ModelAdmin):
     # Celery so the request returns immediately while the worker grinds.
     # ------------------------------------------------------------------
     def operations_view(self, request):
+        # Deferred to avoid a top-level ingestion→clusters import (the modules
+        # already have a tangled reverse FK relationship).
+        from clusters.models import ClusterItem  # noqa: PLC0415
+
         checkpoints = {cp.source: cp for cp in IngestionCheckpoint.objects.all()}
         rows = []
         for source in sorted(tasks.ADAPTERS):
@@ -51,10 +56,12 @@ class IngestionCheckpointAdmin(admin.ModelAdmin):
                     "opportunities_found": cp.opportunities_found if cp else 0,
                 }
             )
+        latest_items = ClusterItem.objects.select_related("cluster").order_by("-assigned_at")[:25]
         context = {
             **self.admin_site.each_context(request),
             "title": "Ingestion operations",
             "rows": rows,
+            "latest_items": latest_items,
         }
         return render(request, "admin/ingestion/operations.html", context)
 
@@ -91,7 +98,7 @@ class IngestionCheckpointAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterClassification)
-class FilterClassificationAdmin(admin.ModelAdmin):
+class FilterClassificationAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "model",
@@ -114,7 +121,7 @@ class FilterClassificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalSet)
-class FilterEvalSetAdmin(admin.ModelAdmin):
+class FilterEvalSetAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "human_label",
@@ -175,7 +182,7 @@ class FilterEvalSetAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalRun)
-class FilterEvalRunAdmin(admin.ModelAdmin):
+class FilterEvalRunAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "run_at",
@@ -206,7 +213,7 @@ class FilterEvalRunAdmin(admin.ModelAdmin):
 
 
 @admin.register(FilterEvalClassification)
-class FilterEvalClassificationAdmin(admin.ModelAdmin):
+class FilterEvalClassificationAdmin(UnfoldModelAdmin):
     list_display = (
         "id",
         "eval_run",

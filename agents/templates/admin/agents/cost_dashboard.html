@@ -1,68 +1,110 @@
-{% extends "admin/base_site.html" %}
+{% extends "unfold/layouts/base_simple.html" %}
+
 {% block content %}
-<h1>Cost dashboard</h1>
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-6">Cost dashboard</h1>
 
-<section style="margin:1em 0">
-  <h2>Today · {{ today.date }}</h2>
-  <ul>
-    <li>Filter classifications: {{ today.filter_classifications }} (${{ today.filter_cost_usd }})</li>
-    <li>Agent runs: {{ today.agent_runs }} (${{ today.agent_run_cost_usd }})</li>
-    <li><strong>Total spend today:</strong> ${{ today.total_cost_usd }}</li>
-  </ul>
+<section class="mb-8">
+  <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-3">Today · {{ today.date }}</h2>
+  <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Filter classifications</dt>
+      <dd class="mt-1 text-sm tabular-nums text-base-900 dark:text-base-100">{{ today.filter_classifications }} <span class="text-base-500 dark:text-base-300">(${{ today.filter_cost_usd }})</span></dd>
+    </div>
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Agent runs</dt>
+      <dd class="mt-1 text-sm tabular-nums text-base-900 dark:text-base-100">{{ today.agent_runs }} <span class="text-base-500 dark:text-base-300">(${{ today.agent_run_cost_usd }})</span></dd>
+    </div>
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3 bg-base-50 dark:bg-base-800">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Total spend today</dt>
+      <dd class="mt-1 text-base font-semibold tabular-nums text-base-900 dark:text-base-100">${{ today.total_cost_usd }}</dd>
+    </div>
+  </dl>
 </section>
 
-<section style="margin:1em 0">
-  <h2>Last 7 days · total ${{ totals_7d }}</h2>
-  <table>
-    <thead>
-      <tr><th>Date</th><th>Classifications</th><th>Filter $</th><th>Runs</th><th>Run $</th><th>Total $</th></tr>
-    </thead>
-    <tbody>
-      {% for d in last_7 %}
+<section class="mb-8">
+  <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-3">Last 7 days · total ${{ totals_7d }}</h2>
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
         <tr>
-          <td>{{ d.date }}</td>
-          <td>{{ d.filter_classifications }}</td>
-          <td>${{ d.filter_cost_usd }}</td>
-          <td>{{ d.agent_runs }}</td>
-          <td>${{ d.agent_run_cost_usd }}</td>
-          <td>${{ d.total_cost_usd }}</td>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Date</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Classifications</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Filter $</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Runs</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Run $</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Total $</th>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for d in last_7 %}
+          <tr>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">{{ d.date }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ d.filter_classifications }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">${{ d.filter_cost_usd }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ d.agent_runs }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">${{ d.agent_run_cost_usd }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums font-semibold text-base-900 dark:text-base-100">${{ d.total_cost_usd }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
-<section style="margin:1em 0">
-  <h2>Per-model breakdown</h2>
-  <table>
-    <thead><tr><th>Model</th><th>Steps</th><th>Cost</th></tr></thead>
-    <tbody>
-      {% for row in per_model %}
-        <tr><td><code>{{ row.model }}</code></td><td>{{ row.steps }}</td><td>${{ row.cost|default:"0" }}</td></tr>
-      {% empty %}
-        <tr><td colspan="3">No steps yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
-
-<section style="margin:1em 0">
-  <h2>Top 5 most expensive runs (last 7 days)</h2>
-  <table>
-    <thead><tr><th>Run</th><th>Cluster</th><th>Cost</th><th>Steps</th><th>Started</th></tr></thead>
-    <tbody>
-      {% for run in top_runs %}
+<section class="mb-8">
+  <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-3">Per-model breakdown</h2>
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
         <tr>
-          <td><a href="/admin/agents/agentrun/{{ run.id }}/change/"><code>{{ run.id|slice:":8" }}</code></a></td>
-          <td>{{ run.cluster }}</td>
-          <td>${{ run.cost_used_usd }}</td>
-          <td>{{ run.steps_used }}</td>
-          <td>{{ run.started_at }}</td>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Model</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Steps</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cost</th>
         </tr>
-      {% empty %}
-        <tr><td colspan="5">No runs yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for row in per_model %}
+          <tr>
+            <td class="px-4 py-2 text-sm"><code class="font-mono text-xs">{{ row.model }}</code></td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.steps }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">${{ row.cost|default:"0" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="px-4 py-6 text-center text-sm text-base-500 dark:text-base-300">No steps yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="mb-8">
+  <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-3">Top 5 most expensive runs (last 7 days)</h2>
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Run</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cluster</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cost</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Steps</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Started</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for run in top_runs %}
+          <tr data-href="/admin/agents/agentrun/{{ run.id }}/change/" class="hover:bg-base-50 dark:hover:bg-base-800">
+            <td class="px-4 py-2 text-sm"><a href="/admin/agents/agentrun/{{ run.id }}/change/" class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">{{ run.id|slice:":8" }}</a></td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">{{ run.cluster }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">${{ run.cost_used_usd }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ run.steps_used }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">{{ run.started_at }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="px-4 py-6 text-center text-sm text-base-500 dark:text-base-300">No runs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "admin/_ux/_clickable_rows.html" %}
 </section>
 {% endblock %}

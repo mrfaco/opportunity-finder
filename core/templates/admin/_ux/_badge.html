@@ -1,0 +1,23 @@
+{% comment %}
+Colored pill badge.
+
+Args:
+  label: text to display
+  tone: success | danger | warning | info | neutral
+
+Inline styles (not Tailwind utility classes) so the badge renders reliably
+regardless of which Tailwind classes Unfold's CSS bundle happens to ship.
+{% endcomment %}
+{% spaceless %}
+{% if tone == "success" %}
+  <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.12);color:#34d399;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);white-space:nowrap;">{{ label }}</span>
+{% elif tone == "danger" %}
+  <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.12);color:#f87171;box-shadow:inset 0 0 0 1px rgba(239,68,68,0.3);white-space:nowrap;">{{ label }}</span>
+{% elif tone == "warning" %}
+  <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(245,158,11,0.12);color:#fbbf24;box-shadow:inset 0 0 0 1px rgba(245,158,11,0.3);white-space:nowrap;">{{ label }}</span>
+{% elif tone == "info" %}
+  <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(59,130,246,0.12);color:#60a5fa;box-shadow:inset 0 0 0 1px rgba(59,130,246,0.3);white-space:nowrap;">{{ label }}</span>
+{% else %}
+  <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(148,163,184,0.12);color:#cbd5e1;box-shadow:inset 0 0 0 1px rgba(148,163,184,0.3);white-space:nowrap;">{{ label }}</span>
+{% endif %}
+{% endspaceless %}

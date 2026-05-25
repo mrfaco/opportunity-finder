@@ -21,6 +21,7 @@ from agents.tools import register
 from agents.tools.base import Tool, ToolInput, ToolOutput
 from clusters.models import Cluster
 from core.html import html_to_text
+from ideation.schemas import IdeationOutput
 from investigations.schemas import Brief
 
 _HN_TIMEOUT_S = 20.0
@@ -879,6 +880,44 @@ register(
         input_type=Brief,
         output_type=RecordBriefOutput,
         impl=_record_brief,
+        cost_tier=0,
+        cache_ttl_seconds=0,
+    )
+)
+
+
+# ---------------------------------------------------------------------------
+# Ideation termination tool — analogous to record_brief.
+# ---------------------------------------------------------------------------
+class RecordIdeationOutput(ToolOutput):
+    pass
+
+
+def _record_ideation(_ideation: IdeationOutput) -> RecordIdeationOutput:
+    """Confirm receipt of the ideation.
+
+    The loop intercepts ``record_ideation`` calls before this impl is reached —
+    it persists the ideation to the AgentRun, updates the Ideation row, and
+    terminates the loop. This impl exists so that if the loop ever does
+    dispatch it, the agent gets a clean success acknowledgement.
+    """
+    return RecordIdeationOutput(status="success")
+
+
+register(
+    Tool(
+        name="record_ideation",
+        description=(
+            "Record the final ideation result and end the run. Call this "
+            "exactly once when you have three concepts on three distinct bet "
+            "axes, each with competitive landscape, mvp scope, kill criteria, "
+            "fit-to-builder, and a first validation test. The input fields "
+            "are the ideation — see the procedural prompt for what each "
+            "field should contain."
+        ),
+        input_type=IdeationOutput,
+        output_type=RecordIdeationOutput,
+        impl=_record_ideation,
         cost_tier=0,
         cache_ttl_seconds=0,
     )
