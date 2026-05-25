@@ -92,6 +92,20 @@ repos:
         # adding operator buttons without API parity quietly limits it to
         # admin-only. Pass --strict to enforce in CI.
 
+      - id: skill-parity
+        name: Skill parity (soft warn — new API routes without skill docs)
+        entry: python scripts/check_skill_parity.py
+        language: system
+        pass_filenames: false
+        verbose: true
+        always_run: true
+        # Soft hook (exits 0): when a commit adds a new path("…") entry
+        # in api/urls.py, this checks whether any .claude/skills/**/SKILL.md
+        # mentions the URL fragment. If not, the new endpoint exists but
+        # the skills won't know to call it (the PDF download is the case
+        # that motivated this — endpoints landed, skills didn't update).
+        # Pass --strict to enforce in CI.
+
       - id: missing-migrations
         name: Django models in sync with migrations
         entry: scripts/check_missing_migrations.sh

@@ -33,6 +33,7 @@ Fail fast if either is unset.
 | Queue investigation | POST `/api/v1/investigations/runs/` | body: `{"cluster_id": "<uuid>"}` |
 | List investigations | GET `/api/v1/investigations/?status=<status>&limit=<N>` | filterable by status |
 | Get one (full brief) | GET `/api/v1/investigations/<uuid>/` | returns brief + cluster_snapshot |
+| Download as PDF | GET `/api/v1/investigations/<uuid>/pdf/` | application/pdf — print-styled brief render |
 
 `status` values: `draft`, `awaiting_review`, `promoted`, `rejected`,
 `stale`, `superseded`.
@@ -68,6 +69,14 @@ Read one investigation's full brief:
 ```sh
 curl -sS "$OPP_API_BASE/api/v1/investigations/$INV_ID/" \
   -H "Authorization: Bearer $OPP_API_KEY" | jq '.brief'
+```
+
+Download the brief as a PDF (saves to disk; use `-o` for the filename):
+
+```sh
+curl -sS "$OPP_API_BASE/api/v1/investigations/$INV_ID/pdf/" \
+  -H "Authorization: Bearer $OPP_API_KEY" \
+  -o "investigation-$INV_ID.pdf"
 ```
 
 ## Behavior rules

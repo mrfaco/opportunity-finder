@@ -29,6 +29,7 @@ OPP_API_KEY    # opp_<32 chars>
 | Mark stale | POST `/api/v1/investigations/<uuid>/stale/` | `{"stale_reason": "..."}` (default `manual`) |
 | List ideations | GET `/api/v1/ideations/?status=<status>&limit=<N>` | — |
 | Get one ideation | GET `/api/v1/ideations/<uuid>/` | — |
+| Download ideation as PDF | GET `/api/v1/ideations/<uuid>/pdf/` | application/pdf — print-styled three-concept render |
 
 Valid `stale_reason` values: `prompt_changed`, `cluster_changed`, `age`, `manual`.
 
@@ -75,6 +76,14 @@ Read one ideation's full output:
 ```sh
 curl -sS "$OPP_API_BASE/api/v1/ideations/$IDEATION_ID/" \
   -H "Authorization: Bearer $OPP_API_KEY" | jq '.output'
+```
+
+Download an ideation's concept set as a PDF:
+
+```sh
+curl -sS "$OPP_API_BASE/api/v1/ideations/$IDEATION_ID/pdf/" \
+  -H "Authorization: Bearer $OPP_API_KEY" \
+  -o "ideation-$IDEATION_ID.pdf"
 ```
 
 ## Behavior rules
