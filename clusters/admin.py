@@ -8,6 +8,7 @@ from django.db.models import Avg, Max, OuterRef, Subquery
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.html import format_html
 
 from agents.orchestrator import start_run
 from clusters import clustering
@@ -28,6 +29,35 @@ _RECENCY_HALF_LIFE_DAYS = 7.0
 _HIGHLIGHT_TOP_N = 3
 
 
+class ClusterItemInline(admin.TabularInline):
+    """Read-only inline showing the items inside a cluster.
+
+    Renders each item's title as a link to the original article (the HN
+    permalink for HN items, the canonical URL for others) so the reviewer
+    can click straight through to the source. The ``View`` link at the
+    end of each row opens the full ClusterItem admin if they need
+    classifier reasoning, the raw_text body, or metadata.
+    """
+
+    model = ClusterItem
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    ordering = ("-classifier_confidence",)
+    fields = ("source", "title_link", "author", "posted_at", "classifier_confidence")
+    readonly_fields = fields
+
+    @admin.display(description="Title")
+    def title_link(self, obj: ClusterItem) -> str:
+        title = obj.title or "(untitled)"
+        if not obj.url:
+            return title
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', obj.url, title)
+
+    def has_add_permission(self, request: object, obj: object = None) -> bool:
+        return False
+
+
 @admin.register(Cluster)
 class ClusterAdmin(admin.ModelAdmin):
     list_display = (
@@ -43,6 +73,7 @@ class ClusterAdmin(admin.ModelAdmin):
     list_filter = ("status", "sources", "category_tags")
     search_fields = ("id", "title", "summary")
     exclude = ("centroid_embedding",)
+    inlines = [ClusterItemInline]
     readonly_fields = (
         "id",
         "created_at",

@@ -224,6 +224,10 @@ def test_cluster_detail_page_renders(admin_client):
     assert "detail-test" in body
     # The centroid summary should appear in place of the raw vector.
     assert "-dim:" in body
+    # The items inline should list each member with a link to the source.
+    for item in cluster.items.all():
+        assert f'href="{item.url}"' in body
+        assert item.title in body
 
 
 @pytest.mark.django_db
