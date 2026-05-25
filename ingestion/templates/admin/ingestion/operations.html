@@ -120,7 +120,7 @@
             </td>
           </tr>
           <tr data-expand-panel hidden>
-            <td colspan="5" class="px-4 py-4 bg-base-50 dark:bg-base-800/50">
+            <td colspan="5" class="px-4 py-4" style="background:rgba(15,23,42,0.4);">
               <dl class="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
                 <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Task ID</dt>
                 <dd class="font-mono text-xs text-base-800 dark:text-base-100 break-all">{{ tr.task_id }}</dd>
@@ -137,14 +137,14 @@
                 {% if tr.result %}
                   <dt class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-300">Result</dt>
                   <dd>
-                    <pre class="font-mono text-xs leading-relaxed text-base-800 dark:text-base-100 p-3 rounded bg-base-100 dark:bg-base-900 overflow-auto" style="max-height:240px;white-space:pre-wrap;word-break:break-word;">{{ tr.result }}</pre>
+                    <pre class="font-mono text-xs leading-relaxed p-3 rounded overflow-auto" style="background:#0f172a;color:#e2e8f0;max-height:240px;white-space:pre-wrap;word-break:break-word;">{{ tr.result }}</pre>
                   </dd>
                 {% endif %}
 
                 {% if tr.traceback %}
-                  <dt class="text-xs uppercase tracking-wider font-semibold text-red-500 dark:text-red-400">Traceback</dt>
+                  <dt class="text-xs uppercase tracking-wider font-semibold" style="color:#f87171;">Traceback</dt>
                   <dd>
-                    <pre class="font-mono text-xs leading-relaxed text-red-200 p-3 rounded overflow-auto" style="background:rgba(239,68,68,0.08);max-height:400px;white-space:pre-wrap;word-break:break-word;">{{ tr.traceback }}</pre>
+                    <pre class="font-mono text-xs leading-relaxed p-3 rounded overflow-auto" style="background:#1f0a0a;color:#fca5a5;max-height:400px;white-space:pre-wrap;word-break:break-word;box-shadow:inset 0 0 0 1px rgba(239,68,68,0.2);">{{ tr.traceback }}</pre>
                   </dd>
                 {% endif %}
               </dl>
