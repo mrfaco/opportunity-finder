@@ -10,8 +10,20 @@ from django.utils import timezone
 
 from clusters import clustering
 from clusters.models import Cluster, ClusterMergeProposal, ClusterSplitProposal, ProposalStatus
+from clusters.summarizer import generate_title_and_summary
 
 logger = logging.getLogger(__name__)
+
+# Minimum size for a cluster to be eligible for LLM-driven title generation.
+# Singletons get their title set verbatim from the underlying item at cluster
+# creation (see ``clusters.clustering.assign_item_to_cluster``); paying for a
+# Haiku call to restate a single item's own title is wasteful.
+_TITLE_MIN_SIZE = 2
+
+# A cluster's title is regenerated only when its size drifts by at least this
+# fraction since the last titling pass. Avoids re-billing for trivial growth
+# (e.g. 10 → 11) but catches the meaningful shifts (e.g. 2 → 5).
+_TITLE_REGEN_RATIO = 0.20
 
 
 @shared_task
@@ -30,7 +42,9 @@ def refine_clusters_nightly() -> dict[str, int]:
         "orphans_reassigned": 0,
         "merge_proposals_queued": 0,
         "split_proposals_queued": 0,
-        "titles_regenerated_skipped": 0,
+        "titles_regenerated": 0,
+        "titles_skipped_too_small": 0,
+        "titles_skipped_size_unchanged": 0,
     }
 
     # 1. Recompute centroids.
@@ -87,9 +101,42 @@ def refine_clusters_nightly() -> dict[str, int]:
         )
         stats["split_proposals_queued"] += 1
 
-    # 5. Title/summary regeneration is intentionally stubbed.
-    # TODO(v1-followup): regenerate title+summary for clusters whose size
-    # changed by >=20% since last_refined_at using a cheap-model call.
+    # 5. Title/summary regeneration. Single Haiku call per eligible cluster,
+    # gated on (a) multi-item membership and (b) material size drift since
+    # the last titling. The size check holds nightly cost roughly constant
+    # as the cluster set grows: clusters that haven't moved don't get re-
+    # billed, but the moment one grows by >=20% the title catches up.
+    for cluster in Cluster.active.all():
+        if cluster.size < _TITLE_MIN_SIZE:
+            stats["titles_skipped_too_small"] += 1
+            continue
+        if not _title_needs_refresh(cluster):
+            stats["titles_skipped_size_unchanged"] += 1
+            continue
+        result = generate_title_and_summary(cluster)
+        cluster.title = result.title
+        cluster.summary = result.summary
+        cluster.last_titled_size = cluster.size
+        cluster.save(update_fields=["title", "summary", "last_titled_size", "updated_at"])
+        stats["titles_regenerated"] += 1
 
     logger.info("refine_clusters_nightly complete: %s", stats)
     return stats
+
+
+def _title_needs_refresh(cluster: Cluster) -> bool:
+    """True if the cluster's title is missing or its size drift exceeds the threshold.
+
+    ``last_titled_size`` is ``None`` for clusters that have never been titled
+    via the LLM path — those always need a refresh. For ones that have, we
+    measure drift relative to the larger of the two sizes to make growth
+    and shrinkage symmetric (otherwise shrinking by 50% looks bigger than
+    growing by 50%).
+    """
+    if cluster.last_titled_size is None or not cluster.title:
+        return True
+    larger = max(cluster.size, cluster.last_titled_size)
+    if larger == 0:
+        return False
+    drift = abs(cluster.size - cluster.last_titled_size) / larger
+    return drift >= _TITLE_REGEN_RATIO

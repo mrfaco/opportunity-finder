@@ -101,6 +101,11 @@ def assign_item_to_cluster(item: ClusterItem) -> Cluster:
         item.assigned_at = now
         return nearest
 
+    # Seed the singleton's title from the item's own title. A 1-item cluster
+    # has nothing to summarize that the item title doesn't already say, and
+    # burning a Haiku call to restate it would be wasteful. When the cluster
+    # grows past size=1, the nightly refinement task regenerates via the
+    # cluster_summary prompt — see ``clusters/summarizer.py``.
     new_cluster = Cluster.objects.create(
         status=ClusterStatus.PENDING,
         size=1,
@@ -109,6 +114,8 @@ def assign_item_to_cluster(item: ClusterItem) -> Cluster:
         sources=[item.source],
         centroid_embedding=item.embedding,
         classifier_score=item.classifier_confidence,
+        title=item.title or None,
+        last_titled_size=1,
     )
     item.cluster = new_cluster
     item.added_to_cluster_at = now
@@ -146,9 +153,12 @@ def find_orphan_items(cluster: Cluster) -> list[ClusterItem]:
     """
     margin = settings.CLUSTER_REASSIGN_MARGIN
     orphans: list[ClusterItem] = []
-    current_centroid = np.array(cluster.centroid_embedding) if cluster.centroid_embedding else None
-    if current_centroid is None:
+    # ``centroid_embedding`` comes back from pgvector as a numpy array, and
+    # ``if arr`` raises ValueError because numpy refuses to reduce a multi-
+    # element array to a single bool. Compare against None explicitly.
+    if cluster.centroid_embedding is None:
         return orphans
+    current_centroid = np.array(cluster.centroid_embedding)
     for item in cluster.items.all():
         item_emb = np.array(item.embedding)
         current_sim = float(np.dot(current_centroid, item_emb))

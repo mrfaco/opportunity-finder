@@ -82,6 +82,10 @@ class Cluster(TimestampedModel):
 
     title = models.TextField(null=True, blank=True)
     summary = models.TextField(null=True, blank=True)
+    # ``size`` value at the last title/summary regeneration. Used by the
+    # nightly refinement task to decide whether the cluster has drifted
+    # enough to warrant burning another Haiku call. NULL = never titled.
+    last_titled_size = models.PositiveIntegerField(null=True, blank=True)
 
     category_tags = ArrayField(models.CharField(max_length=64), default=list, blank=True)
 
