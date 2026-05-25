@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from clusters.models import Cluster
+from clusters.models import Cluster, ClusterMergeProposal, ProposalStatus
 from ideation.models import Ideation
 from ingestion import tasks as ingestion_tasks
 from ingestion.models import IngestionCheckpoint
@@ -109,6 +109,76 @@ class ClusterSerializer(serializers.ModelSerializer):
             "investigation_count",
             "classifier_score",
         )
+
+
+# ---------------------------------------------------------------------------
+# Cluster merge proposals
+# ---------------------------------------------------------------------------
+
+
+class ClusterMergeProposalListSerializer(serializers.ModelSerializer):
+    """Compact list-view of a merge proposal — judge verdict surfaced.
+
+    Includes the two clusters' titles so the operator can scan without
+    drilling into each cluster.
+    """
+
+    cluster_a_id = serializers.UUIDField(read_only=True)
+    cluster_b_id = serializers.UUIDField(read_only=True)
+    cluster_a_title = serializers.SerializerMethodField()
+    cluster_b_title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClusterMergeProposal
+        fields = (
+            "id",
+            "status",
+            "created_at",
+            "cluster_a_id",
+            "cluster_b_id",
+            "cluster_a_title",
+            "cluster_b_title",
+            "centroid_similarity",
+            "llm_judge_verdict",
+            "llm_judge_confidence",
+            "reviewed_at",
+        )
+
+    def get_cluster_a_title(self, obj: ClusterMergeProposal) -> str | None:
+        return obj.cluster_a.title
+
+    def get_cluster_b_title(self, obj: ClusterMergeProposal) -> str | None:
+        return obj.cluster_b.title
+
+
+class ClusterMergeProposalDetailSerializer(ClusterMergeProposalListSerializer):
+    """Detail view — adds judge reasoning, summaries, and review notes."""
+
+    cluster_a_summary = serializers.SerializerMethodField()
+    cluster_b_summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClusterMergeProposal
+        fields = ClusterMergeProposalListSerializer.Meta.fields + (
+            "cluster_a_summary",
+            "cluster_b_summary",
+            "llm_judge_reasoning",
+            "review_notes",
+        )
+
+    def get_cluster_a_summary(self, obj: ClusterMergeProposal) -> str | None:
+        return obj.cluster_a.summary
+
+    def get_cluster_b_summary(self, obj: ClusterMergeProposal) -> str | None:
+        return obj.cluster_b.summary
+
+
+class MergeProposalRejectRequestSerializer(serializers.Serializer):
+    review_notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class MergeProposalStatusFilterSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=ProposalStatus.choices, required=False)
 
 
 # ---------------------------------------------------------------------------

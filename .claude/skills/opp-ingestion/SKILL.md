@@ -37,7 +37,7 @@ Check before doing anything:
 |---|---|---|
 | Trigger ingest | POST `/api/v1/ingestion/runs/` | `{"source": "hacker_news"\|"github"}` |
 | Trigger backfill | POST `/api/v1/ingestion/backfills/` | `{"source": "...", "days": <int 1-365>}` |
-| List task runs | GET `/api/v1/ingestion/runs/?source=<name>&limit=N` | optional `source`, `limit` (default 50, max 200) |
+| List task runs | GET `/api/v1/task-runs/?task_prefix=ingestion.tasks.&args_contains=<src>&limit=N` | generalized task history; pass the ingestion prefix to scope |
 | List recent items | GET `/api/v1/ingestion/items/?source=<name>&limit=N` | optional filters |
 | List checkpoints | GET `/api/v1/ingestion/checkpoints/` | — |
 
@@ -64,12 +64,15 @@ curl -sS -X POST "$OPP_API_BASE/api/v1/ingestion/backfills/" \
   -d '{"source": "github", "days": 7}'
 ```
 
-List recent task runs (defaults to 50, both ingest + backfill):
+List recent task runs (defaults to 50). The `/task-runs/` endpoint is
+shared across all Celery tasks — scope to ingestion via `task_prefix`:
 
 ```sh
-curl -sS "$OPP_API_BASE/api/v1/ingestion/runs/?limit=10" \
+curl -sS "$OPP_API_BASE/api/v1/task-runs/?task_prefix=ingestion.tasks.&limit=10" \
   -H "Authorization: Bearer $OPP_API_KEY" | jq '.[] | {task_name, status, date_done, traceback}'
 ```
+
+Add `args_contains=hacker_news` to filter to one source.
 
 List recent ingested items:
 

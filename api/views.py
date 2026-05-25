@@ -22,6 +22,8 @@ from rest_framework.views import APIView
 
 from api.serializers import (
     BackfillRequestSerializer,
+    ClusterMergeProposalDetailSerializer,
+    ClusterMergeProposalListSerializer,
     ClusterSerializer,
     IdeationDetailSerializer,
     IdeationListSerializer,
@@ -32,12 +34,15 @@ from api.serializers import (
     InvestigationListSerializer,
     InvestigationRunQueuedSerializer,
     InvestigationStartRequestSerializer,
+    MergeProposalRejectRequestSerializer,
     RejectRequestSerializer,
     StaleRequestSerializer,
     TaskQueuedResponseSerializer,
     TaskRunSerializer,
 )
-from clusters.models import Cluster, ClusterItem, ClusterStatus
+from clusters import orchestrator as cluster_orchestrator
+from clusters import tasks as cluster_tasks
+from clusters.models import Cluster, ClusterItem, ClusterMergeProposal, ClusterStatus
 from ideation.models import Ideation
 from ingestion import tasks as ingestion_tasks
 from ingestion.models import IngestionCheckpoint
@@ -69,7 +74,7 @@ def _clamp_limit(raw: str | None) -> int:
 
 
 class IngestionRunsView(APIView):
-    """POST: trigger an incremental ingest. GET: list recent task runs."""
+    """POST only: trigger an incremental ingest. Read history via /task-runs/."""
 
     def post(self, request):
         ser = IngestRunRequestSerializer(data=request.data)
@@ -78,18 +83,28 @@ class IngestionRunsView(APIView):
         out = TaskQueuedResponseSerializer({"task_id": str(async_result.id), "status": "queued"})
         return Response(out.data, status=status.HTTP_202_ACCEPTED)
 
+
+class TaskRunsView(APIView):
+    """GET: list recent Celery task results across the system.
+
+    Filter via ``task_prefix`` to scope (e.g. ``ingestion.tasks.``,
+    ``clusters.tasks.``). The history is whatever django-celery-results
+    has recorded; without a result backend running this returns empty.
+    """
+
     def get(self, request):
-        # Deferred to avoid a top-level dep on django-celery-results from this
-        # module — keeps test imports lean and matches the pattern used by
-        # ingestion/admin.py (see comment there).
         from django_celery_results.models import TaskResult  # noqa: PLC0415
 
         limit = _clamp_limit(request.query_params.get("limit"))
-        source = request.query_params.get("source")
-        qs = TaskResult.objects.filter(task_name__startswith="ingestion.tasks.")
-        if source:
-            # Args are stored as a repr-ish string; match the source substring.
-            qs = qs.filter(task_args__contains=source)
+        prefix = request.query_params.get("task_prefix")
+        contains = request.query_params.get("args_contains")
+        qs = TaskResult.objects.all()
+        if prefix:
+            qs = qs.filter(task_name__startswith=prefix)
+        if contains:
+            # Args are stored as a repr-ish string; substring match is
+            # the most useful filter without doing args-by-position parsing.
+            qs = qs.filter(task_args__contains=contains)
         rows = list(qs.order_by("-date_created")[:limit])
         data = [
             {
@@ -160,6 +175,101 @@ class IngestionCheckpointsView(APIView):
 # ---------------------------------------------------------------------------
 # Clusters
 # ---------------------------------------------------------------------------
+
+
+class RefinementRunsView(APIView):
+    """POST only: enqueue refine_clusters_nightly.
+
+    The task recomputes centroids, reassigns orphans, queues + judges
+    merge proposals, and regenerates titles for drifted clusters. Polls
+    via GET /api/v1/task-runs/?task_prefix=clusters.tasks.
+    """
+
+    def post(self, request):
+        async_result = cluster_tasks.refine_clusters_nightly.delay()
+        out = TaskQueuedResponseSerializer({"task_id": str(async_result.id), "status": "queued"})
+        return Response(out.data, status=status.HTTP_202_ACCEPTED)
+
+
+class ClusterMergeProposalsView(APIView):
+    """GET: list merge proposals.
+
+    Filters: ``status`` (e.g. pending_review), ``judge_verdict`` (``true`` /
+    ``false``), ``min_judge_confidence``. The skill workflow is "show me
+    the obvious-yes pending proposals" — i.e. status=pending_review +
+    judge_verdict=true sorted by confidence.
+    """
+
+    def get(self, request):
+        limit = _clamp_limit(request.query_params.get("limit"))
+        qs = ClusterMergeProposal.objects.select_related("cluster_a", "cluster_b").order_by(
+            "-created_at"
+        )
+
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        judge_verdict = request.query_params.get("judge_verdict")
+        if judge_verdict is not None:
+            # Accept "true"/"false"/"null" textually. "null" surfaces rows
+            # the judge couldn't evaluate (shouldn't happen post-judge, but
+            # also covers pre-judge rows from before the wiring landed).
+            jv = judge_verdict.lower()
+            if jv == "true":
+                qs = qs.filter(llm_judge_verdict=True)
+            elif jv == "false":
+                qs = qs.filter(llm_judge_verdict=False)
+            elif jv == "null":
+                qs = qs.filter(llm_judge_verdict__isnull=True)
+
+        min_conf = request.query_params.get("min_judge_confidence")
+        if min_conf is not None:
+            qs = qs.filter(llm_judge_confidence__gte=float(min_conf))
+
+        rows = list(qs[:limit])
+        return Response(ClusterMergeProposalListSerializer(rows, many=True).data)
+
+
+class ClusterMergeProposalDetailView(APIView):
+    """GET: full proposal with judge reasoning + both clusters' summaries."""
+
+    def get(self, request, pk):
+        try:
+            proposal = ClusterMergeProposal.objects.select_related("cluster_a", "cluster_b").get(
+                pk=pk
+            )
+        except ClusterMergeProposal.DoesNotExist:
+            return Response(
+                {"detail": f"Merge proposal {pk} does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(ClusterMergeProposalDetailSerializer(proposal).data)
+
+
+class ClusterMergeProposalActionViewSet(viewsets.ViewSet):
+    """Action endpoints — apply / reject. Delegates to clusters.orchestrator."""
+
+    def get_queryset(self):
+        return ClusterMergeProposal.objects.all()
+
+    @action(detail=True, methods=["post"], url_path="apply")
+    def apply(self, request, pk=None):
+        proposal = cluster_orchestrator.apply_merge_proposal(proposal_id=pk, user=request.user)
+        proposal.refresh_from_db()
+        return Response(ClusterMergeProposalDetailSerializer(proposal).data)
+
+    @action(detail=True, methods=["post"], url_path="reject")
+    def reject(self, request, pk=None):
+        ser = MergeProposalRejectRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        proposal = cluster_orchestrator.reject_merge_proposal(
+            proposal_id=pk,
+            user=request.user,
+            review_notes=ser.validated_data["review_notes"],
+        )
+        proposal.refresh_from_db()
+        return Response(ClusterMergeProposalDetailSerializer(proposal).data)
 
 
 class ClustersView(APIView):

@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 
 from django.contrib import admin, messages
-from django.db import transaction
 from django.db.models import Avg, Max, OuterRef, Subquery
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -13,7 +12,7 @@ from unfold.admin import ModelAdmin as UnfoldModelAdmin
 from unfold.admin import TabularInline as UnfoldTabularInline
 
 from agents.orchestrator import start_run
-from clusters import clustering
+from clusters import orchestrator as cluster_orchestrator
 from clusters.models import (
     Cluster,
     ClusterItem,
@@ -249,38 +248,30 @@ class ClusterMergeProposalAdmin(UnfoldModelAdmin):
     def approve_and_apply(self, request, queryset):
         applied = 0
         for proposal in queryset.filter(status=ProposalStatus.PENDING_REVIEW):
-            with transaction.atomic():
-                survivor, absorbed = proposal.cluster_a, proposal.cluster_b
-                absorbed.items.update(cluster=survivor, assigned_at=timezone.now())
-                clustering.recompute_centroid(survivor)
-                survivor.merge_history = [
-                    *survivor.merge_history,
-                    {
-                        "absorbed_cluster_id": str(absorbed.id),
-                        "applied_at": timezone.now().isoformat(),
-                        "centroid_similarity": proposal.centroid_similarity,
-                        "proposal_id": str(proposal.id),
-                    },
-                ]
-                survivor.save(update_fields=["merge_history", "updated_at"])
-                absorbed.status = ClusterStatus.MERGED_INTO
-                absorbed.merged_into_cluster = survivor
-                absorbed.save(update_fields=["status", "merged_into_cluster", "updated_at"])
-                proposal.status = ProposalStatus.APPLIED
-                proposal.reviewed_by = request.user
-                proposal.reviewed_at = timezone.now()
-                proposal.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            try:
+                cluster_orchestrator.apply_merge_proposal(
+                    proposal_id=proposal.id, user=request.user
+                )
                 applied += 1
+            except cluster_orchestrator.MergeProposalNotInState as exc:  # allow: suppress-exception
+                # Per-row admin UX: a stale row gets a warning so the batch
+                # action keeps going. The orchestrator owns the precondition;
+                # we surface its message.
+                messages.warning(request, str(exc))
         messages.success(request, f"Applied {applied} merge(s).")
 
     @admin.action(description="Reject selected merge proposals")
     def reject(self, request, queryset):
-        count = queryset.filter(status=ProposalStatus.PENDING_REVIEW).update(
-            status=ProposalStatus.REJECTED,
-            reviewed_by=request.user,
-            reviewed_at=timezone.now(),
-        )
-        messages.success(request, f"Rejected {count} merge(s).")
+        rejected = 0
+        for proposal in queryset.filter(status=ProposalStatus.PENDING_REVIEW):
+            try:
+                cluster_orchestrator.reject_merge_proposal(
+                    proposal_id=proposal.id, user=request.user
+                )
+                rejected += 1
+            except cluster_orchestrator.MergeProposalNotInState as exc:  # allow: suppress-exception
+                messages.warning(request, str(exc))
+        messages.success(request, f"Rejected {rejected} merge(s).")
 
 
 @admin.register(ClusterSplitProposal)

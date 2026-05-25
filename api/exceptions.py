@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
+from clusters.orchestrator import MergeProposalNotFound, MergeProposalNotInState
 from investigations.orchestrator import (
     InvestigationNotFound,
     InvestigationNotInState,
@@ -19,7 +20,7 @@ from investigations.orchestrator import (
 
 
 def api_exception_handler(exc, context):
-    if isinstance(exc, InvestigationNotInState):
+    if isinstance(exc, (InvestigationNotInState, MergeProposalNotInState)):
         return Response(
             {
                 "detail": str(exc),
@@ -28,6 +29,6 @@ def api_exception_handler(exc, context):
             },
             status=status.HTTP_409_CONFLICT,
         )
-    if isinstance(exc, InvestigationNotFound):
+    if isinstance(exc, (InvestigationNotFound, MergeProposalNotFound)):
         return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
     return drf_exception_handler(exc, context)

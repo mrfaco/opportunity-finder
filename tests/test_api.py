@@ -268,7 +268,7 @@ def test_ingestion_items_lists_recent(client, auth_headers, cluster):
 
 
 @pytest.mark.django_db
-def test_ingestion_runs_history_filters_by_task_name(client, auth_headers):
+def test_task_runs_filters_by_prefix(client, auth_headers):
     from django_celery_results.models import TaskResult  # noqa: PLC0415
 
     TaskResult.objects.create(
@@ -279,15 +279,220 @@ def test_ingestion_runs_history_filters_by_task_name(client, auth_headers):
     )
     TaskResult.objects.create(
         task_id="t2",
-        task_name="agents.tasks.run_agent_loop",  # NOT ingestion
+        task_name="clusters.tasks.refine_clusters_nightly",
         status="SUCCESS",
     )
-    resp = client.get("/api/v1/ingestion/runs/", **auth_headers)
+    TaskResult.objects.create(
+        task_id="t3",
+        task_name="agents.tasks.run_agent_loop",
+        status="SUCCESS",
+    )
+    # Prefix scoped to ingestion only — refinement + agent rows should not appear.
+    resp = client.get("/api/v1/task-runs/?task_prefix=ingestion.tasks.", **auth_headers)
     assert resp.status_code == 200
-    rows = resp.json()
-    task_ids = [r["task_id"] for r in rows]
+    task_ids = [r["task_id"] for r in resp.json()]
     assert "t1" in task_ids
     assert "t2" not in task_ids
+    assert "t3" not in task_ids
+    # Unfiltered surfaces everything.
+    resp = client.get("/api/v1/task-runs/", **auth_headers)
+    task_ids = [r["task_id"] for r in resp.json()]
+    assert {"t1", "t2", "t3"} <= set(task_ids)
+
+
+# ---------------------------------------------------------------------------
+# Refinement + cluster merge proposals
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_refinement_runs_post_enqueues(client, auth_headers, monkeypatch):
+    calls = _stub_noop_delay(monkeypatch, "clusters.tasks.refine_clusters_nightly")
+    resp = client.post(
+        "/api/v1/refinement/runs/",
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert resp.status_code == 202
+    assert resp.json()["status"] == "queued"
+    assert calls == [((), {})]
+
+
+@pytest.fixture
+def two_clusters_with_items(db):
+    from clusters.models import ClusterStatus, Source  # noqa: PLC0415
+
+    now = timezone.now()
+    a = Cluster.objects.create(
+        status=ClusterStatus.PENDING,
+        size=2,
+        first_seen_at=now,
+        last_seen_at=now,
+        sources=[Source.HACKER_NEWS],
+        centroid_embedding=_vec(),
+        classifier_score=0.8,
+        title="cluster A",
+        summary="summary A",
+    )
+    b = Cluster.objects.create(
+        status=ClusterStatus.PENDING,
+        size=2,
+        first_seen_at=now,
+        last_seen_at=now,
+        sources=[Source.HACKER_NEWS],
+        centroid_embedding=_vec(),
+        classifier_score=0.7,
+        title="cluster B",
+        summary="summary B",
+    )
+    for c in (a, b):
+        for i in range(2):
+            ClusterItem.objects.create(
+                cluster=c,
+                source=Source.HACKER_NEWS,
+                source_item_id=f"hn-{c.id}-{i}",
+                url=f"https://example.com/{i}",
+                title=f"Item {i}",
+                posted_at=now,
+                raw_text="x",
+                snippet="x",
+                classifier_verdict="opportunity",
+                classifier_confidence=0.8,
+                embedding=_vec(),
+                added_to_cluster_at=now,
+                assigned_at=now,
+            )
+    return a, b
+
+
+def _make_merge_proposal(a, b, *, verdict: bool, confidence: float = 0.85):
+    from clusters.models import ClusterMergeProposal, ProposalStatus  # noqa: PLC0415
+
+    return ClusterMergeProposal.objects.create(
+        cluster_a=a,
+        cluster_b=b,
+        centroid_similarity=0.91,
+        status=ProposalStatus.PENDING_REVIEW,
+        llm_judge_verdict=verdict,
+        llm_judge_confidence=confidence,
+        llm_judge_reasoning="judge said so",
+    )
+
+
+@pytest.mark.django_db
+def test_merge_proposals_list_filters_by_judge_verdict(
+    client, auth_headers, two_clusters_with_items
+):
+    a, b = two_clusters_with_items
+    yes = _make_merge_proposal(a, b, verdict=True, confidence=0.92)
+    # Make a second pair for the "no" proposal (can't reuse the same a+b
+    # because nothing prevents two pending proposals for the same pair,
+    # but it's cleaner to keep them distinct).
+    no = _make_merge_proposal(b, a, verdict=False, confidence=0.71)
+
+    resp = client.get("/api/v1/cluster-merge-proposals/?judge_verdict=true", **auth_headers)
+    assert resp.status_code == 200
+    ids = [r["id"] for r in resp.json()]
+    assert str(yes.id) in ids
+    assert str(no.id) not in ids
+
+    resp = client.get("/api/v1/cluster-merge-proposals/?judge_verdict=false", **auth_headers)
+    ids = [r["id"] for r in resp.json()]
+    assert str(no.id) in ids
+    assert str(yes.id) not in ids
+
+
+@pytest.mark.django_db
+def test_merge_proposal_detail_surfaces_judge_reasoning(
+    client, auth_headers, two_clusters_with_items
+):
+    a, b = two_clusters_with_items
+    proposal = _make_merge_proposal(a, b, verdict=True)
+    resp = client.get(f"/api/v1/cluster-merge-proposals/{proposal.id}/", **auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["llm_judge_reasoning"] == "judge said so"
+    assert body["cluster_a_title"] == "cluster A"
+    assert body["cluster_b_summary"] == "summary B"
+
+
+@pytest.mark.django_db
+def test_merge_proposal_apply_flips_status_and_moves_items(
+    client, auth_headers, two_clusters_with_items
+):
+    a, b = two_clusters_with_items
+    proposal = _make_merge_proposal(a, b, verdict=True)
+
+    resp = client.post(
+        f"/api/v1/cluster-merge-proposals/{proposal.id}/apply/",
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "applied"
+
+    # b's items now belong to a, b's status flipped, proposal applied.
+    from clusters.models import ClusterStatus  # noqa: PLC0415
+
+    a.refresh_from_db()
+    b.refresh_from_db()
+    proposal.refresh_from_db()
+    assert b.items.count() == 0
+    assert a.items.count() == 4  # 2 original + 2 absorbed
+    assert b.status == ClusterStatus.MERGED_INTO
+    assert b.merged_into_cluster_id == a.id
+    assert proposal.status == "applied"
+
+
+@pytest.mark.django_db
+def test_merge_proposal_apply_rejects_double_apply(client, auth_headers, two_clusters_with_items):
+    a, b = two_clusters_with_items
+    proposal = _make_merge_proposal(a, b, verdict=True)
+
+    first = client.post(
+        f"/api/v1/cluster-merge-proposals/{proposal.id}/apply/",
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"/api/v1/cluster-merge-proposals/{proposal.id}/apply/",
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert second.status_code == 409
+    body = second.json()
+    assert body["current_status"] == "applied"
+    assert body["expected_status"] == "pending_review"
+
+
+@pytest.mark.django_db
+def test_merge_proposal_reject_records_review_notes(client, auth_headers, two_clusters_with_items):
+    a, b = two_clusters_with_items
+    proposal = _make_merge_proposal(a, b, verdict=False)
+
+    resp = client.post(
+        f"/api/v1/cluster-merge-proposals/{proposal.id}/reject/",
+        data={"review_notes": "judge was right — different audiences"},
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert resp.status_code == 200
+    proposal.refresh_from_db()
+    assert proposal.status == "rejected"
+    assert "different audiences" in proposal.review_notes
+
+
+@pytest.mark.django_db
+def test_merge_proposal_apply_404(client, auth_headers):
+    resp = client.post(
+        "/api/v1/cluster-merge-proposals/11111111-1111-1111-1111-111111111111/apply/",
+        content_type="application/json",
+        **auth_headers,
+    )
+    assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------

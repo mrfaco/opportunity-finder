@@ -13,6 +13,8 @@ from django.urls import path
 from api import views
 
 urlpatterns = [
+    # Generalized task history (across all Celery tasks).
+    path("task-runs/", views.TaskRunsView.as_view(), name="api-task-runs"),
     # Ingestion
     path("ingestion/runs/", views.IngestionRunsView.as_view(), name="api-ingestion-runs"),
     path(
@@ -25,6 +27,29 @@ urlpatterns = [
         "ingestion/checkpoints/",
         views.IngestionCheckpointsView.as_view(),
         name="api-ingestion-checkpoints",
+    ),
+    # Refinement (nightly cluster maintenance: centroids, orphans, judge, titles).
+    path("refinement/runs/", views.RefinementRunsView.as_view(), name="api-refinement-runs"),
+    # Cluster merge proposals
+    path(
+        "cluster-merge-proposals/",
+        views.ClusterMergeProposalsView.as_view(),
+        name="api-cluster-merge-proposals",
+    ),
+    path(
+        "cluster-merge-proposals/<uuid:pk>/",
+        views.ClusterMergeProposalDetailView.as_view(),
+        name="api-cluster-merge-proposal-detail",
+    ),
+    path(
+        "cluster-merge-proposals/<uuid:pk>/apply/",
+        views.ClusterMergeProposalActionViewSet.as_view({"post": "apply"}),
+        name="api-cluster-merge-proposal-apply",
+    ),
+    path(
+        "cluster-merge-proposals/<uuid:pk>/reject/",
+        views.ClusterMergeProposalActionViewSet.as_view({"post": "reject"}),
+        name="api-cluster-merge-proposal-reject",
     ),
     # Clusters
     path("clusters/", views.ClustersView.as_view(), name="api-clusters"),
