@@ -39,6 +39,10 @@ class IngestionCheckpointAdmin(UnfoldModelAdmin):
     # Celery so the request returns immediately while the worker grinds.
     # ------------------------------------------------------------------
     def operations_view(self, request):
+        # Deferred to avoid a top-level ingestion→clusters import (the modules
+        # already have a tangled reverse FK relationship).
+        from clusters.models import ClusterItem  # noqa: PLC0415
+
         checkpoints = {cp.source: cp for cp in IngestionCheckpoint.objects.all()}
         rows = []
         for source in sorted(tasks.ADAPTERS):
@@ -52,10 +56,12 @@ class IngestionCheckpointAdmin(UnfoldModelAdmin):
                     "opportunities_found": cp.opportunities_found if cp else 0,
                 }
             )
+        latest_items = ClusterItem.objects.select_related("cluster").order_by("-assigned_at")[:25]
         context = {
             **self.admin_site.each_context(request),
             "title": "Ingestion operations",
             "rows": rows,
+            "latest_items": latest_items,
         }
         return render(request, "admin/ingestion/operations.html", context)
 

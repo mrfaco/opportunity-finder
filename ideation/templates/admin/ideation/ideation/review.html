@@ -3,23 +3,23 @@
 
 {% block content %}
 {% if ideation %}
-<div class="mb-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+<div class="mb-6 rounded-lg border border-base-200 dark:border-base-700 bg-white dark:bg-base-900 p-5">
   <p class="mb-1 text-sm">
-    <strong class="text-slate-900 dark:text-slate-100">Investigation:</strong>
+    <strong class="text-base-900 dark:text-base-100">Investigation:</strong>
     <a href="/admin/investigations/investigation/{{ investigation.id }}/change/" class="text-blue-600 dark:text-blue-400 hover:underline">
       <span class="font-mono text-xs">{{ investigation.id|slice:":8" }}</span> — {{ investigation.brief.headline|default:"(no headline)" }}
     </a>
   </p>
   <p class="mb-1 text-sm flex items-center gap-2">
-    <strong class="text-slate-900 dark:text-slate-100">Status:</strong>
+    <strong class="text-base-900 dark:text-base-100">Status:</strong>
     {% include "admin/_ux/_badge.html" with label=ideation.status tone=ideation.status|status_tone %}
-    <span class="text-slate-500 dark:text-slate-400">· created {{ ideation.created_at }}</span>
+    <span class="text-base-500 dark:text-base-300">· created {{ ideation.created_at }}</span>
   </p>
   {% if ideation.guidance %}
-    <p class="mb-1 text-sm text-slate-700 dark:text-slate-300"><strong>Guidance:</strong> {{ ideation.guidance }}</p>
+    <p class="mb-1 text-sm text-base-700 dark:text-base-200"><strong>Guidance:</strong> {{ ideation.guidance }}</p>
   {% endif %}
   {% if primary_run %}
-    <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
+    <p class="mb-3 text-sm text-base-700 dark:text-base-200">
       Run <a href="/admin/agents/agentrun/{{ primary_run.id }}/change/" class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">{{ primary_run.id|slice:":8" }}</a>
       <span class="tabular-nums">· ${{ primary_run.cost_used_usd }} · {{ primary_run.steps_used }} steps</span>
       · <a href="/admin/agents/run/{{ primary_run.id }}/trajectory/" class="text-blue-600 dark:text-blue-400 hover:underline">trajectory</a>
@@ -33,10 +33,10 @@
 {% if concepts %}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {% for c in concepts %}
-      <section class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-5">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">{{ c.name }}</h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2"><strong>bet axis:</strong> {{ c.bet_axis }}</p>
-        <p class="italic text-slate-700 dark:text-slate-300 mb-4">{{ c.one_liner }}</p>
+      <section class="rounded-lg border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-900 p-5">
+        <h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-1">{{ c.name }}</h2>
+        <p class="text-xs text-base-500 dark:text-base-300 mb-2"><strong>bet axis:</strong> {{ c.bet_axis }}</p>
+        <p class="italic text-base-700 dark:text-base-200 mb-4">{{ c.one_liner }}</p>
 
         <article class="prose dark:prose-invert prose-sm max-w-none">
           <h4>Core features</h4>
@@ -50,24 +50,24 @@
 
           <h4>Competitive landscape</h4>
         </article>
-        <div class="overflow-x-auto rounded border border-slate-200 dark:border-slate-700 my-3">
-          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-            <thead class="bg-slate-100 dark:bg-slate-800">
+        <div class="overflow-x-auto rounded border border-base-200 dark:border-base-700 my-3">
+          <table class="min-w-full divide-y divide-base-200 dark:divide-base-700 text-sm">
+            <thead class="bg-base-100 dark:bg-base-800">
               <tr>
-                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Name</th>
-                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Threat</th>
-                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Overlap / evidence</th>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Name</th>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Threat</th>
+                <th class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Overlap / evidence</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+            <tbody class="divide-y divide-base-200 dark:divide-base-800">
               {% for comp in c.competitive_landscape %}
                 <tr>
                   <td class="px-3 py-1.5">{% if comp.url %}<a href="{{ comp.url }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ comp.name }}</a>{% else %}{{ comp.name }}{% endif %}</td>
                   <td class="px-3 py-1.5">{% include "admin/_ux/_badge.html" with label=comp.threat_level tone=comp.threat_level|status_tone %}</td>
-                  <td class="px-3 py-1.5 text-slate-700 dark:text-slate-300">{{ comp.overlap }} — {{ comp.evidence }}</td>
+                  <td class="px-3 py-1.5 text-base-700 dark:text-base-200">{{ comp.overlap }} — {{ comp.evidence }}</td>
                 </tr>
               {% empty %}
-                <tr><td colspan="3" class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">No competitors listed.</td></tr>
+                <tr><td colspan="3" class="px-3 py-3 text-center text-base-500 dark:text-base-300">No competitors listed.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -101,9 +101,9 @@
 {% endif %}
 
 {% if ideation_notes %}
-  <section class="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
-    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">Ideation notes</h3>
-    <p class="text-sm text-slate-700 dark:text-slate-300">{{ ideation_notes }}</p>
+  <section class="mt-6 rounded-lg border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800 p-4">
+    <h3 class="text-sm font-semibold text-base-900 dark:text-base-100 mb-2">Ideation notes</h3>
+    <p class="text-sm text-base-700 dark:text-base-200">{{ ideation_notes }}</p>
   </section>
 {% endif %}
 {% endif %}

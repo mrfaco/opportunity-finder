@@ -4,8 +4,8 @@
 {% block breadcrumbs %}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-1">Cluster triage</h1>
-<p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-1">Cluster triage</h1>
+<p class="text-sm text-base-600 dark:text-base-300 mb-6">
   Ranked by <code class="font-mono text-xs">log2(1 + size) × avg_confidence × exp(-days_since_last_seen / 7)</code>.
   Top {{ rows|length|default:0 }} candidates shown.
   {% if show_all %}
@@ -16,37 +16,37 @@
 </p>
 
 {% if rows %}
-  <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-      <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800 sticky top-0 z-10">
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Title</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Size</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Avg conf</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Max conf</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Last seen</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Status</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Priority</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Action</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Title</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Size</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Avg conf</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Max conf</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Last seen</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Status</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Priority</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Action</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
         {% for row in rows %}
           <tr data-href="/admin/clusters/cluster/{{ row.cluster.id }}/change/"
-              class="hover:bg-slate-50 dark:hover:bg-slate-800 {% if row.highlight %}bg-amber-50 dark:bg-amber-500/10{% endif %}">
+              class="hover:bg-base-50 dark:hover:bg-base-800 {% if row.highlight %}bg-amber-50 dark:bg-amber-500/10{% endif %}">
             <td class="px-4 py-2 text-sm">
-              <span class="text-slate-900 dark:text-slate-100" title="{{ row.title }}">{{ row.title|truncatechars:90 }}</span>
+              <span class="text-base-900 dark:text-base-100" title="{{ row.title }}">{{ row.title|truncatechars:90 }}</span>
             </td>
-            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.size }}</td>
-            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.avg_conf|floatformat:2 }}</td>
-            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.max_conf|floatformat:2 }}</td>
-            <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.size }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.avg_conf|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.max_conf|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">
               {% if row.days_since is None %}never{% else %}{{ row.days_since|floatformat:1 }}d ago{% endif %}
             </td>
             <td class="px-4 py-2 text-sm">
               {% include "admin/_ux/_badge.html" with label=row.status tone=row.status|status_tone %}
             </td>
-            <td class="px-4 py-2 text-sm tabular-nums font-semibold text-slate-900 dark:text-slate-100">{{ row.priority|floatformat:3 }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums font-semibold text-base-900 dark:text-base-100">{{ row.priority|floatformat:3 }}</td>
             <td class="px-4 py-2 text-sm">
               <form method="post" action="/admin/clusters/cluster/{{ row.cluster.id }}/investigate/" class="inline">
                 {% csrf_token %}

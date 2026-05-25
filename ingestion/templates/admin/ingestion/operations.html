@@ -1,33 +1,33 @@
 {% extends "unfold/layouts/base_simple.html" %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-1">Ingestion operations</h1>
-<p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-1">Ingestion operations</h1>
+<p class="text-sm text-base-600 dark:text-base-300 mb-6">
   Per-source checkpoint state and one-click triggers. Actions are enqueued via
   Celery; the worker logs progress to <code class="font-mono text-xs">docker compose logs celery_worker</code>.
 </p>
 
 {% if rows %}
-  <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-      <thead class="bg-slate-50 dark:bg-slate-800">
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Source</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Last item posted</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Last run</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Items seen</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Opportunities</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Actions</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Source</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Last item posted</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Last run</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Items seen</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Opportunities</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Actions</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
         {% for row in rows %}
           <tr>
-            <td class="px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ row.source }}</td>
-            <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ row.last_item_posted_at|default:"—" }}</td>
-            <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ row.last_run_at|default:"never" }}</td>
-            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.items_seen }}</td>
-            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.opportunities_found }}</td>
+            <td class="px-4 py-2 text-sm font-semibold text-base-900 dark:text-base-100">{{ row.source }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ row.last_item_posted_at|default:"—" }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ row.last_run_at|default:"never" }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.items_seen }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ row.opportunities_found }}</td>
             <td class="px-4 py-2 text-sm whitespace-nowrap">
               <form method="post" action="/admin/ingestion/operations/{{ row.source }}/ingest/" class="inline mr-3">
                 {% csrf_token %}
@@ -35,12 +35,12 @@
               </form>
               <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline-flex items-center gap-2">
                 {% csrf_token %}
-                <label class="text-xs text-slate-600 dark:text-slate-400">Backfill
+                <label class="text-xs text-base-600 dark:text-base-300">Backfill
                   <input type="number" name="days" value="30" min="1" max="365"
-                         class="ml-1 w-16 rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 text-xs px-2 py-0.5">
+                         class="ml-1 w-16 rounded-md border-base-300 dark:border-base-700 dark:bg-base-900 dark:text-base-100 text-xs px-2 py-0.5">
                   days
                 </label>
-                <button type="submit" class="inline-flex items-center rounded-md bg-slate-600 hover:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Go</button>
+                <button type="submit" class="inline-flex items-center rounded-md bg-base-600 hover:bg-base-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Go</button>
               </form>
             </td>
           </tr>
@@ -52,9 +52,57 @@
   {% include "admin/_ux/_empty_state.html" with title="No source adapters registered" body="Register an adapter under ingestion/adapters/ to see it here." %}
 {% endif %}
 
-<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-10 mb-3">Notes</h2>
-<ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-  <li><strong class="text-slate-900 dark:text-slate-100">Incremental</strong> pulls items posted after the source's checkpoint. Hourly Celery Beat already runs this automatically; the button is for ad-hoc kicks.</li>
-  <li><strong class="text-slate-900 dark:text-slate-100">Backfill</strong> pulls a fresh N-day window and dedups against existing <code class="font-mono text-xs">ClusterItem</code> rows so reruns are safe. Costs roughly $0.002/item (~$1.00 per 30 days of Ask HN).</li>
+<h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mt-10 mb-3">Latest ingested items</h2>
+<p class="text-sm text-base-600 dark:text-base-300 mb-3">Most recent {{ latest_items|length }} items added to a cluster, newest first.</p>
+{% if latest_items %}
+  <div class="overflow-x-auto rounded-lg border border-base-200 dark:border-base-700">
+    <table class="min-w-full divide-y divide-base-200 dark:divide-base-700">
+      <thead class="bg-base-50 dark:bg-base-800">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Assigned</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Source</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Title</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Cluster</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Conf</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-base-600 dark:text-base-200">Verdict</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-base-200 dark:divide-base-800 bg-white dark:bg-base-900">
+        {% for item in latest_items %}
+          <tr class="hover:bg-base-100 dark:hover:bg-base-800">
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200 whitespace-nowrap">{{ item.assigned_at|date:"Y-m-d H:i" }}</td>
+            <td class="px-4 py-2 text-sm text-base-700 dark:text-base-200">{{ item.source }}</td>
+            <td class="px-4 py-2 text-sm">
+              {% if item.url %}
+                <a href="{{ item.url }}" target="_blank" rel="noopener" class="text-blue-400 hover:underline" title="{{ item.title }}">{{ item.title|default:"(untitled)"|truncatechars:90 }}</a>
+              {% else %}
+                <span class="text-base-100" title="{{ item.title }}">{{ item.title|default:"(untitled)"|truncatechars:90 }}</span>
+              {% endif %}
+              {% if item.author %}<span class="ml-2 text-xs text-base-500">by {{ item.author }}</span>{% endif %}
+            </td>
+            <td class="px-4 py-2 text-sm">
+              <a href="/admin/clusters/cluster/{{ item.cluster.id }}/change/" class="text-blue-400 hover:underline" title="{{ item.cluster.title|default:item.cluster.id }}">{{ item.cluster.title|default:item.cluster.id|truncatechars:40 }}</a>
+            </td>
+            <td class="px-4 py-2 text-sm tabular-nums text-base-700 dark:text-base-200">{{ item.classifier_confidence|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-sm">
+              {% if item.classifier_verdict == "opportunity" %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.12);color:#34d399;box-shadow:inset 0 0 0 1px rgba(16,185,129,0.3);white-space:nowrap;">opportunity</span>
+              {% else %}
+                <span style="display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;background:rgba(148,163,184,0.12);color:#cbd5e1;box-shadow:inset 0 0 0 1px rgba(148,163,184,0.3);white-space:nowrap;">{{ item.classifier_verdict }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  {% include "admin/_ux/_empty_state.html" with title="No ingested items yet" body="Run an incremental ingest above to populate this list." %}
+{% endif %}
+
+<h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mt-10 mb-3">Notes</h2>
+<ul class="space-y-2 text-sm text-base-600 dark:text-base-300">
+  <li><strong class="text-base-900 dark:text-base-100">Incremental</strong> pulls items posted after the source's checkpoint. Hourly Celery Beat already runs this automatically; the button is for ad-hoc kicks.</li>
+  <li><strong class="text-base-900 dark:text-base-100">Backfill</strong> pulls a fresh N-day window and dedups against existing <code class="font-mono text-xs">ClusterItem</code> rows so reruns are safe. Costs roughly $0.002/item (~$1.00 per 30 days of Ask HN).</li>
 </ul>
 {% endblock %}

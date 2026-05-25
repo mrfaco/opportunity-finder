@@ -3,25 +3,25 @@
 
 {% block content %}
 <div class="mb-6 space-y-2">
-  <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">Trajectory · run <span class="font-mono text-base">{{ run.id|slice:":8" }}</span></h1>
+  <h1 class="text-2xl font-semibold text-base-900 dark:text-base-100">Trajectory · run <span class="font-mono text-base">{{ run.id|slice:":8" }}</span></h1>
   <div class="flex flex-wrap items-center gap-3 text-sm">
     {% include "admin/_ux/_badge.html" with label=run.status tone=run.status|status_tone %}
     {% if run.termination_reason %}
-      <span class="text-slate-500 dark:text-slate-400">Termination: <code class="font-mono text-xs">{{ run.termination_reason }}</code></span>
+      <span class="text-base-500 dark:text-base-300">Termination: <code class="font-mono text-xs">{{ run.termination_reason }}</code></span>
     {% endif %}
   </div>
   <dl class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-    <div class="rounded-md border border-slate-200 dark:border-slate-700 p-3">
-      <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Steps</dt>
-      <dd class="mt-1 text-sm tabular-nums text-slate-900 dark:text-slate-100">{{ run.steps_used }} / {{ run.budget_max_steps }}</dd>
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Steps</dt>
+      <dd class="mt-1 text-sm tabular-nums text-base-900 dark:text-base-100">{{ run.steps_used }} / {{ run.budget_max_steps }}</dd>
     </div>
-    <div class="rounded-md border border-slate-200 dark:border-slate-700 p-3">
-      <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Cost</dt>
-      <dd class="mt-1 text-sm tabular-nums text-slate-900 dark:text-slate-100">${{ run.cost_used_usd }} / ${{ run.budget_max_cost_usd }}</dd>
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Cost</dt>
+      <dd class="mt-1 text-sm tabular-nums text-base-900 dark:text-base-100">${{ run.cost_used_usd }} / ${{ run.budget_max_cost_usd }}</dd>
     </div>
-    <div class="rounded-md border border-slate-200 dark:border-slate-700 p-3">
-      <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Duration</dt>
-      <dd class="mt-1 text-sm tabular-nums text-slate-900 dark:text-slate-100">{{ run.duration_used_s }}s / {{ run.budget_max_duration_s }}s</dd>
+    <div class="rounded-md border border-base-200 dark:border-base-700 p-3">
+      <dt class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300">Duration</dt>
+      <dd class="mt-1 text-sm tabular-nums text-base-900 dark:text-base-100">{{ run.duration_used_s }}s / {{ run.budget_max_duration_s }}s</dd>
     </div>
   </dl>
 </div>
@@ -30,30 +30,30 @@
   <div class="mb-6 rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">{{ note }}</div>
 {% endif %}
 
-<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">Steps</h2>
+<h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mb-3">Steps</h2>
 <ol class="space-y-3">
   {% for step in steps %}
-    <li class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+    <li class="rounded-lg border border-base-200 dark:border-base-700 bg-white dark:bg-base-900">
       <details>
         <summary class="cursor-pointer select-none px-4 py-3 flex flex-wrap items-center gap-2 text-sm">
-          <span class="font-semibold text-slate-900 dark:text-slate-100">#{{ step.step_number }}</span>
-          <span class="text-slate-600 dark:text-slate-400">{{ step.step_type }}</span>
-          {% if step.tool_name %}<code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ step.tool_name }}</code>{% endif %}
+          <span class="font-semibold text-base-900 dark:text-base-100">#{{ step.step_number }}</span>
+          <span class="text-base-600 dark:text-base-300">{{ step.step_type }}</span>
+          {% if step.tool_name %}<code class="font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded">{{ step.tool_name }}</code>{% endif %}
           {% if step.tool_status %}{% include "admin/_ux/_badge.html" with label=step.tool_status tone=step.tool_status|status_tone %}{% endif %}
-          <span class="text-slate-500 dark:text-slate-400 tabular-nums">${{ step.cost_usd }}</span>
-          <span class="text-slate-500 dark:text-slate-400 tabular-nums">{{ step.input_tokens }}+{{ step.output_tokens }} tok</span>
+          <span class="text-base-500 dark:text-base-300 tabular-nums">${{ step.cost_usd }}</span>
+          <span class="text-base-500 dark:text-base-300 tabular-nums">{{ step.input_tokens }}+{{ step.output_tokens }} tok</span>
           {% if step.was_cached %}{% include "admin/_ux/_badge.html" with label="cached" tone="info" %}{% endif %}
         </summary>
         <div class="px-4 pb-4 space-y-3">
           {% if step.tool_input %}
             <div>
-              <h4 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Input</h4>
+              <h4 class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300 mb-1">Input</h4>
               {% include "admin/_ux/_codeblock.html" with content=step.tool_input|json_pretty language="json" %}
             </div>
           {% endif %}
           {% if step.tool_output_summary %}
             <div>
-              <h4 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Output summary</h4>
+              <h4 class="text-xs uppercase tracking-wide text-base-500 dark:text-base-300 mb-1">Output summary</h4>
               {% include "admin/_ux/_codeblock.html" with content=step.tool_output_summary|json_pretty language="json" %}
             </div>
           {% endif %}
@@ -65,10 +65,10 @@
   {% endfor %}
 </ol>
 
-<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-8 mb-3">Events (raw)</h2>
-<details class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-  <summary class="cursor-pointer select-none px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ events.count }} event{{ events.count|pluralize }}</summary>
-  <ol class="px-4 pb-4 text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1">
+<h2 class="text-lg font-semibold text-base-900 dark:text-base-100 mt-8 mb-3">Events (raw)</h2>
+<details class="rounded-lg border border-base-200 dark:border-base-700 bg-white dark:bg-base-900">
+  <summary class="cursor-pointer select-none px-4 py-3 text-sm text-base-700 dark:text-base-200">{{ events.count }} event{{ events.count|pluralize }}</summary>
+  <ol class="px-4 pb-4 text-xs font-mono text-base-600 dark:text-base-300 space-y-1">
     {% for ev in events %}
       <li><code>{{ ev.event_type }}</code> @ {{ ev.recorded_at }}{% if ev.tool_name %} · {{ ev.tool_name }}{% endif %}</li>
     {% endfor %}

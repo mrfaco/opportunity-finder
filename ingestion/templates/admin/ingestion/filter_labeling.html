@@ -1,19 +1,19 @@
 {% extends "unfold/layouts/base_simple.html" %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-2">Filter eval — labeling</h1>
-<p class="text-sm text-slate-700 dark:text-slate-300 mb-6">
+<h1 class="text-2xl font-semibold text-base-900 dark:text-base-100 mb-2">Filter eval — labeling</h1>
+<p class="text-sm text-base-700 dark:text-base-200 mb-6">
   <strong>{{ labeled_count }}</strong> items labeled ·
   <strong>{{ pending_count }}</strong> production classifications awaiting human review.
 </p>
 
-<div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-5">
-  <p class="font-semibold text-slate-900 dark:text-slate-100 mb-2">Placeholder UI</p>
-  <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">{{ todo }}</p>
-  <p class="text-sm text-slate-700 dark:text-slate-300 mb-1">Intended UX:</p>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-slate-600 dark:text-slate-400">
+<div class="rounded-lg border border-dashed border-base-300 dark:border-base-600 bg-base-50 dark:bg-base-900 p-5">
+  <p class="font-semibold text-base-900 dark:text-base-100 mb-2">Placeholder UI</p>
+  <p class="text-sm text-base-700 dark:text-base-200 mb-3">{{ todo }}</p>
+  <p class="text-sm text-base-700 dark:text-base-200 mb-1">Intended UX:</p>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-base-600 dark:text-base-300">
     <li>One classification card at a time, source + content visible.</li>
-    <li>Keyboard shortcuts — <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-xs font-mono">Y</kbd> yes · <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-xs font-mono">N</kbd> no · <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-xs font-mono">A</kbd> ambiguous · <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-xs font-mono">?</kbd> adversarial.</li>
+    <li>Keyboard shortcuts — <kbd class="px-1.5 py-0.5 rounded bg-base-200 dark:bg-base-700 text-xs font-mono">Y</kbd> yes · <kbd class="px-1.5 py-0.5 rounded bg-base-200 dark:bg-base-700 text-xs font-mono">N</kbd> no · <kbd class="px-1.5 py-0.5 rounded bg-base-200 dark:bg-base-700 text-xs font-mono">A</kbd> ambiguous · <kbd class="px-1.5 py-0.5 rounded bg-base-200 dark:bg-base-700 text-xs font-mono">?</kbd> adversarial.</li>
     <li>Model verdict + reason hidden behind a "show model" toggle, off by default during fresh labeling, on for disagreement review.</li>
     <li>Optional reasoning note (single text field).</li>
     <li>Progress counter persistent at the top.</li>
