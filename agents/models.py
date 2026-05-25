@@ -101,6 +101,10 @@ class ToolStatus(models.TextChoices):
     ERROR = "error", "Error"
     RATE_LIMITED = "rate_limited", "Rate limited"
     TIMEOUT = "timeout", "Timeout"
+    # Mirrors the ``ToolOutput.status`` literal in ``agents/tools/base.py``;
+    # ``_fetch_hn_item`` and similar adapters return "not_found" on 404 and
+    # the loop must be able to persist that as a step status.
+    NOT_FOUND = "not_found", "Not found"
     VALIDATION_FAILED = "validation_failed", "Validation failed"
 
 
