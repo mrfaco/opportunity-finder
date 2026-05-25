@@ -364,6 +364,51 @@ def test_fetch_url_marks_truncated_when_oversized(monkeypatch):
     assert out.content_truncated is True
 
 
+def test_fetch_url_returns_error_on_403(monkeypatch):
+    """A 4xx/5xx from the target URL must become a tool-level error, not
+    bubble up and crash the agent loop. socket.dev returns 403 to our UA
+    in production — that's the scenario that motivated the change."""
+    import httpx as _httpx  # noqa: PLC0415
+
+    def _raise_403(*_a, **_k):
+        response = _httpx.Response(403)
+
+        def _raise():
+            raise _httpx.HTTPStatusError(
+                "403", request=_httpx.Request("GET", "x"), response=response
+            )
+
+        return SimpleNamespace(
+            status_code=403,
+            raise_for_status=_raise,
+            content=b"",
+            encoding="utf-8",
+            url="https://socket.dev/x",
+        )
+
+    monkeypatch.setattr("agents.tools.stubs.httpx.get", _raise_403)
+    out = get_tool("fetch_url").dispatch({"url": "https://socket.dev/x"})
+    assert out.status == "error"
+    assert out.error_reason is not None
+    assert "403" in out.error_reason
+    # The agent sees the requested URL echoed back (not the redirected one,
+    # since we never got past the response).
+    assert out.url == "https://socket.dev/x"
+
+
+def test_fetch_url_returns_error_on_timeout(monkeypatch):
+    import httpx as _httpx  # noqa: PLC0415
+
+    def _raise_timeout(*_a, **_k):
+        raise _httpx.ConnectTimeout("timed out")
+
+    monkeypatch.setattr("agents.tools.stubs.httpx.get", _raise_timeout)
+    out = get_tool("fetch_url").dispatch({"url": "https://slow.example/"})
+    assert out.status == "error"
+    assert out.error_reason is not None
+    assert "ConnectTimeout" in out.error_reason
+
+
 # ---------------------------------------------------------------------------
 # web_search (Tavily)
 # ---------------------------------------------------------------------------

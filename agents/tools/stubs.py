@@ -737,16 +737,39 @@ def _fetch_url(inp: FetchUrlInput) -> FetchUrlOutput:
 
     Bounded by ``_FETCH_MAX_BYTES`` to keep one over-large page from blowing
     up the agent's context window. ``content_truncated`` signals whether the
-    cap was hit. Non-2xx responses raise — the agent should treat that as a
-    real failure, not a tool-level fallback.
+    cap was hit.
+
+    Because the URL is supplied by the agent — typically picked off a
+    search result — any non-2xx response is an *external* problem
+    (site blocks our UA, 404s, server outages) rather than a systemic
+    one. We surface those as ``status='error'`` so the agent can try a
+    different URL or move on, rather than crashing the whole run.
     """
-    response = httpx.get(
-        inp.url,
-        timeout=_FETCH_TIMEOUT_S,
-        follow_redirects=True,
-        headers={"User-Agent": "opportunity-finder/0.1"},
-    )
-    response.raise_for_status()
+    try:
+        response = httpx.get(
+            inp.url,
+            timeout=_FETCH_TIMEOUT_S,
+            follow_redirects=True,
+            headers={"User-Agent": "opportunity-finder/0.1"},
+        )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:  # allow: suppress-exception
+        # 4xx/5xx from the *target* URL. The agent's contract sees this as
+        # a tool-level error and decides what to do next; this is the
+        # documented protocol, not a silent fallback.
+        return FetchUrlOutput(
+            status="error",
+            url=inp.url,
+            error_reason=f"HTTP {exc.response.status_code} from {inp.url}",
+        )
+    except (httpx.TimeoutException, httpx.NetworkError) as exc:  # allow: suppress-exception
+        # Timeouts and network-level errors are also "the agent picked a
+        # URL that doesn't work" — same protocol response.
+        return FetchUrlOutput(
+            status="error",
+            url=inp.url,
+            error_reason=f"{type(exc).__name__}: {exc}",
+        )
     raw = response.content[:_FETCH_MAX_BYTES]
     truncated = len(response.content) > _FETCH_MAX_BYTES
     try:
