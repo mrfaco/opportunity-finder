@@ -47,7 +47,11 @@ class _MergeResponse(BaseModel):
 
     verdict: bool
     confidence: float = Field(ge=0.0, le=1.0)
-    reasoning: str = Field(min_length=10, max_length=600)
+    # Cap raised from 600 → 2000 chars. Haiku regularly produces dense
+    # 800-1500 char reasoning when comparing two adjacent clusters; the
+    # original limit truncated useful signal that the operator wants in
+    # the admin pending-review queue.
+    reasoning: str = Field(min_length=10, max_length=2000)
 
 
 class MergeVerdict(BaseModel):

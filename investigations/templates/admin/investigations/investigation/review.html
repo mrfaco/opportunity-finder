@@ -5,7 +5,16 @@
 {% if investigation %}
 <div class="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
   <section class="lg:col-span-2 rounded-lg border border-base-200 dark:border-base-700 bg-white dark:bg-base-900 p-6">
-    <p class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-400 mb-2">Brief</p>
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-xs uppercase tracking-wider font-semibold text-base-500 dark:text-base-400">Brief</p>
+      <a href="/admin/investigations/{{ investigation.id }}/pdf/"
+         download="investigation-{{ investigation.id }}.pdf"
+         class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white shadow-sm"
+         style="background:#1e293b;"
+         title="Download as PDF">
+        ⬇ PDF
+      </a>
+    </div>
     {% if brief.headline %}<h2 class="text-2xl font-bold text-base-900 dark:text-base-50 leading-tight mb-5">{{ brief.headline }}</h2>{% endif %}
     {% if brief.confidence %}
       <div class="mb-5 flex items-center gap-2">
