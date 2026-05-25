@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
 
+from ingestion import tasks
 from ingestion.models import (
     FilterClassification,
     FilterEvalClassification,
@@ -29,6 +31,63 @@ class IngestionCheckpointAdmin(admin.ModelAdmin):
         "items_seen",
         "opportunities_found",
     )
+
+    # ------------------------------------------------------------------
+    # Ingestion operations dashboard — per-source checkpoint state plus
+    # one-click triggers for incremental ingest and backfill, enqueued via
+    # Celery so the request returns immediately while the worker grinds.
+    # ------------------------------------------------------------------
+    def operations_view(self, request):
+        checkpoints = {cp.source: cp for cp in IngestionCheckpoint.objects.all()}
+        rows = []
+        for source in sorted(tasks.ADAPTERS):
+            cp = checkpoints.get(source)
+            rows.append(
+                {
+                    "source": source,
+                    "last_item_posted_at": cp.last_item_posted_at if cp else None,
+                    "last_run_at": cp.last_run_at if cp else None,
+                    "items_seen": cp.items_seen if cp else 0,
+                    "opportunities_found": cp.opportunities_found if cp else 0,
+                }
+            )
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Ingestion operations",
+            "rows": rows,
+        }
+        return render(request, "admin/ingestion/operations.html", context)
+
+    def trigger_ingest_view(self, request, source):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        if source not in tasks.ADAPTERS:
+            messages.error(request, f"Unknown source {source!r}.")
+            return HttpResponseRedirect("/admin/ingestion/operations/")
+        async_result = tasks.ingest_source.delay(source)
+        messages.success(
+            request,
+            f"Incremental ingest queued for {source}. Celery task id: {async_result.id}.",
+        )
+        return HttpResponseRedirect("/admin/ingestion/operations/")
+
+    def trigger_backfill_view(self, request, source):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        if source not in tasks.ADAPTERS:
+            messages.error(request, f"Unknown source {source!r}.")
+            return HttpResponseRedirect("/admin/ingestion/operations/")
+        days_str = (request.POST.get("days") or "").strip()
+        if not days_str.isdigit() or int(days_str) <= 0:
+            messages.error(request, "Days must be a positive integer.")
+            return HttpResponseRedirect("/admin/ingestion/operations/")
+        days = int(days_str)
+        async_result = tasks.backfill_source_task.delay(source, days)
+        messages.success(
+            request,
+            f"Backfill queued: {source} for {days}d. Celery task id: {async_result.id}.",
+        )
+        return HttpResponseRedirect("/admin/ingestion/operations/")
 
 
 @admin.register(FilterClassification)

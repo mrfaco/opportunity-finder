@@ -12,6 +12,7 @@ from agents import prompts as prompt_loader
 from agents.cost import compute_cost
 from ingestion.adapters.base import SourceAdapter
 from ingestion.adapters.hacker_news import HackerNewsAdapter
+from ingestion.backfill import backfill_from_adapter
 from ingestion.filter import classify_content
 from ingestion.metrics import compute_metrics, compute_metrics_by_tier
 from ingestion.models import FilterEvalClassification, FilterEvalRun, FilterEvalSet
@@ -19,10 +20,22 @@ from ingestion.pipeline import ingest_from_adapter
 
 logger = logging.getLogger(__name__)
 
-# Registry of source name -> adapter class. New adapters slot in here.
-_ADAPTERS: dict[str, type[SourceAdapter]] = {
+# Registry of source name -> adapter class. New adapters slot in here. Public
+# so the management command and the operations admin can both read it without
+# duplicating the mapping.
+ADAPTERS: dict[str, type[SourceAdapter]] = {
     HackerNewsAdapter.source: HackerNewsAdapter,
 }
+
+
+def _resolve_adapter_cls(source: str) -> type[SourceAdapter]:
+    adapter_cls = ADAPTERS.get(source)
+    if adapter_cls is None:
+        raise ValueError(
+            f"No ingestion adapter registered for source {source!r}. "
+            f"Known sources: {sorted(ADAPTERS)}"
+        )
+    return adapter_cls
 
 
 @shared_task
@@ -32,13 +45,18 @@ def ingest_source(source: str) -> dict:
     ``source`` is an adapter key (e.g. ``"hacker_news"``). Unknown sources
     raise rather than silently no-op.
     """
-    adapter_cls = _ADAPTERS.get(source)
-    if adapter_cls is None:
-        raise ValueError(
-            f"No ingestion adapter registered for source {source!r}. "
-            f"Known sources: {sorted(_ADAPTERS)}"
-        )
-    return ingest_from_adapter(adapter_cls())
+    return ingest_from_adapter(_resolve_adapter_cls(source)())
+
+
+@shared_task
+def backfill_source_task(source: str, days: int) -> dict:
+    """Backfill ``days`` of history from ``source``.
+
+    Wraps ``backfill_from_adapter`` so the admin operations page can kick
+    off long-running backfills without blocking the request. The same
+    function is what the ``backfill_source`` management command calls.
+    """
+    return backfill_from_adapter(_resolve_adapter_cls(source)(), days=days)
 
 
 def _resolve_prompt(prompt_hash: str | None) -> prompt_loader.Prompt:

@@ -241,7 +241,7 @@ def test_backfill_skips_existing_and_processes_new(monkeypatch):
         ]
     )
     monkeypatch.setattr(
-        "ingestion.management.commands.backfill_source._ADAPTERS",
+        "ingestion.tasks.ADAPTERS",
         {"hacker_news": lambda: backfill_adapter},
     )
 
@@ -249,8 +249,9 @@ def test_backfill_skips_existing_and_processes_new(monkeypatch):
     call_command("backfill_source", "hacker_news", "--days", "30", stdout=out)
     output = out.getvalue()
 
-    assert "1 existing items will be skipped" in output
-    assert "processing 1 new" in output
+    # 1 processed (the new one), 1 opportunity, out of 2 fetched.
+    assert "1 processed" in output
+    assert "out of 2 fetched" in output
     assert ClusterItem.objects.filter(source_item_id="new").exists()
     # Existing item was not double-classified.
     assert ClusterItem.objects.filter(source_item_id="existing").count() == 1

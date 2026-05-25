@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Ingestion operations</h1>
+
+<p style="margin:0.5em 0; color:#666">
+  Per-source checkpoint state and one-click triggers. Actions are enqueued via
+  Celery; the worker logs progress to <code>docker compose logs celery_worker</code>.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Source</th>
+      <th>Last item posted</th>
+      <th>Last run</th>
+      <th>Items seen</th>
+      <th>Opportunities</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td><strong>{{ row.source }}</strong></td>
+        <td>{{ row.last_item_posted_at|default:"—" }}</td>
+        <td>{{ row.last_run_at|default:"never" }}</td>
+        <td>{{ row.items_seen }}</td>
+        <td>{{ row.opportunities_found }}</td>
+        <td>
+          <form method="post"
+                action="/admin/ingestion/operations/{{ row.source }}/ingest/"
+                style="display:inline">
+            {% csrf_token %}
+            <button type="submit">Run incremental</button>
+          </form>
+          <form method="post"
+                action="/admin/ingestion/operations/{{ row.source }}/backfill/"
+                style="display:inline; margin-left:0.5em">
+            {% csrf_token %}
+            <label style="font-size:0.9em">
+              Backfill
+              <input type="number" name="days" value="30" min="1" max="365"
+                     style="width:5em"> days
+            </label>
+            <button type="submit">Go</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="6" style="text-align:center; padding:1em">
+          No source adapters registered.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2 style="margin-top:2em">Notes</h2>
+<ul style="color:#666">
+  <li>
+    <strong>Incremental</strong> pulls items posted after the source's checkpoint.
+    Hourly Celery Beat already runs this automatically; the button is for ad-hoc kicks.
+  </li>
+  <li>
+    <strong>Backfill</strong> pulls a fresh N-day window and dedups against existing
+    <code>ClusterItem</code> rows so reruns are safe. Costs roughly $0.002/item
+    (~$1.00 per 30 days of Ask HN).
+  </li>
+</ul>
+{% endblock %}

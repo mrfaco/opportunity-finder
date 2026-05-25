@@ -21,20 +21,12 @@ boundary — negligible cost vs. the value of guaranteed-disjoint operation.
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
-from django.utils import timezone
 
-from clusters.models import ClusterItem
-from ingestion.adapters.base import SourceAdapter
-from ingestion.adapters.hacker_news import HackerNewsAdapter
-from ingestion.pipeline import _process_item
-
-_ADAPTERS: dict[str, type[SourceAdapter]] = {
-    HackerNewsAdapter.source: HackerNewsAdapter,
-}
+from ingestion.backfill import backfill_from_adapter
+from ingestion.tasks import ADAPTERS
 
 
 class Command(BaseCommand):
@@ -43,7 +35,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
             "source",
-            help=f"Adapter key. One of: {sorted(_ADAPTERS)}.",
+            help=f"Adapter key. One of: {sorted(ADAPTERS)}.",
         )
         parser.add_argument(
             "--days",
@@ -53,46 +45,22 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, source: str, days: int, **options: Any) -> None:
-        adapter_cls = _ADAPTERS.get(source)
+        adapter_cls = ADAPTERS.get(source)
         if adapter_cls is None:
             raise CommandError(
                 f"No ingestion adapter registered for source {source!r}. "
-                f"Known sources: {sorted(_ADAPTERS)}"
+                f"Known sources: {sorted(ADAPTERS)}"
             )
         if days <= 0:
             raise CommandError("--days must be positive")
 
-        since = timezone.now() - timedelta(days=days)
-        existing_ids = set(
-            ClusterItem.objects.filter(source=source).values_list("source_item_id", flat=True)
-        )
-        self.stdout.write(
-            f"Backfilling {source} from {since.isoformat()}; "
-            f"{len(existing_ids)} existing items will be skipped."
-        )
-
-        adapter = adapter_cls()
-        fetched = list(adapter.fetch_new_items(since=since))
-        to_process = [i for i in fetched if i.source_item_id not in existing_ids]
-        # Oldest first — matches the regular pipeline so per-item failures
-        # leave a coherent partial result if the run is interrupted.
-        to_process.sort(key=lambda i: i.posted_at)
-        self.stdout.write(
-            f"Fetched {len(fetched)} items in window; processing {len(to_process)} new."
-        )
-
-        opportunities = 0
-        for i, item in enumerate(to_process, 1):
-            if _process_item(item):
-                opportunities += 1
-            if i % 50 == 0:
-                self.stdout.write(
-                    f"  ... {i}/{len(to_process)} processed, {opportunities} opportunities"
-                )
-
+        self.stdout.write(f"Backfilling {source} for {days}d ...")
+        stats = backfill_from_adapter(adapter_cls(), days=days)
         self.stdout.write(
             self.style.SUCCESS(
-                f"Backfill complete: {len(to_process)} processed, "
-                f"{opportunities} opportunities, {len(to_process) - opportunities} discarded."
+                f"Backfill complete: {stats['processed']} processed, "
+                f"{stats['opportunities']} opportunities, "
+                f"{stats['discarded']} discarded "
+                f"(out of {stats['fetched']} fetched)."
             )
         )

@@ -63,6 +63,13 @@ class PainMinerAdminSite(AdminSite):
                     "view_only": True,
                     "perms": {"view": True},
                 },
+                {
+                    "name": "Ingestion ops",
+                    "object_name": "IngestionOps",
+                    "admin_url": "/admin/ingestion/operations/",
+                    "view_only": True,
+                    "perms": {"view": True},
+                },
             ],
         }
         return [dashboards, *app_list]
@@ -75,8 +82,8 @@ class PainMinerAdminSite(AdminSite):
         from agents.models import AgentRun  # noqa: PLC0415
         from clusters.admin import ClusterAdmin  # noqa: PLC0415
         from clusters.models import Cluster  # noqa: PLC0415
-        from ingestion.admin import FilterEvalSetAdmin  # noqa: PLC0415
-        from ingestion.models import FilterEvalSet  # noqa: PLC0415
+        from ingestion.admin import FilterEvalSetAdmin, IngestionCheckpointAdmin  # noqa: PLC0415
+        from ingestion.models import FilterEvalSet, IngestionCheckpoint  # noqa: PLC0415
         from investigations.admin import InvestigationAdmin  # noqa: PLC0415
         from investigations.models import Investigation  # noqa: PLC0415
 
@@ -85,6 +92,7 @@ class PainMinerAdminSite(AdminSite):
         agents_admin = AgentRunAdmin(AgentRun, self)
         clusters_admin = ClusterAdmin(Cluster, self)
         ingestion_admin = FilterEvalSetAdmin(FilterEvalSet, self)
+        ingestion_ops_admin = IngestionCheckpointAdmin(IngestionCheckpoint, self)
         investigations_admin = InvestigationAdmin(Investigation, self)
 
         custom = [
@@ -122,6 +130,21 @@ class PainMinerAdminSite(AdminSite):
                 "ingestion/filter-eval-history/",
                 self.admin_view(ingestion_admin.eval_history_view),
                 name="ingestion-filter-eval-history",
+            ),
+            path(
+                "ingestion/operations/",
+                self.admin_view(ingestion_ops_admin.operations_view),
+                name="ingestion-operations",
+            ),
+            path(
+                "ingestion/operations/<str:source>/ingest/",
+                self.admin_view(ingestion_ops_admin.trigger_ingest_view),
+                name="ingestion-trigger-ingest",
+            ),
+            path(
+                "ingestion/operations/<str:source>/backfill/",
+                self.admin_view(ingestion_ops_admin.trigger_backfill_view),
+                name="ingestion-trigger-backfill",
             ),
             path(
                 "investigations/latest/",
