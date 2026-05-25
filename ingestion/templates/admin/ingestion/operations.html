@@ -1,71 +1,60 @@
-{% extends "admin/base_site.html" %}
-{% block content %}
-<h1>Ingestion operations</h1>
+{% extends "unfold/layouts/base_simple.html" %}
 
-<p style="margin:0.5em 0; color:#666">
+{% block content %}
+<h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-1">Ingestion operations</h1>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
   Per-source checkpoint state and one-click triggers. Actions are enqueued via
-  Celery; the worker logs progress to <code>docker compose logs celery_worker</code>.
+  Celery; the worker logs progress to <code class="font-mono text-xs">docker compose logs celery_worker</code>.
 </p>
 
-<table>
-  <thead>
-    <tr>
-      <th>Source</th>
-      <th>Last item posted</th>
-      <th>Last run</th>
-      <th>Items seen</th>
-      <th>Opportunities</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in rows %}
-      <tr>
-        <td><strong>{{ row.source }}</strong></td>
-        <td>{{ row.last_item_posted_at|default:"—" }}</td>
-        <td>{{ row.last_run_at|default:"never" }}</td>
-        <td>{{ row.items_seen }}</td>
-        <td>{{ row.opportunities_found }}</td>
-        <td>
-          <form method="post"
-                action="/admin/ingestion/operations/{{ row.source }}/ingest/"
-                style="display:inline">
-            {% csrf_token %}
-            <button type="submit">Run incremental</button>
-          </form>
-          <form method="post"
-                action="/admin/ingestion/operations/{{ row.source }}/backfill/"
-                style="display:inline; margin-left:0.5em">
-            {% csrf_token %}
-            <label style="font-size:0.9em">
-              Backfill
-              <input type="number" name="days" value="30" min="1" max="365"
-                     style="width:5em"> days
-            </label>
-            <button type="submit">Go</button>
-          </form>
-        </td>
-      </tr>
-    {% empty %}
-      <tr>
-        <td colspan="6" style="text-align:center; padding:1em">
-          No source adapters registered.
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% if rows %}
+  <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+      <thead class="bg-slate-50 dark:bg-slate-800">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Source</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Last item posted</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Last run</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Items seen</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Opportunities</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
+        {% for row in rows %}
+          <tr>
+            <td class="px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ row.source }}</td>
+            <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ row.last_item_posted_at|default:"—" }}</td>
+            <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ row.last_run_at|default:"never" }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.items_seen }}</td>
+            <td class="px-4 py-2 text-sm tabular-nums text-slate-700 dark:text-slate-300">{{ row.opportunities_found }}</td>
+            <td class="px-4 py-2 text-sm whitespace-nowrap">
+              <form method="post" action="/admin/ingestion/operations/{{ row.source }}/ingest/" class="inline mr-3">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Run incremental</button>
+              </form>
+              <form method="post" action="/admin/ingestion/operations/{{ row.source }}/backfill/" class="inline-flex items-center gap-2">
+                {% csrf_token %}
+                <label class="text-xs text-slate-600 dark:text-slate-400">Backfill
+                  <input type="number" name="days" value="30" min="1" max="365"
+                         class="ml-1 w-16 rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 text-xs px-2 py-0.5">
+                  days
+                </label>
+                <button type="submit" class="inline-flex items-center rounded-md bg-slate-600 hover:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white shadow-sm">Go</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  {% include "admin/_ux/_empty_state.html" with title="No source adapters registered" body="Register an adapter under ingestion/adapters/ to see it here." %}
+{% endif %}
 
-<h2 style="margin-top:2em">Notes</h2>
-<ul style="color:#666">
-  <li>
-    <strong>Incremental</strong> pulls items posted after the source's checkpoint.
-    Hourly Celery Beat already runs this automatically; the button is for ad-hoc kicks.
-  </li>
-  <li>
-    <strong>Backfill</strong> pulls a fresh N-day window and dedups against existing
-    <code>ClusterItem</code> rows so reruns are safe. Costs roughly $0.002/item
-    (~$1.00 per 30 days of Ask HN).
-  </li>
+<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-10 mb-3">Notes</h2>
+<ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+  <li><strong class="text-slate-900 dark:text-slate-100">Incremental</strong> pulls items posted after the source's checkpoint. Hourly Celery Beat already runs this automatically; the button is for ad-hoc kicks.</li>
+  <li><strong class="text-slate-900 dark:text-slate-100">Backfill</strong> pulls a fresh N-day window and dedups against existing <code class="font-mono text-xs">ClusterItem</code> rows so reruns are safe. Costs roughly $0.002/item (~$1.00 per 30 days of Ask HN).</li>
 </ul>
 {% endblock %}
