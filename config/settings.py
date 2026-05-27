@@ -282,7 +282,13 @@ DEFAULT_BUDGET_MAX_DURATION_S = env.int("DEFAULT_BUDGET_MAX_DURATION_S", default
 # Documented inline because the values are load-bearing for system behavior.
 # ---------------------------------------------------------------------------
 # Online-stage cosine similarity threshold for joining the nearest cluster.
-CLUSTER_JOIN_THRESHOLD = env.float("CLUSTER_JOIN_THRESHOLD", default=0.75)
+# Calibrated against the voyage-4 embeddings actually in use: 0.65 over-
+# merged distinct AI-topic items into mega-buckets; 0.70 still produced a
+# 21-item "AI in business" conflation; 0.72 broke that into coherent
+# thematic groups (RAG, code review, QA, agent workflows) with no
+# spurious merges. See the re_cluster_items command + the session that
+# tuned this in 2026-05 if you change it.
+CLUSTER_JOIN_THRESHOLD = env.float("CLUSTER_JOIN_THRESHOLD", default=0.72)
 # Pairwise centroid similarity above which we consider clusters merge candidates.
 CLUSTER_MERGE_THRESHOLD = env.float("CLUSTER_MERGE_THRESHOLD", default=0.82)
 # Margin by which "other cluster" must beat current cluster to trigger reassign.
