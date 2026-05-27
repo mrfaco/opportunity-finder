@@ -44,7 +44,18 @@ def _process_item(item: IngestedItem) -> bool:
     The network calls (classify, embed) happen before the DB transaction so a
     failure leaves nothing half-written. Exceptions propagate — the caller
     leaves the checkpoint un-advanced so the item is retried next run.
+
+    If the item already exists (matched by ``(source, source_item_id)``)
+    we return False without re-classifying. The adapter base class
+    documents "the pipeline dedupes via ``(source, source_item_id)``
+    uniqueness" — this is where that promise is kept. Without this
+    check, re-runs over an overlapping ``since`` window would burn
+    Haiku tokens on already-classified items and then crash on the
+    unique-constraint insert.
     """
+    if ClusterItem.objects.filter(source=item.source, source_item_id=item.source_item_id).exists():
+        return False
+
     verdict = classify_content(item.raw_text)
     band = _verdict_band(verdict.is_opportunity, verdict.confidence)
     cost = compute_cost(

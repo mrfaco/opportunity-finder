@@ -622,6 +622,38 @@ def test_ingest_source_rejects_unknown_source():
 # ---------------------------------------------------------------------------
 # setup_schedules command
 # ---------------------------------------------------------------------------
+@pytest.mark.django_db
+def test_pipeline_skips_existing_item_without_re_classifying(monkeypatch):
+    """Regression: re-running the pipeline over an overlapping ``since``
+    window must not re-classify items already in the DB. Without this,
+    the unique constraint on ``(source, source_item_id)`` crashes the
+    run (observed live with the stack_overflow adapter's day-resolution
+    fromdate overlap)."""
+    base = timezone.now() - timedelta(hours=2)
+    classify_calls = {"count": 0}
+
+    def _count_classify(text):
+        classify_calls["count"] += 1
+        return _verdict(is_opp=True, confidence=0.95)
+
+    monkeypatch.setattr(pipeline, "classify_content", _count_classify)
+    _patch_embed(monkeypatch)
+
+    # First run: items processed normally.
+    first = _FakeAdapter([_ingested("dup-1", base, "shared body")])
+    pipeline.ingest_from_adapter(first)
+    assert classify_calls["count"] == 1
+    assert ClusterItem.objects.filter(source_item_id="dup-1").count() == 1
+
+    # Second run with the same item: classifier must not be invoked, no
+    # duplicate row, no IntegrityError.
+    second = _FakeAdapter([_ingested("dup-1", base, "shared body")])
+    stats = pipeline.ingest_from_adapter(second)
+    assert classify_calls["count"] == 1  # unchanged
+    assert ClusterItem.objects.filter(source_item_id="dup-1").count() == 1
+    assert stats["opportunities"] == 0
+
+
 # ---------------------------------------------------------------------------
 # backfill_source command
 # ---------------------------------------------------------------------------
