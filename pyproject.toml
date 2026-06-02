@@ -27,7 +27,7 @@ dependencies = [
     "pyyaml>=6.0",
     "markdown>=3.6",
     "numpy>=1.26",
-    "django-unfold>=0.94,<0.95",
+    "django-unfold>=0.94,<0.96",
     "djangorestframework>=3.15",
     # PDF rendering for the investigation/ideation download buttons.
     # Pulls Pango + Cairo at runtime — system deps installed in the
