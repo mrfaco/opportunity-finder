@@ -45,7 +45,7 @@ dev = [
     # different minor versions and every commit thrashes the same files
     # back and forth (the "pre-commit Restored changes" loop). Bump in
     # lockstep with the rev in .pre-commit-config.yaml below.
-    "ruff==0.15.14",
+    "ruff==0.15.15",
     "mypy>=1.11",
     "django-stubs[compatible-mypy]>=5.0",
     "types-PyYAML>=6.0",
