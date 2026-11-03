@@ -23,7 +23,7 @@ Human objective → Finder research + proposal → Validator independent researc
 
 A discovery starts from an objective such as “Look for opportunities in the
 travel space.” It requires no ingested data, cluster or embeddings. Default:
-20 individual turns, meaning ten Finder–Validator exchanges, with configurable
+100 individual turns, meaning fifty Finder–Validator exchanges, with configurable
 research, cost and duration limits. Agreement can finish earlier; it applies to
 an exact proposal revision and must pass evidence checks. Model agreement is
 not proof of commercial viability.

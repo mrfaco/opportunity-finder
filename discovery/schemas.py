@@ -24,7 +24,7 @@ class DiscoveryConfig(BaseModel):
     runtime: Literal["claude_code", "openrouter_batch"] = "claude_code"
     finder_provider: Provider = "openrouter"
     validator_provider: Provider = "openrouter"
-    max_turns: int = Field(default=20, ge=2, le=200)
+    max_turns: int = Field(default=100, ge=2, le=200)
     max_cost_usd: Decimal = Field(default=Decimal("10.00"), gt=0)
     max_duration_s: int = Field(default=1800, ge=1)
     max_model_calls_per_turn: int = Field(default=8, ge=1, le=50)

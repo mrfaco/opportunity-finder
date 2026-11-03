@@ -10,7 +10,7 @@ pivot or abandon a proposal. Both agents consider services, manufacturing,
 intelligence, physical goods, software and other business models across B2B,
 B2C and mixed customer relationships.
 
-The default limit is 20 individual agent submissions: Finder turns 1, 3, 5, …
+The default limit is 100 individual agent submissions: Finder turns 1, 3, 5, …
 and Validator turns 2, 4, 6, …. Research/model calls inside a turn have separate
 limits. The loop can stop early when Validator accepts Finder's exact immutable
 proposal revision and evidence checks pass. Validator's suggested niche is not
@@ -118,7 +118,7 @@ Content-Type: application/json
     "runtime": "claude_code",
     "finder_provider": "openrouter",
     "validator_provider": "anthropic",
-    "max_turns": 20,
+    "max_turns": 100,
     "max_cost_usd": "10.00",
     "max_duration_s": 86400,
     "finder_model": "deepseek/deepseek-v4.1-flash",

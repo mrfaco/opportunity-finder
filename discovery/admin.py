@@ -41,7 +41,7 @@ class DiscoveryStartForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 2}),
         help_text="Optional geography, capital, skills, customer or operating constraints.",
     )
-    max_turns = forms.IntegerField(initial=20, min_value=2, max_value=200)
+    max_turns = forms.IntegerField(initial=100, min_value=2, max_value=200)
     max_cost_usd = forms.DecimalField(
         initial="10.00", min_value=Decimal("0.0001"), decimal_places=4
     )
