@@ -287,6 +287,10 @@ def build_launch(
     if provider == "anthropic":
         argv += ["--max-budget-usd", str(max_model_cost)]
     if provider == "ollama":
+        # Ollama injects Claude's model argument itself. Keep the exact model
+        # only on the launcher, as in Video Swarm, rather than passing it twice.
+        model_index = argv.index("--model")
+        del argv[model_index : model_index + 2]
         scratch = run_dir / "ollama-home"
         shim_dir = run_dir / "ollama-bin"
         for path in (scratch, shim_dir):
