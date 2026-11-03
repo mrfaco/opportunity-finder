@@ -308,9 +308,11 @@ def commit_turn(
                 raise SubmissionError("Validator must review the latest Finder revision")
             if validation.reviewed_proposal_hash != latest_proposal.content_hash:
                 raise SubmissionError("Reviewed proposal hash does not match")
-            if not has_independent_research(task):
+            if not has_independent_research(task, require_search=validation.verdict == "accept"):
                 raise SubmissionError(
-                    "Validator needs a successful search with results and a new query this turn"
+                    "Validator needs independent research this turn: a new successful search, "
+                    "or for a challenge a fetched source not used by Finder. "
+                    "Acceptance always requires a new successful search."
                 )
             require_agreement(discovery, task, latest_proposal, validation)
         if validate_only:

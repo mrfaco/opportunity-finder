@@ -53,7 +53,7 @@ def _normalized_query(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
-def has_independent_research(task: DiscoveryTask) -> bool:
+def has_independent_research(task: DiscoveryTask, *, require_search: bool = True) -> bool:
     finder_queries = {
         _normalized_query(op.request.get("query", ""))
         for op in task.discovery.operations.filter(
@@ -63,12 +63,32 @@ def has_independent_research(task: DiscoveryTask) -> bool:
         )
         if op.request.get("action") == "search"
     }
-    return any(
+    successful_search = any(
         op.request.get("action") == "search"
         and _normalized_query(op.request.get("query", ""))
         and _normalized_query(op.request.get("query", "")) not in finder_queries
         and op.response.get("status") == "success"
         and bool(op.response.get("documents"))
+        for op in task.operations.filter(kind="research", state="completed")
+    )
+    if successful_search or require_search:
+        return successful_search
+    # A challenge can independently inspect a new source while search is down.
+    # Acceptance still requires a fresh successful search, never a reused fetch.
+    finder_urls = set(
+        task.discovery.evidence.filter(
+            turn__role="finder", turn__number__lt=task.turn_number
+        ).values_list("url", flat=True)
+    )
+    return any(
+        op.request.get("action") == "fetch"
+        and op.response.get("status") == "success"
+        and any(
+            doc.get("kind") == "fetched_page"
+            and doc.get("url") not in finder_urls
+            and bool(doc.get("text"))
+            for doc in op.response.get("documents", [])
+        )
         for op in task.operations.filter(kind="research", state="completed")
     )
 

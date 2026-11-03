@@ -9,11 +9,50 @@ from unittest.mock import patch
 import httpx
 import psutil
 import pytest
+from django.utils import timezone
 
 from discovery.agent_tools import AgentTools
 from discovery.claude_runtime import _descendants, _stop
 from discovery.connectors.web import DuckDuckGoConnector, WebFetchConnector
 from discovery.errors import DiscoveryStop
+from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn, Evidence, ResearchOperation
+from discovery.termination import has_independent_research
+
+
+@pytest.mark.django_db
+def test_independent_fetch_allows_challenge_but_never_acceptance():
+    discovery = Discovery.objects.create(objective="independent review", request_hash="test")
+    finder = DiscoveryTask.objects.create(
+        discovery=discovery, role="finder", turn_number=1, state="done"
+    )
+    turn = DiscoveryTurn.objects.create(discovery=discovery, task=finder, role="finder", number=1)
+    Evidence.objects.create(
+        discovery=discovery, turn=turn, url="https://known.example/", retrieved_at=timezone.now()
+    )
+    validator = DiscoveryTask.objects.create(discovery=discovery, role="validator", turn_number=2)
+    op = ResearchOperation.objects.create(
+        discovery=discovery,
+        task=validator,
+        kind="research",
+        state="completed",
+        operation_key="fetch",
+        request={"action": "fetch"},
+        response={
+            "status": "success",
+            "documents": [
+                {
+                    "url": "https://new.example/",
+                    "kind": "fetched_page",
+                    "text": "Independent counterevidence",
+                }
+            ],
+        },
+    )
+    assert has_independent_research(validator, require_search=False)
+    assert not has_independent_research(validator)
+    op.response["documents"][0]["url"] = "https://known.example/"
+    op.save()
+    assert not has_independent_research(validator, require_search=False)
 
 
 @pytest.mark.parametrize("status,body", [(202, "challenge"), (200, "anomaly challenge")])
