@@ -53,7 +53,9 @@ class ResearchPage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal["1.0"] = "1.0"
-    status: Literal["success", "not_found", "access_denied", "rate_limited"] = "success"
+    status: Literal["success", "not_found", "access_denied", "rate_limited", "timeout", "error"] = (
+        "success"
+    )
     documents: list[ResearchDocument] = Field(default_factory=list)
     next_cursor: str | None = None
     truncated: bool = False

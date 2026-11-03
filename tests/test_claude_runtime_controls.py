@@ -10,7 +10,16 @@ import psutil
 
 from discovery.agent_tools import AgentTools
 from discovery.claude_runtime import _descendants, _stop
+from discovery.connectors.web import WebFetchConnector
 from discovery.errors import DiscoveryStop
+
+
+def test_slow_source_is_a_visible_tool_outcome():
+    with patch("discovery.connectors.web.fetch_public_url", side_effect=TimeoutError):
+        result = WebFetchConnector().fetch("https://example.com/slow")
+    assert result.status == "timeout"
+    assert result.error_reason
+    assert not result.documents
 
 
 def test_research_quota_allows_terminal_submission():

@@ -152,7 +152,23 @@ class WebFetchConnector(Connector):
         )
 
     def fetch(self, target: str) -> ResearchPage:
-        return fetch_public_url(target)
+        try:
+            return fetch_public_url(target)
+        except TimeoutError:  # allow: suppress-exception
+            # One slow public page is a visible tool outcome. The agent can
+            # choose another source rather than losing the whole dialogue.
+            return ResearchPage(
+                status="timeout", error_reason="Source page timed out; try another source"
+            )
+        except (  # allow: suppress-exception — explicit source-error tool protocol
+            OSError,
+            http.client.HTTPException,
+            ConnectorError,
+        ) as exc:  # allow: suppress-exception
+            return ResearchPage(
+                status="error",
+                error_reason=f"Source fetch failed ({type(exc).__name__}); try another source",
+            )
 
 
 class TavilyConnector(Connector):
