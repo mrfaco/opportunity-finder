@@ -90,3 +90,14 @@ report and Markdown download with zero console/page errors. Temporary QA users
 were removed. Large MCP result projection was checked to stay below the client's
 file-spill threshold without changing stored evidence. Retry count is explicitly
 zero; CLI output and research limits remain separate from the dialogue limit.
+
+
+## First live Ollama launch follow-up
+
+The first Argentina travel launch reached real Ollama inference and captured
+research evidence. It exposed two runtime defects: research-quota exhaustion
+aborted the turn, and process-group cleanup could hit protected macOS groups.
+The research quota now returns a visible submit-now message with remaining-call
+notices. Cleanup tracks process identities/creation times and signals only owned
+processes individually, preserving unrelated processes. Two focused regressions
+cover these cases and pass. Full coverage remains deferred.

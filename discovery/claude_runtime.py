@@ -7,7 +7,6 @@ import os
 import re
 import shlex
 import shutil
-import signal
 import subprocess
 import time
 import uuid
@@ -17,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import psutil
 from django.conf import settings
 from django.db import close_old_connections
 
@@ -317,38 +317,48 @@ def build_launch(
     return argv, env, session
 
 
-def _descendants(pid: int) -> set[int]:
-    output = subprocess.run(
-        ["/bin/ps", "-axo", "pid=,ppid="], capture_output=True, text=True, check=True
-    ).stdout
-    rows = [tuple(map(int, row.split())) for row in output.splitlines() if row.strip()]
-    found = {pid}
-    while True:
-        expanded = found | {child for child, parent in rows if parent in found}
-        if expanded == found:
-            return found
-        found = expanded
+def _descendants(pid: int) -> set[psutil.Process]:
+    try:
+        root = psutil.Process(pid)
+    except psutil.NoSuchProcess:  # allow: suppress-exception
+        return set()  # A process that already exited needs no cleanup.
+    return {root, *root.children(recursive=True)}
 
 
-def _stop(process: subprocess.Popen[bytes], children: set[int]) -> None:
+def _stop(process: subprocess.Popen[bytes], children: set[psutil.Process]) -> None:
+    # Process objects retain creation times, so PID reuse cannot turn a former
+    # child into an unrelated cleanup target. Never signal whole process groups:
+    # Ollama can inherit groups containing protected macOS helpers.
     children |= _descendants(process.pid)
-    groups: set[int] = set()
-    for pid in children:
+    owned = []
+    for child in children:
         try:
-            group = os.getpgid(pid)
-        except ProcessLookupError:  # allow: suppress-exception
-            continue  # The child already exited; there is nothing to terminate.
-        if group != os.getpgrp():
-            groups.add(group)
-    for sig in (signal.SIGTERM, signal.SIGKILL):
-        for group in groups:
-            try:
-                os.killpg(group, sig)
-            except ProcessLookupError:  # allow: suppress-exception
-                continue  # The process group has already exited.
-        if sig == signal.SIGTERM:
-            time.sleep(0.5)
-    process.wait(timeout=5)
+            identities = child.uids()
+            if (
+                child.is_running()
+                and identities.real == os.getuid()
+                and identities.effective == os.geteuid()
+            ):
+                owned.append(child)
+        except psutil.NoSuchProcess:  # allow: suppress-exception
+            continue  # The descendant already exited.
+    for child in sorted(owned, key=lambda p: p.pid == process.pid):
+        try:
+            child.terminate()
+        except psutil.NoSuchProcess:  # allow: suppress-exception
+            continue  # A sibling's termination may have reaped this child.
+    _, alive = psutil.wait_procs([child for child in owned if child.pid != process.pid], timeout=1)
+    for child in alive:
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:  # allow: suppress-exception
+            continue
+    try:
+        process.wait(timeout=1)
+    except subprocess.TimeoutExpired:  # allow: suppress-exception
+        # The direct Popen child must be reaped by Popen to preserve its exit status.
+        process.kill()
+        process.wait(timeout=5)
 
 
 def _result(path: Path) -> dict[str, Any]:
@@ -376,7 +386,7 @@ def _run_process(
     _private_write(input_path, json.dumps(inputs))
     for path in (output_path, error_path):
         _private_write(path, "")
-    children: set[int] = set()
+    children: set[psutil.Process] = set()
     with (
         input_path.open("rb") as source,
         output_path.open("wb") as output,
@@ -397,8 +407,8 @@ def _run_process(
                 if time.monotonic() - last_renewal >= 5:
                     renew_task(task.pk, lease_token(task))
                     check_limits(task)
-                    children |= _descendants(process.pid)
                     last_renewal = time.monotonic()
+                children |= _descendants(process.pid)
                 if bridge.failure is not None:
                     raise bridge.failure
                 if gateway is not None and gateway.failure is not None:

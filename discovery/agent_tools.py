@@ -13,10 +13,11 @@ from typing import Any
 from django.db import close_old_connections, transaction
 from pydantic import ValidationError
 
+from discovery.errors import DiscoveryStop
 from discovery.models import DiscoveryTask
 from discovery.orchestrator import check_lease, commit_turn, content_hash
 from discovery.research import check_limits, lease_token, perform_research
-from discovery.schemas import Proposal, Validation
+from discovery.schemas import DiscoveryConfig, Proposal, Validation
 
 
 class AgentTools:
@@ -119,6 +120,19 @@ class AgentTools:
             except (ValueError, ValidationError) as exc:  # allow: suppress-exception
                 # Versioned tool validation errors are visible self-correction input.
                 result = {"schema_version": "1.0", "status": "validation_failed", "error": str(exc)}
+            except DiscoveryStop as exc:  # allow: suppress-exception
+                # Research exhaustion is a visible tool quota, not an aborted
+                # dialogue. Leave the agent able to submit its current findings.
+                if exc.reason != "turn_call_limit":
+                    self.failure = exc
+                    raise
+                result = {
+                    "schema_version": "1.0",
+                    "status": "research_limit_reached",
+                    "research_calls_remaining": 0,
+                    "message": "Research quota reached. Make no more research calls. "
+                    "Submit your best evidence-backed brief now; label evidence gaps honestly.",
+                }
             except Exception as exc:  # noqa: BLE001  # supervisor observes and propagates failure
                 self.failure = exc
                 raise
@@ -187,9 +201,22 @@ class AgentTools:
             sequence = hashlib.sha256(
                 json.dumps([name, request_id], sort_keys=True).encode()
             ).hexdigest()[:24]
-            return perform_research(
+            result = perform_research(
                 self.task, f"{self.task.pk}:claude:research:{sequence}", arguments
             )
+            config = DiscoveryConfig.model_validate(self.task.discovery.config_snapshot)
+            remaining = max(
+                0,
+                config.max_research_calls_per_turn
+                - self.task.operations.filter(kind="research").count(),
+            )
+            result = {**result, "research_calls_remaining": remaining}
+            if remaining <= 2:
+                result["budget_notice"] = (
+                    f"Only {remaining} research calls remain. "
+                    "Prioritize decisive pages and submit your brief."
+                )
+            return result
         schema = Proposal if self.task.role == "finder" else Validation
         normalized = schema.model_validate(arguments).model_dump(mode="json")
         # Validate now so the agent can repair a citation/schema problem. Commit
