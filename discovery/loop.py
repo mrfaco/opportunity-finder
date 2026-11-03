@@ -125,6 +125,11 @@ def _save_context(task: DiscoveryTask, context: dict[str, Any]) -> None:
 
 def _execute(task: DiscoveryTask) -> None:
     config = DiscoveryConfig.model_validate(task.discovery.config_snapshot)
+    if config.runtime == "claude_code":
+        from discovery.claude_runtime import run_turn  # noqa: PLC0415  # runtime selection
+
+        run_turn(task, _initial_context(task), tools_for_role(task.role))
+        return
     model = config.finder_model if task.role == "finder" else config.validator_model
     prompt = task.discovery.prompt_snapshot[task.role]
     context = task.context
@@ -258,7 +263,12 @@ def run_task(task_id: str) -> None:
         # alone may change discovery state.
         return
     except DiscoveryStop as exc:  # allow: suppress-exception
-        finish_discovery(task.discovery_id, exc.reason, error_summary=str(exc))
+        finish_discovery(
+            task.discovery_id,
+            exc.reason,
+            status="failed" if exc.reason == "invalid_submission" else "completed",
+            error_summary=str(exc),
+        )
     except OutcomeUnknown as exc:
         task.operations.filter(state__in=["started", "pending"]).update(state="unknown")
         finish_discovery(

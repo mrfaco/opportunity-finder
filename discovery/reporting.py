@@ -43,6 +43,11 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         "Customer interviews and real purchasing tests remain necessary.",
         "Research covers the enabled connectors and retrieved sources, not the entire market.",
     ]
+    if any(op.response.get("cloud_charges_unverified") for op in discovery.operations.all()):
+        limitations.append(
+            "Ollama cloud-plan charges were not verified; "
+            "zero recorded incremental API cost is not proof of free cloud usage."
+        )
     if unknown:
         limitations.append(
             "Local cancellation or termination does not cancel outstanding remote batches; "
@@ -110,7 +115,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         f"Constraints: {discovery.constraints or 'None specified.'}",
         "",
         f"Turns completed: {discovery.turns_completed} · Elapsed: {duration:.0f} seconds · "
-        f"Known spend: USD {known} · Estimated connector charges: USD {estimated}",
+        f"Known spend: USD {known:.6f} · Estimated charges: USD {estimated:.6f}",
         "",
         f"Stop reason: {discovery.stop_reason} · Lifecycle: {discovery.status}",
         "",

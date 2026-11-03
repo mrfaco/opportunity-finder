@@ -261,3 +261,25 @@ default ceilings, and early completion on evidence-backed Validator acceptance
 of Finder's exact revision. The prototype implements these choices; the local
 configuration explicitly selects DuckDuckGo search to avoid requiring a Tavily key.
 See `../../discovery.md` for setup and the remaining hardening phase.
+
+
+## Runtime follow-up: match Video Swarm's Claude Code harness
+
+The user's newer instruction replaces the initial direct-batch execution plan
+for new discoveries. Implement a restricted Claude Code subprocess harness and
+per-role provider selection (Anthropic/OpenRouter/Ollama), preserving the
+application's mail, task, connector and report contracts. Version new configs
+as `1.1`; preserve historical schema-1.0 batch execution and stored data.
+
+- Add role provider fields to the start form and API config; show frozen profiles
+  on detail/status responses. Credentials stay in host settings.
+- Default new roles to interactive DeepSeek V4.1 Flash through OpenRouter;
+  reject :batch IDs explicitly for the Claude Code harness.
+- Bind research and submission tools to the leased role/task, enforce limits
+  in application code, and prevent unrelated shell/filesystem capabilities.
+- Support Anthropic host login/API-key setup and Ollama's Claude launcher with
+  exact provider-specific model IDs.
+- Verify the host launch contract and each provider profile with small offline
+  fixtures and focused UI checks; defer extensive coverage as instructed.
+- Report decisions, verification and unavailable live-provider checks after the
+  autonomous implementation. No further user clarification is needed.

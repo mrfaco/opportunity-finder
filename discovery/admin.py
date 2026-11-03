@@ -48,7 +48,28 @@ class DiscoveryStartForm(forms.Form):
     max_duration_s = forms.IntegerField(initial=1800, min_value=1)
     max_model_calls_per_turn = forms.IntegerField(initial=8, min_value=1, max_value=50)
     max_research_calls_per_turn = forms.IntegerField(initial=8, min_value=1, max_value=50)
-    finder_model = forms.CharField(initial=DEFAULT_MODEL, max_length=160)
+    finder_provider = forms.ChoiceField(
+        choices=[
+            ("openrouter", "OpenRouter"),
+            ("anthropic", "Anthropic / Claude Code login"),
+            ("ollama", "Ollama"),
+        ],
+        initial="openrouter",
+        help_text="Every provider uses Claude Code. Configure credentials on the host.",
+    )
+    finder_model = forms.CharField(
+        initial=DEFAULT_MODEL,
+        max_length=160,
+        help_text="OpenRouter: provider/model; Anthropic: sonnet/native ID; Ollama: exact tag.",
+    )
+    validator_provider = forms.ChoiceField(
+        choices=[
+            ("openrouter", "OpenRouter"),
+            ("anthropic", "Anthropic / Claude Code login"),
+            ("ollama", "Ollama"),
+        ],
+        initial="openrouter",
+    )
     validator_model = forms.CharField(initial=DEFAULT_MODEL, max_length=160)
     connectors = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple)
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
@@ -59,6 +80,8 @@ class DiscoveryStartForm(forms.Form):
             (item["id"], item.get("name", item["id"])) for item in describe_connectors()
         ]
         self.fields["connectors"].initial = settings.DISCOVERY_CONNECTORS
+        self.fields["finder_provider"].initial = settings.DISCOVERY_FINDER_PROVIDER
+        self.fields["validator_provider"].initial = settings.DISCOVERY_VALIDATOR_PROVIDER
         self.fields["finder_model"].initial = settings.DISCOVERY_FINDER_MODEL
         self.fields["validator_model"].initial = settings.DISCOVERY_VALIDATOR_MODEL
         self.fields["idempotency_key"].initial = uuid.uuid4()
@@ -70,11 +93,17 @@ class DiscoveryStartForm(forms.Form):
             "max_duration_s",
             "max_model_calls_per_turn",
             "max_research_calls_per_turn",
+            "finder_provider",
             "finder_model",
+            "validator_provider",
             "validator_model",
             "connectors",
         )
-        return {key: self.cleaned_data[key] for key in keys}
+        return {
+            "schema_version": "1.1",
+            "runtime": "claude_code",
+            **{key: self.cleaned_data[key] for key in keys},
+        }
 
 
 def _url(value: str) -> str:
@@ -227,6 +256,15 @@ class DiscoveryAdmin(ModelAdmin):
                         strip=True,
                     )
                 ),
+                "execution_profiles": [
+                    {
+                        "role": role.title(),
+                        "provider": discovery.config_snapshot.get(f"{role}_provider", "openrouter"),
+                        "model": discovery.config_snapshot.get(f"{role}_model", ""),
+                    }
+                    for role in ("finder", "validator")
+                ],
+                "runtime_name": discovery.config_snapshot.get("runtime", "openrouter_batch"),
                 "active": discovery.status in {"queued", "running"},
                 "can_cancel": self.has_change_permission(request, discovery),
             },

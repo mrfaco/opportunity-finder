@@ -1,7 +1,7 @@
 {% extends "unfold/layouts/base_simple.html" %}
 {% block content %}
 <style>
-.discovery-form input:not([type=checkbox]):not([type=hidden]), .discovery-form textarea {width:100%;max-width:56rem;padding:0.65rem;border:1px solid #64748b;border-radius:0.4rem;background:transparent;color:inherit;}
+.discovery-form input:not([type=checkbox]):not([type=hidden]), .discovery-form textarea, .discovery-form select {width:100%;max-width:56rem;padding:0.65rem;border:1px solid #64748b;border-radius:0.4rem;background:transparent;color:inherit;}
 .discovery-form label {font-weight:600;display:block;margin-bottom:0.35rem;}
 .discovery-form .helptext {display:block;font-size:0.85rem;color:#94a3b8;margin-top:0.25rem;}
 .discovery-form .errorlist {color:#f87171;margin:0.5rem 0;}
@@ -9,7 +9,7 @@
 </style>
 <h1 class="text-2xl font-semibold mb-3">Start an opportunity discovery</h1>
 <p class="mb-4">Give Finder a direction. Validator will try to disprove its proposal and send back objections or promising alternatives. The agents can explore services, manufacturing, intelligence, physical products, software, B2B or B2C.</p>
-<p class="mb-4">20 turns means 10 Finder–Validator exchanges. A validated agreement can finish earlier. Both roles default to DeepSeek V4.1 Flash batch through OpenRouter; batch jobs may wait hours. Choose a duration that permits that wait. No automatic switch to a faster model.</p>
+<p class="mb-4">20 turns means 10 Finder–Validator exchanges. A validated agreement can finish earlier. Both roles run in Claude Code. Choose OpenRouter, Anthropic or Ollama independently for each role and provide its exact model ID. New runs default to interactive DeepSeek V4.1 Flash through OpenRouter. Provider and model selections are frozen when the discovery starts; there is no automatic fallback.</p>
 <form method="post" class="discovery-form">
   {% csrf_token %}
   {{ form.as_p }}

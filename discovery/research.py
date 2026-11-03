@@ -77,7 +77,7 @@ def begin_operation(
             if kind == "model"
             else config.max_research_calls_per_turn
         )
-        if task.operations.filter(kind=kind).count() >= max_calls:
+        if kind in {"model", "research"} and task.operations.filter(kind=kind).count() >= max_calls:
             raise DiscoveryStop("turn_call_limit", f"Maximum {kind} calls reached")
         held = discovery.operations.exclude(state__in=["completed", "failed"]).aggregate(
             value=Sum("reserved_usd")
@@ -96,7 +96,7 @@ def begin_operation(
         turn = task.turn
         if kind == "model":
             turn.model_calls += 1
-        else:
+        elif kind == "research":
             turn.research_calls += 1
         turn.save(update_fields=["model_calls", "research_calls"])
         return operation

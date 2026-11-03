@@ -33,9 +33,11 @@
 <div class="discovery-panel">
   <strong>{{ discovery.status|title }}</strong>{% if discovery.outcome %} · {{ discovery.outcome }}{% endif %}
   <p>{{ discovery.turns_completed }} of {{ discovery.config_snapshot.max_turns }} turns · Spend incl. estimates ${{ discovery.cost_used_usd }}</p>
+  <p>Agent harness: {{ runtime_name }}</p>
+  {% for profile in execution_profiles %}<p>{{ profile.role }}: {{ profile.provider }} · {{ profile.model }}</p>{% endfor %}
   {% if discovery.stop_reason %}<p>Stop reason: {{ discovery.stop_reason }}</p>{% endif %}
   {% if discovery.error_summary %}<p class="discovery-text" style="color:#f87171">{{ discovery.error_summary }}</p>{% endif %}
-  {% if active %}<p class="mt-2">The dialogue is still in progress. Batch inference may remain queued or processing for hours. Refresh to see persisted mail, evidence and provider operation status.</p>{% endif %}
+  {% if active %}<p class="mt-2">{% if runtime_name == "openrouter_batch" %}This historical batch run may remain queued while its provider processes the request.{% else %}Claude Code is researching or preparing the next mail handoff.{% endif %} Refresh to see persisted mail, evidence and execution status.</p>{% endif %}
   {% if discovery.constraints %}<p class="discovery-text mt-2">Constraints: {{ discovery.constraints }}</p>{% endif %}
 </div>
 {% if discovery.report_markdown %}

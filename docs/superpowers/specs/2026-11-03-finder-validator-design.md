@@ -369,3 +369,28 @@ OpenRouter DeepSeek V4.1 Flash batch runtime (user-selected); Tavily default sea
 Validator acceptance ends discussion; one final report rather than a forced
 winner. Runtime provider abstraction can follow existing conventions, but a
 Claude Code/Codex subprocess runtime is not part of this first release.
+
+
+## 11. Runtime revision: Claude Code and selectable providers
+
+The user's subsequent instruction supersedes the initial direct OpenRouter
+batch runtime choice: the agent setup must match Video Swarm and use Claude
+Code, with a selection of Ollama, OpenRouter or Anthropic. New config schema
+`1.1` adds `runtime=claude_code`, `finder_provider`, and `validator_provider`.
+Each role has its own explicit provider/model profile. New default models use
+interactive `deepseek/deepseek-v4.1-flash` through OpenRouter. Claude Code runs
+the conversation; the application retains authority over durable tasks, internal
+mail, research/submission tools, budgets, cancellation and final reports.
+
+OpenRouter :batch IDs cannot drive Claude Code's dependent interactive tool
+loop. Reject them explicitly for new discoveries instead of removing the suffix
+or falling back. Schema-1.0 batch snapshots remain readable and execute through
+their historical path without rewriting records. Finder and Validator keep
+separate contexts; provider credentials are host configuration and are never
+part of the agent-visible input. Every role uses the same restricted harness,
+regardless of its chosen inference provider.
+
+Anthropic can use the worker host's Claude Code login or an explicit API key.
+Ollama uses its configured launcher/service. Missing clients or unavailable
+providers fail visibly. Prototype verification remains focused; extensive test
+coverage is deferred until the working flow is complete.

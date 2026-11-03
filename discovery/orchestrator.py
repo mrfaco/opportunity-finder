@@ -68,6 +68,9 @@ def start_discovery(
     if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
         raise DiscoveryError("Idempotency key must be 1–200 characters")
     defaults = {
+        "runtime": getattr(settings, "DISCOVERY_RUNTIME", "claude_code"),
+        "finder_provider": getattr(settings, "DISCOVERY_FINDER_PROVIDER", "openrouter"),
+        "validator_provider": getattr(settings, "DISCOVERY_VALIDATOR_PROVIDER", "openrouter"),
         "finder_model": getattr(settings, "DISCOVERY_FINDER_MODEL", None),
         "validator_model": getattr(settings, "DISCOVERY_VALIDATOR_MODEL", None),
         "connectors": getattr(settings, "DISCOVERY_CONNECTORS", None),
@@ -93,8 +96,6 @@ def start_discovery(
             if existing.request_hash != request_hash:
                 raise DiscoveryConflict("Idempotency key already used for a different discovery")
             return existing
-    if not settings.OPENROUTER_API_KEY:
-        raise DiscoveryError("OPENROUTER_API_KEY is not configured")
     # Registry is imported here to avoid coupling database models to connector startup.
     from discovery.connectors.registry import get_connector  # noqa: PLC0415
 
@@ -180,10 +181,13 @@ def claim_task(task_id: UUID | str) -> DiscoveryTask | None:
         now = timezone.now()
         if task.state == "working" and task.lease_expires_at and task.lease_expires_at > now:
             return None
-        if task.operations.filter(
-            state__in=["started", "unknown"],
-            reserved_usd__gt=0,
-        ).exists():
+        if (
+            task.operations.filter(
+                state__in=["started", "unknown"],
+            )
+            .exclude(kind="research", reserved_usd=0)
+            .exists()
+        ):
             _finish_locked(
                 discovery,
                 "worker_lost",
@@ -195,6 +199,7 @@ def claim_task(task_id: UUID | str) -> DiscoveryTask | None:
         # Known-unbilled reads can be repeated after a crash; billed calls
         # remain blocked above until their outcome is reconciled.
         task.operations.filter(
+            kind="research",
             state__in=["started", "unknown"],
             reserved_usd=0,
         ).update(state="planned", error_summary="")
@@ -262,6 +267,7 @@ def commit_turn(
     model: str = "",
     prompt_hash: str = "",
     enqueue: bool = True,
+    validate_only: bool = False,
 ) -> Discovery:
     base = DiscoveryTask.objects.get(pk=task_id)
     schema = Proposal if base.role == "finder" else Validation
@@ -307,6 +313,8 @@ def commit_turn(
                     "Validator needs a successful search with results and a new query this turn"
                 )
             require_agreement(discovery, task, latest_proposal, validation)
+        if validate_only:
+            return discovery
         now = timezone.now()
         turn.submission = normalized
         turn.submission_hash = digest

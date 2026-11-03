@@ -28,9 +28,12 @@ research, cost and duration limits. Agreement can finish earlier; it applies to
 an exact proposal revision and must pass evidence checks. Model agreement is
 not proof of commercial viability.
 
-Both roles default to OpenRouter's `deepseek/deepseek-v4.1-flash:batch`. Batch
-inference is asynchronous and can wait hours; choose a suitable duration limit.
-The runtime does not silently switch to synchronous or different models.
+Both roles run through Claude Code, using the same harness pattern as Video
+Swarm. Select **Ollama, OpenRouter or Anthropic** independently for each role.
+New discoveries default to OpenRouter's interactive
+`deepseek/deepseek-v4.1-flash`. Existing batch records retain their original
+configuration. Claude Code discoveries reject `:batch` model IDs explicitly.
+The runtime never silently changes the selected provider or model.
 
 Research connectors expose search/fetch capabilities independently of ingestion:
 Tavily general web search, bounded web page retrieval, Hacker News, GitHub,
@@ -41,16 +44,20 @@ connector availability, API usage and recovery.
 ## Run locally
 
 Follow [QUICKSTART.md](QUICKSTART.md). Keep credentials in the ignored `.env`.
-Discovery needs an OpenRouter key and a configured general web-search connector.
+Discovery needs Claude Code, a configured selected provider, and a general
+web-search connector. Ollama selection additionally needs its launcher.
 The historical ingestion workflow separately requires its classifier and
 embedding credentials.
 
 ```sh
-make build
-make migrate
-make createsuperuser
-make up
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py createsuperuser
+.venv/bin/python manage.py runserver 127.0.0.1:8088
 ```
+
+Run the host Celery worker and Beat in separate terminals as described in the
+quickstart. The original Python-only Docker image does not supply Claude Code
+or Ollama; explicitly provision those clients before using container workers.
 
 Open `/admin/discovery/discovery/` to start a run, inspect mail, evidence and
 provider status, or download a completed Markdown report. The authenticated

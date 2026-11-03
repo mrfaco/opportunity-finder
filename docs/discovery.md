@@ -23,18 +23,40 @@ consensus between agents, not verified demand, profitability or legal clearance.
 
 ## Runtime and credentials
 
-Both roles default to `deepseek/deepseek-v4.1-flash:batch` through OpenRouter.
-Set `OPENROUTER_API_KEY` in the ignored `.env` or deployment environment. The
-batch runtime uses asynchronous provider jobs. The `:batch` selection is retained
-in the discovery snapshot; requests use OpenRouter's batch API rather than a
-synchronous fallback. A sequence of dependent agent calls can take hours, so
-choose a discovery wall-clock limit that permits queueing. The ordinary default
-is 1,800 seconds; increase it deliberately for a longer batch run.
+Both reasoning roles run as **Claude Code subprocesses**, following Video
+Swarm's agent-harness pattern. The application owns durable tasks, internal
+mail, tools, budgets and report generation; Claude Code owns each role's model
+conversation. In the start form, choose a provider and model separately for
+Finder and Validator:
 
-Role models, connectors, maximum turns, cost ceiling and call limits are frozen
-when a discovery starts. Changing deployment settings affects future runs rather
-than silently changing an existing dialogue. Do not place credentials in objectives,
-constraints, briefs, evidence, prompts or committed configuration files.
+| Provider | Model ID example | Host configuration |
+|---|---|---|
+| OpenRouter | `deepseek/deepseek-v4.1-flash` | `OPENROUTER_API_KEY` |
+| Anthropic | `sonnet` or a native Claude model ID | Host Claude Code login or `ANTHROPIC_API_KEY` |
+| Ollama | An exact installed/cloud Ollama model tag | `ollama` executable and configured Ollama service |
+
+All three choices use Claude Code; this is not three different reasoning loops.
+The default for new discoveries is OpenRouter with interactive DeepSeek V4.1
+Flash. Provider credentials are configured on the host and never submitted as
+form fields or saved in a discovery snapshot. Claude's built-in filesystem,
+shell and unrelated integrations are not part of the research toolset.
+
+**Batch suffixes are not accepted for Claude Code discoveries.** A dependent
+interactive tool conversation needs a model response before research and the
+next handoff can proceed. Use `deepseek/deepseek-v4.1-flash` rather than its
+`:batch` variant. The application rejects that mismatch explicitly; it never
+silently removes the suffix or switches a provider. Existing schema-1.0 batch
+records retain their historical execution configuration and remain inspectable.
+
+New configuration schema version `1.1` adds `runtime`, `finder_provider` and
+`validator_provider`. Old schema-1.0 snapshots without `runtime` are interpreted
+as `openrouter_batch`; no historical record is rewritten. All role selections,
+connectors, maximum turns, cost ceilings and call limits are frozen when a new
+discovery starts. Changing deployment defaults affects subsequent discoveries.
+
+Role providers can differ: for example, Finder on Ollama and Validator on
+Anthropic. Choose model IDs appropriate to each provider. Do not place
+credentials in objectives, constraints, briefs, evidence or committed files.
 
 General search is explicitly configured:
 
@@ -62,15 +84,14 @@ its original retrieval timestamp.
 
 - `/admin/discovery/discovery/`: list and filter discoveries.
 - `/admin/discovery/discovery/start/`: start from an objective, constraints,
-  selected connectors, role models and budgets.
+  selected connectors, role providers/models and budgets.
 - `/admin/discovery/discovery/<id>/review/`: inspect status, costs, threaded mail,
   immutable submissions, evidence and provider-operation status.
 - The detail page provides cancellation and final Markdown report download.
 
 Source/model text is escaped in the interface. Reading the operator page does
 not mark an agent's assigned task complete. Refresh the detail page to inspect
-persisted progress; batch inference can remain queued or processing without new
-mail until its response arrives.
+persisted progress while Claude Code researches and prepares a handoff.
 
 ## API
 
@@ -93,11 +114,15 @@ Content-Type: application/json
   "objective": "Look for opportunities in the travel space",
   "constraints": "Argentina; include service and intelligence businesses",
   "config": {
+    "schema_version": "1.1",
+    "runtime": "claude_code",
+    "finder_provider": "openrouter",
+    "validator_provider": "anthropic",
     "max_turns": 20,
     "max_cost_usd": "10.00",
     "max_duration_s": 86400,
-    "finder_model": "deepseek/deepseek-v4.1-flash:batch",
-    "validator_model": "deepseek/deepseek-v4.1-flash:batch",
+    "finder_model": "deepseek/deepseek-v4.1-flash",
+    "validator_model": "sonnet",
     "connectors": ["duckduckgo", "web_fetch"]
   }
 }
@@ -128,8 +153,9 @@ allow committed tasks to be published after temporary broker failures. Leases
 and fencing prevent a stale worker from committing another handoff.
 
 External operation records distinguish planned, submitted, completed and unknown
-outcomes. Poll an already-submitted batch using its stored provider identity;
-do not create another job just because the worker restarted. Unknown billed
+outcomes. A Claude Code process interrupted after inference may have incurred a
+charge; do not blindly start a second billed attempt. Historical batch jobs use
+their saved provider ID when polling rather than creating a second batch. Unknown billed
 outcomes require operator reconciliation before another paid attempt. Known
 spend and unknown outcomes remain distinct in the final report. Do not infer
 zero spend from missing usage.
@@ -183,8 +209,9 @@ With the development database migrated and Redis running:
 .venv/bin/python scripts/smoke_discovery.py
 ```
 
-This uses real PostgreSQL, an extension-registry fixture connector and
-`httpx.MockTransport` for all OpenRouter traffic. It demonstrates a four-turn
+This historical batch-path smoke uses real PostgreSQL, an extension-registry
+fixture connector and `httpx.MockTransport` for OpenRouter traffic. It explicitly
+selects `openrouter_batch`; it does not exercise the new Claude Code launcher. It demonstrates a four-turn
 service proposal, saturation challenge, niche pivot and exact-revision agreement
 through eight asynchronous model steps. The clearly labelled synthetic discovery
 and ignored `.tmp/discovery-smoke-report.md` remain for inspection. These are
@@ -206,3 +233,72 @@ registered in Beat automatically; legacy ingestion schedules are not seeded.
 Provider-reported costs and configured Tavily charge estimates are labelled
 separately in reports; both consume the budget conservatively. An outstanding
 remote batch is an unsettled possible charge, never assumed free.
+
+
+### Host runtime requirements
+
+Claude Code must be installed and executable by the Celery worker for every
+provider. Ollama selection additionally requires the Ollama launcher. For
+Anthropic, authenticate Claude Code on the same host account used by the worker,
+or set its API key explicitly. An interactive login is a human setup step, not
+an action performed by the discovery agent.
+
+The repository's original Python Docker image does not provision Claude Code or
+Ollama. Run the web/worker on a configured host for this prototype, or explicitly
+build an image that supplies those runtimes and authentication. A missing binary
+or unavailable selected provider is a visible configuration failure, not a reason
+to route to a different backend.
+
+Default provider/model settings:
+
+```dotenv
+DISCOVERY_RUNTIME=claude_code
+DISCOVERY_FINDER_PROVIDER=openrouter
+DISCOVERY_VALIDATOR_PROVIDER=openrouter
+DISCOVERY_FINDER_MODEL=deepseek/deepseek-v4.1-flash
+DISCOVERY_VALIDATOR_MODEL=deepseek/deepseek-v4.1-flash
+```
+
+
+### Claude Code execution decisions and focused checks
+
+Finder resumes its per-discovery Claude session. Validator starts a fresh session
+for each review, receiving the latest proposal, objections and evidence. The
+supervisor renews the task lease while Claude runs, enforces the deadline and
+research-call limits, and stops the process family on cancellation. The mail
+handoff is committed after wake usage is settled, so a following turn cannot
+race ahead of accounting.
+
+Claude receives only the discovery MCP research/submission tools: built-in file,
+shell, browser and subagent tools are disabled. The installed Claude Code version
+suppresses even explicitly configured MCP servers under `--safe-mode`, so this
+implementation uses `--restricted`, empty settings sources, an explicit system
+prompt, disabled slash commands and strict MCP configuration instead. This was
+verified with the actual installed CLI, not inferred from its help text.
+
+OpenRouter uses a loopback Anthropic-Messages gateway, exact model routing,
+per-call reservations and an ephemeral child credential. The OpenRouter key
+never enters Claude's environment or prompt. Anthropic uses an API key or the
+worker account's existing Claude login. Ollama uses `ollama launch claude` with
+isolated launcher preferences; local models must already be installed. Discovery
+does not log in to accounts, pull models or change global Ollama preferences.
+
+OpenRouter costs are provider-reported when available and explicitly estimated
+otherwise. Native Anthropic uses Claude Code's spending cap and reported usage;
+that cap is checked at client turn boundaries and is not a strict prepaid wallet.
+Subscription valuations and Ollama cloud-plan charges are not verified invoices.
+Unsettled operations remain visible rather than being assumed free.
+
+Repeat the real-harness, provider-free demonstration with:
+
+```sh
+.venv/bin/python scripts/smoke_claude_discovery.py
+```
+
+It runs the installed Claude Code executable against simulated OpenRouter
+Messages responses, real MCP tools and PostgreSQL, through four turns and twelve
+model requests. It checks Finder session reuse, independent Validator sessions,
+research, a saturation challenge, a niche pivot and final agreement. No paid
+requests are made. Its report is `.tmp/claude-discovery-smoke-report.md` and is
+clearly labelled synthetic. Anthropic/Ollama configuration and launcher contracts
+were checked without invoking their paid inference or changing credentials.

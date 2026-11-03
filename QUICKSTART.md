@@ -1,87 +1,93 @@
 # Local quickstart
 
 The primary workflow is a search-led dialogue between Finder and Validator.
-You need Docker Compose, `make`, and a funded OpenRouter API key. General web
-search also needs a configured connector. Historical ingestion and clustering
-are optional and have separate credentials.
+Both agents run in Claude Code, following Video Swarm's harness pattern. Choose
+Ollama, OpenRouter or Anthropic separately for each role; all three use the same
+durable mail, research connectors and final-report workflow.
 
-## Configure
+## Configure the host
 
-If `.env` does not already exist, copy `.env.example` to `.env`. Preserve any
-existing keys. Add the following entries without committing their values:
+Install Claude Code and make `claude` available to the Celery worker. Selecting
+Ollama also requires its `ollama` launcher and a configured model/service. For
+Anthropic use the host's Claude Code login or `ANTHROPIC_API_KEY`; for OpenRouter
+set `OPENROUTER_API_KEY` in the ignored `.env`. Do not paste provider credentials
+into the discovery form. The original Python-only Docker image does not install
+these agent runtimes; use host processes for this prototype.
+
+If `.env` does not exist, copy `.env.example`; preserve existing credentials.
+Configure PostgreSQL with pgvector, Redis and a random Django development secret.
+General web search can use `DISCOVERY_CONNECTORS=duckduckgo,web_fetch` without
+another API key, or `web_search,web_fetch` with `TAVILY_API_KEY`.
+
+Default execution settings are:
 
 ```dotenv
-OPENROUTER_API_KEY=<your-key>
-DJANGO_SECRET_KEY=<a-random-development-secret>
-TAVILY_API_KEY=<your-tavily-key>
+DISCOVERY_RUNTIME=claude_code
+DISCOVERY_FINDER_PROVIDER=openrouter
+DISCOVERY_VALIDATOR_PROVIDER=openrouter
+DISCOVERY_FINDER_MODEL=deepseek/deepseek-v4.1-flash
+DISCOVERY_VALIDATOR_MODEL=deepseek/deepseek-v4.1-flash
 ```
 
-Check `.env.example` for Discovery defaults. Both agent models default to
-`deepseek/deepseek-v4.1-flash:batch`. The application submits asynchronous batch
-inference through OpenRouter; jobs may wait hours. Choose a duration that permits
-that wait. There is no automatic switch to another model.
+Claude Code uses an interactive model to research and exchange mail. Do not use
+`:batch` model IDs for new runs: they are rejected instead of silently converted.
+Previously created schema-1.0 batch discoveries retain their historical path.
 
-The standard `web_search` connector uses Tavily; `web_fetch` retrieves actual
-pages. Additional explicitly configured connectors can supplement research.
-`GET /api/v1/connectors/` and the admin start page show configuration status.
-Do not select a connector whose required credentials are absent.
+## Start host processes
 
-## Build and start
+Install the Python environment and migrate the configured database:
 
 ```sh
-make build
-make migrate
-make createsuperuser
-make up
+uv venv --python 3.13 .venv
+uv pip install --python .venv/bin/python -e '.[dev]'
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py createsuperuser
 ```
 
-The Makefile sets host UID/GID so container writes remain owned by you. Services
-include PostgreSQL with pgvector, Redis, Django on port 8000, a Celery worker and
-Celery Beat. No production deployment is needed.
+Run these in separate terminals:
 
-Open http://localhost:8000/admin/discovery/discovery/ and log in. Start a
-Discovery with an objective such as:
+```sh
+.venv/bin/python manage.py runserver 127.0.0.1:8088
+.venv/bin/celery -A config worker --pool=solo --concurrency=1 -l info
+.venv/bin/celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+This checkout's local PostgreSQL/Redis ports are documented in
+[the discovery guide](docs/discovery.md). Host `.env` addresses differ from Docker
+Compose service addresses. Preserve other projects' services and snapshots.
+
+Open http://127.0.0.1:8088/admin/discovery/discovery/ and log in. Start a Discovery:
 
 > Look for opportunities in travel for independent operators in Argentina.
-> Consider services, physical products and information businesses as well as software.
+> Consider services, physical products and intelligence businesses as well as software.
 
-Set capital/geography/skills constraints if relevant. The default 20 turns means
-10 Finder–Validator exchanges. Both roles have their own research calls and
-model-call limits inside each turn; these are not additional dialogue turns.
-Set an appropriate cost ceiling and wall-clock duration before starting.
+Choose each role's provider and its matching model ID. OpenRouter uses
+`provider/model`, Anthropic uses `sonnet` or a native Claude ID, and Ollama uses
+its exact model tag. Add geography, skills or capital constraints if useful.
+The default 20 turns means ten Finder–Validator exchanges; research/model calls
+inside a turn have separate limits. Set cost and duration ceilings before start.
+Provider/model selections are frozen with the prompts and enabled connectors.
 
 ## Inspect the run
 
-The detail page shows status, known spend, persisted mail, immutable turn
-submissions, captured evidence and external-operation status. Batch work can
-remain queued or processing; refresh the page to inspect current state.
+The detail page shows selected providers/models, status, spend including
+estimates, durable mail, immutable submissions, captured evidence and operation
+status. Refresh while Claude Code works. Validator may challenge a saturated
+market and suggest a niche; Finder must adopt and submit it before Validator
+can accept that exact revision. A promising unreviewed idea is not convergence.
 
-Validator can challenge a crowded market and suggest a narrower niche. Finder
-must adopt and submit a revision before Validator can accept it. Acceptance of
-that exact revision can end the run early. A turn limit with unresolved
-objections is reported honestly; a promising unreviewed idea is not convergence.
+Read or download the final Markdown report, including evidence for and against,
+pivots, unresolved assumptions and next human tests. Stopping a run prevents
+further work; inference already sent to a provider may still be charged.
 
-Download the final Markdown report. It includes the business model, evidence
-for and against, pivots, unresolved assumptions and next human tests. Cancel a
-running discovery from its detail page. Cancellation stops new calls but cannot
-undo a provider charge or guarantee cancellation of work already submitted.
+## Historical ingestion and development checks
 
-## Optional historical ingestion
+Discovery needs no Anthropic/Voyage ingestion keys, seed eval set or cluster.
+Legacy ingestion/clustering records and schedules remain available; migrations
+do not silently enable or disable them. Inspect periodic tasks before enabling
+recurring paid work.
 
-Discovery does not require `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, a seed eval set,
-or source ingestion. Those belong to the historical classifier/embedding and
-investigation workflow. Existing schedules remain enabled unless an operator
-changes them.
-
-To use that separate workflow, configure its keys and deliberately run
-`setup_schedules` inside the configured web container. Inspect periodic tasks at
-`/admin/django_celery_beat/periodictask/` before enabling recurring paid work.
-
-## Development verification
-
-Prototype work uses targeted smoke checks first. Extensive failure injection,
-regression tests and coverage verification are scheduled after the end-to-end
-prototype works. See [the implementation plan](docs/superpowers/plans/2026-11-03-finder-validator-plan.md).
-
-For API examples, connector development and interrupted-run recovery, see
-[docs/discovery.md](docs/discovery.md).
+Use focused offline checks while completing the prototype. Broad regression
+coverage and failure injection remain in the final hardening phase, per the
+user's instruction. See [the plan](docs/superpowers/plans/2026-11-03-finder-validator-plan.md)
+and [the discovery guide](docs/discovery.md) for the API and connector contract.

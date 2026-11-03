@@ -11,7 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The search-led `discovery/` app accepts an objective without ingestion or a
 cluster. Finder researches and proposes a business opportunity; Validator
 independently falsifies it through durable internal mail. Default 20 individual
-turns, OpenRouter `deepseek/deepseek-v4.1-flash:batch`, extensible read-only
+turns, a Claude Code agent harness with per-role Anthropic/OpenRouter/Ollama
+selection (OpenRouter `deepseek/deepseek-v4.1-flash` by default), extensible read-only
 connectors and a deterministic final Markdown report. Business models include
 services, manufacturing, intelligence, B2B, B2C and software without SaaS bias.
 The user explicitly deferred extensive coverage until a working prototype;

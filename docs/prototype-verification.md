@@ -57,3 +57,36 @@ ORM. Do not confuse fixture conclusions with actual opportunity research.
   coverage gate are deferred per the user's prototype-first instruction. No
   committed coverage threshold was reduced. This is a development prototype,
   not a completed production-hardening release.
+
+
+## Claude Code provider upgrade (2026-11-03)
+
+The newer user instruction supersedes batch-only execution for new discoveries.
+Config schema 1.1 selects the Claude Code harness with independent provider/model
+profiles for Finder and Validator. Choices are Anthropic, OpenRouter and Ollama;
+historical schema-1.0 batch snapshots continue on their original path.
+
+Focused verification additionally passed:
+
+- Real installed Claude Code 2.1.317 performed a four-turn discovery with actual
+  MCP calls and twelve simulated OpenRouter Messages responses. Finder reused
+  its session; each Validator review used a new session. Real PostgreSQL stored
+  the challenge, revised service proposal, agreement, mail and readable report.
+- The gateway used an ephemeral child credential, exact model routing, bounded
+  requests/responses and accounted calls before returning them to Claude.
+- Anthropic and Ollama provider preflight/launch contracts passed with no
+  OpenRouter credential and without paid generation, login or model downloads.
+- The older eight-batch offline demonstration still passed, confirming historical
+  execution compatibility.
+
+No real paid inference was run. Live Anthropic/Ollama inference and broad failure
+injection/coverage remain outside these focused prototype checks. Updated setup
+and execution decisions are documented in `docs/discovery.md`.
+
+
+The updated browser check also passed both provider selectors (all three choices
+on each role), interactive model defaults, frozen execution profiles, rendered
+report and Markdown download with zero console/page errors. Temporary QA users
+were removed. Large MCP result projection was checked to stay below the client's
+file-spill threshold without changing stored evidence. Retry count is explicitly
+zero; CLI output and research limits remain separate from the dialogue limit.

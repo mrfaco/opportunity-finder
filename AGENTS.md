@@ -68,7 +68,11 @@ The discovery workflow has two reasoning roles (Finder and Validator), durable
 internal mail and independent records, not legacy cluster-backed AgentRuns.
 Discovery persistence belongs to its orchestrator, mail, loop and research
 services. Connector implementations return evidence without writing it.
-Discovery role models use OpenRouter DeepSeek V4.1 Flash batch by default.
+Discovery agents run as Claude Code subprocesses, matching Video Swarm's
+harness pattern. Select Anthropic, OpenRouter or Ollama per role; new defaults
+use OpenRouter's interactive DeepSeek V4.1 Flash. Historical batch snapshots
+retain their original path. New Claude Code configs reject :batch model IDs.
+Provider secrets remain host configuration, never agent context or form data.
 
 ## 2. Test discipline — every change has a test
 

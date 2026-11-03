@@ -211,6 +211,10 @@ def main():
             "SYNTHETIC SMOKE FIXTURE — travel service opportunity",
             constraints="All evidence and responses are fixtures, not actual market research.",
             config={
+                "schema_version": "1.0",
+                "runtime": "openrouter_batch",
+                "finder_model": "deepseek/deepseek-v4.1-flash:batch",
+                "validator_model": "deepseek/deepseek-v4.1-flash:batch",
                 "max_turns": 4,
                 "connectors": ["duckduckgo", "prototype_fixture"],
                 "max_cost_usd": Decimal("1"),

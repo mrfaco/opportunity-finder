@@ -52,6 +52,17 @@ def discovery_view(discovery: Discovery) -> dict:
         "started_at": discovery.started_at,
         "ended_at": discovery.ended_at,
         "config": discovery.config_snapshot,
+        "execution": {
+            "runtime": discovery.config_snapshot.get("runtime", "openrouter_batch"),
+            "finder": {
+                "provider": discovery.config_snapshot.get("finder_provider", "openrouter"),
+                "model": discovery.config_snapshot.get("finder_model"),
+            },
+            "validator": {
+                "provider": discovery.config_snapshot.get("validator_provider", "openrouter"),
+                "model": discovery.config_snapshot.get("validator_model"),
+            },
+        },
         "error_summary": discovery.error_summary,
         "report_ready": bool(discovery.report_markdown),
         "report_url": f"/api/v1/discoveries/{discovery.id}/report/",

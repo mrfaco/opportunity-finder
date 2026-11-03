@@ -335,9 +335,14 @@ LOGGING = {
     },
 }
 
-# Search-led Finder/Validator discoveries. Batch submissions never fall back to
-# synchronous inference. Each dependent completion is polled durably by Celery.
-DISCOVERY_FINDER_MODEL = env("DISCOVERY_FINDER_MODEL", default="deepseek/deepseek-v4.1-flash:batch")
+# Claude Code is the agent harness for every selectable provider. Historical
+# batch records retain their original execution path. Credentials stay in env.
+DISCOVERY_RUNTIME = env("DISCOVERY_RUNTIME", default="claude_code")
+DISCOVERY_FINDER_PROVIDER = env("DISCOVERY_FINDER_PROVIDER", default="openrouter")
+DISCOVERY_VALIDATOR_PROVIDER = env(
+    "DISCOVERY_VALIDATOR_PROVIDER", default=DISCOVERY_FINDER_PROVIDER
+)
+DISCOVERY_FINDER_MODEL = env("DISCOVERY_FINDER_MODEL", default="deepseek/deepseek-v4.1-flash")
 DISCOVERY_VALIDATOR_MODEL = env("DISCOVERY_VALIDATOR_MODEL", default=DISCOVERY_FINDER_MODEL)
 DISCOVERY_BATCH_PROVIDER = env("DISCOVERY_BATCH_PROVIDER", default="sail-research")
 DISCOVERY_BATCH_POLL_SECONDS = env.int("DISCOVERY_BATCH_POLL_SECONDS", default=60)

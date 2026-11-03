@@ -7,7 +7,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash:batch"
+DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash"
+LEGACY_BATCH_MODEL = DEFAULT_MODEL + ":batch"
+Provider = Literal["anthropic", "openrouter", "ollama"]
 Role = Literal["finder", "validator"]
 
 
@@ -16,7 +18,12 @@ class Contract(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
 
 
-class DiscoveryConfig(Contract):
+class DiscoveryConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    schema_version: Literal["1.0", "1.1"] = "1.1"
+    runtime: Literal["claude_code", "openrouter_batch"] = "claude_code"
+    finder_provider: Provider = "openrouter"
+    validator_provider: Provider = "openrouter"
     max_turns: int = Field(default=20, ge=2, le=200)
     max_cost_usd: Decimal = Field(default=Decimal("10.00"), gt=0)
     max_duration_s: int = Field(default=1800, ge=1)
@@ -26,6 +33,40 @@ class DiscoveryConfig(Contract):
     finder_model: str = DEFAULT_MODEL
     validator_model: str = DEFAULT_MODEL
     connectors: list[str] = Field(default_factory=lambda: ["web_search", "web_fetch"])
+
+    @model_validator(mode="before")
+    @classmethod
+    def historical_batch_config(cls, value: Any) -> Any:
+        if isinstance(value, dict) and value.get("schema_version") == "1.0":
+            migrated = dict(value)
+            if "runtime" not in migrated:
+                migrated["runtime"] = "openrouter_batch"
+                migrated.setdefault("finder_model", LEGACY_BATCH_MODEL)
+                migrated.setdefault("validator_model", LEGACY_BATCH_MODEL)
+            return migrated
+        return value
+
+    @model_validator(mode="after")
+    def provider_models(self) -> "DiscoveryConfig":
+        for role in ("finder", "validator"):
+            provider = getattr(self, f"{role}_provider")
+            model = getattr(self, f"{role}_model")
+            if any(char.isspace() for char in model) or model.startswith("-"):
+                raise ValueError(f"{role}: use a model ID without whitespace or leading '-' ")
+            if self.runtime == "openrouter_batch":
+                if provider != "openrouter" or not model.endswith(":batch"):
+                    raise ValueError("Historical batch execution requires OpenRouter :batch models")
+                continue
+            if model.endswith(":batch"):
+                raise ValueError(
+                    f"{role}: Claude Code needs an interactive model; choose "
+                    "deepseek/deepseek-v4.1-flash without :batch for OpenRouter"
+                )
+            if provider == "openrouter" and model.count("/") != 1:
+                raise ValueError(f"{role}: OpenRouter model must use the provider/model format")
+            if provider == "anthropic" and "/" in model:
+                raise ValueError(f"{role}: Anthropic uses a native Claude model ID, such as sonnet")
+        return self
 
     @field_validator("finder_model", "validator_model")
     @classmethod
