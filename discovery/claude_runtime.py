@@ -426,7 +426,12 @@ def _run_process(
     if (process.returncode or result.get("is_error")) and result.get(
         "subtype"
     ) != "error_max_turns":
-        raise DiscoveryError(f"Claude Code stopped with {result.get('subtype', 'provider_error')}")
+        reason = (
+            result.get("api_error")
+            or result.get("terminal_reason")
+            or result.get("subtype", "provider_error")
+        )
+        raise DiscoveryError(f"Claude Code stopped: {reason}")
     return result
 
 
