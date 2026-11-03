@@ -180,12 +180,12 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
     else:
         interval = max(0, int(description.minimum_interval_seconds))
         throttle = f"discovery:throttle:{inp.connector}:{_scope()}"
-        if interval and not cache.add(throttle, "busy", timeout=interval):
-            result = {
+        if interval and not cache.add(throttle, interval, timeout=interval):
+            result: dict[str, Any] = {
                 "schema_version": "1.0",
                 "status": "rate_limited",
                 "documents": [],
-                "retry_after_seconds": interval,
+                "retry_after_seconds": cache.get(throttle) or interval,
                 "cost_usd": "0",
                 "error_reason": "Shared connector rate limit; retry on a later call",
             }
@@ -205,6 +205,9 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
             operation.error_summary = type(exc).__name__
             operation.save(update_fields=["state", "error_summary"])
             raise
+        if page.status == "rate_limited" and page.retry_after_seconds:
+            cooldown = min(max(page.retry_after_seconds, interval), 3600)
+            cache.set(throttle, cooldown, timeout=cooldown)
         if page.status == "success" and inp.connector != "local_corpus":
             cache.set(cache_key, page.model_dump(mode="json"), description.cache_ttl_seconds)
     with transaction.atomic():

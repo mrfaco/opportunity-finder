@@ -276,7 +276,7 @@ class DuckDuckGoConnector(Connector):
             name="General web search (DuckDuckGo HTML)",
             capabilities=["search"],
             access_limitations=(
-                "Public HTML endpoint; best effort availability; bot challenges raise errors; "
+                "Public HTML endpoint; best effort availability; challenges return rate limits; "
                 "no pagination; explicitly select instead of Tavily, never a fallback"
             ),
             minimum_interval_seconds=2.0,
@@ -291,13 +291,18 @@ class DuckDuckGoConnector(Connector):
     ) -> ResearchPage:
         self.validate_search(query, filters, cursor, limit)
         # The fixed search endpoint is trusted; result URLs remain untrusted.
-        response = httpx.get(
-            "https://html.duckduckgo.com/html/",
-            params={"q": query},
-            headers={"User-Agent": _USER_AGENT},
-            timeout=_TIMEOUT_SECONDS,
-            follow_redirects=False,
-        )
+        try:
+            response = httpx.get(
+                "https://html.duckduckgo.com/html/",
+                params={"q": query},
+                headers={"User-Agent": _USER_AGENT},
+                timeout=_TIMEOUT_SECONDS,
+                follow_redirects=False,
+            )
+        except httpx.TimeoutException:  # allow: suppress-exception
+            return ResearchPage(status="timeout", error_reason="DuckDuckGo search timed out")
+        if response.status_code == 202:
+            return self._challenge()
         expected_error = _status_page(response.status_code)
         if expected_error:
             return expected_error
@@ -306,7 +311,7 @@ class DuckDuckGoConnector(Connector):
         parser = _DuckDuckGoParser()
         parser.feed(response.text[:1_000_000])
         if not parser.results and ("anomaly" in response.text or "challenge" in response.text):
-            raise ConnectorError("DuckDuckGo presented a bot challenge; search was not performed")
+            return self._challenge()
         return ResearchPage(
             documents=[
                 ResearchDocument(
@@ -322,4 +327,14 @@ class DuckDuckGoConnector(Connector):
                 if urlsplit(item["url"]).scheme in ("http", "https")
             ],
             truncated=len(parser.results) >= limit,
+        )
+
+    @staticmethod
+    def _challenge() -> ResearchPage:
+        return ResearchPage(
+            status="rate_limited",
+            retry_after_seconds=60,
+            error_reason="DuckDuckGo presented a bot challenge; no search was performed. "
+            "Respect the cooldown. Use captured evidence or fetch known public sources; "
+            "report missing evidence honestly. Do not bypass the challenge.",
         )

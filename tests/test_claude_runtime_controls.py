@@ -6,12 +6,29 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx
 import psutil
+import pytest
 
 from discovery.agent_tools import AgentTools
 from discovery.claude_runtime import _descendants, _stop
-from discovery.connectors.web import WebFetchConnector
+from discovery.connectors.web import DuckDuckGoConnector, WebFetchConnector
 from discovery.errors import DiscoveryStop
+
+
+@pytest.mark.parametrize("status,body", [(202, "challenge"), (200, "anomaly challenge")])
+def test_search_challenge_is_visible_and_does_not_abort_agent(status, body):
+    response = httpx.Response(status, text=body)
+    with patch("discovery.connectors.web.httpx.get", return_value=response):
+        result = DuckDuckGoConnector().search("Argentine cybersecurity")
+    assert result.status == "rate_limited"
+    assert result.retry_after_seconds == 60
+    assert not result.documents
+    with AgentTools(SimpleNamespace(), []) as bridge:
+        with patch.object(bridge, "call", return_value=result.model_dump(mode="json")):
+            message = bridge.handle({"method": "tools/call", "params": {"name": "research"}})
+        assert json.loads(message["content"][0]["text"])["status"] == "rate_limited"
+        assert bridge.failure is None
 
 
 def test_slow_source_is_a_visible_tool_outcome():
