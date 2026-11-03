@@ -1,0 +1,82 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% block content %}
+<style>
+.discovery-panel {border:1px solid #475569;border-radius:0.5rem;padding:1rem;margin:1rem 0;}
+.discovery-text {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;}
+.discovery-report {line-height:1.65;overflow-wrap:anywhere;max-width:100%;}
+.discovery-report h1 {font-size:1.5rem;font-weight:700;margin:0 0 1rem;}
+.discovery-report h2 {font-size:1.25rem;font-weight:600;margin:1.5rem 0 0.75rem;}
+.discovery-report h3 {font-size:1.1rem;font-weight:600;margin:1rem 0 0.5rem;}
+.discovery-report p,.discovery-report ul,.discovery-report ol {margin:0.75rem 0;}
+.discovery-report ul {list-style:disc;padding-left:1.5rem;}
+.discovery-report ol {list-style:decimal;padding-left:1.5rem;}
+.discovery-report a {color:#93c5fd;text-decoration:underline;}
+.discovery-report pre {overflow-x:auto;padding:1rem;background:#0b1220;border-radius:0.5rem;}
+.discovery-report table {border-collapse:collapse;width:100%;}
+.discovery-report td,.discovery-report th {padding:0.5rem;border:1px solid #475569;text-align:left;}
+.discovery-meta {color:#94a3b8;font-size:0.85rem;}
+.discovery-title {font-size:1.2rem;font-weight:600;margin:1.5rem 0 0.5rem;}
+</style>
+<div class="flex flex-wrap items-center gap-4 mb-4">
+  <a class="underline" href="{% url 'admin:discovery_discovery_changelist' %}">All discoveries</a>
+  <a class="underline" href="{% url 'admin:discovery-start' %}">New discovery</a>
+  <a class="underline" href="">Refresh status</a>
+  {% if discovery.report_markdown %}<a class="rounded bg-blue-600 text-white px-3 py-2" href="{% url 'admin:discovery-report' discovery.id %}">Download report</a>{% endif %}
+  {% if active and can_cancel %}
+  <form method="post" action="{% url 'admin:discovery-cancel' discovery.id %}">
+    {% csrf_token %}<button type="submit" class="rounded border border-red-500 px-3 py-2">Stop discovery</button>
+  </form>
+  {% endif %}
+</div>
+<h1 class="text-2xl font-semibold mb-2">{{ discovery.objective }}</h1>
+<p class="discovery-meta">{{ discovery.id }} · Started {{ discovery.created_at|date:"Y-m-d H:i:s T" }}</p>
+<div class="discovery-panel">
+  <strong>{{ discovery.status|title }}</strong>{% if discovery.outcome %} · {{ discovery.outcome }}{% endif %}
+  <p>{{ discovery.turns_completed }} of {{ discovery.config_snapshot.max_turns }} turns · Spend incl. estimates ${{ discovery.cost_used_usd }}</p>
+  {% if discovery.stop_reason %}<p>Stop reason: {{ discovery.stop_reason }}</p>{% endif %}
+  {% if discovery.error_summary %}<p class="discovery-text" style="color:#f87171">{{ discovery.error_summary }}</p>{% endif %}
+  {% if active %}<p class="mt-2">The dialogue is still in progress. Batch inference may remain queued or processing for hours. Refresh to see persisted mail, evidence and provider operation status.</p>{% endif %}
+  {% if discovery.constraints %}<p class="discovery-text mt-2">Constraints: {{ discovery.constraints }}</p>{% endif %}
+</div>
+{% if discovery.report_markdown %}
+<h2 class="discovery-title">Final report</h2>
+<div class="discovery-panel discovery-report">{{ report_html }}</div>
+{% endif %}
+<h2 class="discovery-title">Finder–Validator mail</h2>
+{% for message in mail %}
+<article class="discovery-panel" id="message-{{ message.id }}">
+  <p class="discovery-meta">{{ message.sender|title }} → {{ message.recipient|title }} · {{ message.kind }} · {{ message.created_at|date:"Y-m-d H:i:s" }}{% if message.reply_to_id %} · <a class="underline" href="#message-{{ message.reply_to_id }}">Reply to prior message</a>{% endif %}</p>
+  <h3 class="font-semibold mt-2">{{ message.subject }}</h3>
+  <div class="discovery-text mt-2">{{ message.body }}</div>
+  {% if message.artifact_id %}<p class="discovery-meta mt-2">Artifact {{ message.artifact_id }}</p>{% endif %}
+</article>
+{% empty %}<p>No mail has been recorded yet.</p>{% endfor %}
+<h2 class="discovery-title">Research evidence</h2>
+{% for item in evidence %}
+<details class="discovery-panel" id="evidence-{{ item.id }}">
+  <summary class="font-semibold cursor-pointer">{{ item.title|default:item.url }} · {{ item.kind }}</summary>
+  <p class="discovery-meta mt-2">{{ item.id }} · {{ item.connector }} · retrieved {{ item.retrieved_at|date:"Y-m-d H:i:s T" }}</p>
+  {% if item.public_url %}<a class="underline" href="{{ item.public_url }}" target="_blank" rel="noopener noreferrer">Open source</a>{% endif %}
+  <pre class="discovery-text mt-2">{{ item.content }}</pre>
+</details>
+{% empty %}<p>No evidence has been captured yet.</p>{% endfor %}
+<h2 class="discovery-title">Turn submissions</h2>
+{% for row in turns %}
+<details class="discovery-panel">
+  <summary class="cursor-pointer">Turn {{ row.turn.number }} · {{ row.turn.role|title }} · {{ row.turn.model }}</summary>
+  <pre class="discovery-text mt-3 text-sm">{{ row.formatted_submission }}</pre>
+</details>
+{% empty %}<p>No completed turn submissions yet.</p>{% endfor %}
+<h2 class="discovery-title">Provider and research operations</h2>
+{% for operation in operations %}
+<div class="discovery-panel">
+  <p>{{ operation.kind }}{% if operation.connector %} · {{ operation.connector }}{% endif %} · <strong>{{ operation.state }}</strong> · ${{ operation.cost_usd }}</p>
+  <p class="discovery-meta">{{ operation.created_at|date:"Y-m-d H:i:s" }} · {{ operation.operation_key }}</p>
+  {% if operation.error_summary %}<p class="discovery-text" style="color:#f87171">{{ operation.error_summary }}</p>{% endif %}
+</div>
+{% empty %}<p>No external calls yet.</p>{% endfor %}
+<details class="discovery-panel mt-6">
+  <summary class="cursor-pointer">Frozen discovery configuration</summary>
+  <pre class="discovery-text mt-3 text-sm">{{ config_json }}</pre>
+</details>
+{% endblock %}

@@ -6,7 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `AGENTS.md` is the rulebook for any AI agent touching this repo. It covers exception discipline, the test/coverage ratchet, prompts-in-git, migration sync, module boundaries, and more — all enforced by pre-commit/pre-push hooks. Don't restate or override it here; defer to it.
 
-## Architecture in one paragraph
+## Primary workflow: Finder and Validator
+
+The search-led `discovery/` app accepts an objective without ingestion or a
+cluster. Finder researches and proposes a business opportunity; Validator
+independently falsifies it through durable internal mail. Default 20 individual
+turns, OpenRouter `deepseek/deepseek-v4.1-flash:batch`, extensible read-only
+connectors and a deterministic final Markdown report. Business models include
+services, manufacturing, intelligence, B2B, B2C and software without SaaS bias.
+The user explicitly deferred extensive coverage until a working prototype;
+use focused smoke checks first, then complete the hardening backlog.
+
+## Legacy architecture
 
 This is a **workflow with one agentic step**. Ingestion adapters (`ingestion/adapters/`) emit `IngestedItem`s, which a Haiku-based filter (`ingestion/filter.py`) classifies, which the online clustering algorithm (`clusters/clustering.py`) assigns to a nearest-centroid cluster or spawns a new singleton. A nightly refinement pass queues merge/split proposals for human approval in Django admin. The only true *agent* is the investigation loop (`agents/loop.py` + `agents/orchestrator.py`) that reads a cluster and produces a structured brief via tool calls. Celery Beat schedules ingestion + refinement; the investigation queue runs on demand from admin. **Prompts live in `prompts/` (git), never in the DB.** The DB stores prompt hashes for trajectory replay, not content.
 

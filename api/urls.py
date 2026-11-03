@@ -8,11 +8,12 @@ list.
 
 from __future__ import annotations
 
-from django.urls import path
+from django.urls import include, path
 
 from api import views
 
 urlpatterns = [
+    path("", include("discovery.urls")),
     # Generalized task history (across all Celery tasks).
     path("task-runs/", views.TaskRunsView.as_view(), name="api-task-runs"),
     # Ingestion

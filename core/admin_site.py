@@ -17,17 +17,11 @@ class PainMinerAdminSite(UnfoldAdminSite):
     index_title = "Operational dashboards"
 
     def index(self, request, extra_context=None):
-        """Land on the cluster triage queue instead of the model directory.
+        """Open the primary search-led discovery workflow."""
+        from discovery.admin import DiscoveryAdmin  # noqa: PLC0415  # admin startup cycle
+        from discovery.models import Discovery  # noqa: PLC0415  # admin startup cycle
 
-        The triage table is what the operator actually wants to see when
-        they open the admin — a ranked list of clusters worth investigating.
-        The full app/model directory is still reachable from the sidebar
-        on every admin page.
-        """
-        from clusters.admin import ClusterAdmin  # noqa: PLC0415
-        from clusters.models import Cluster  # noqa: PLC0415
-
-        return ClusterAdmin(Cluster, self).triage_view(request)
+        return DiscoveryAdmin(Discovery, self).changelist_view(request, extra_context)
 
     def get_urls(self):
         # Deferred by necessity: this module is imported to *construct* the

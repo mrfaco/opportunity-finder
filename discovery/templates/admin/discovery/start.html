@@ -1,0 +1,26 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% block content %}
+<style>
+.discovery-form input:not([type=checkbox]):not([type=hidden]), .discovery-form textarea {width:100%;max-width:56rem;padding:0.65rem;border:1px solid #64748b;border-radius:0.4rem;background:transparent;color:inherit;}
+.discovery-form label {font-weight:600;display:block;margin-bottom:0.35rem;}
+.discovery-form .helptext {display:block;font-size:0.85rem;color:#94a3b8;margin-top:0.25rem;}
+.discovery-form .errorlist {color:#f87171;margin:0.5rem 0;}
+.discovery-form p {margin:1rem 0;}
+</style>
+<h1 class="text-2xl font-semibold mb-3">Start an opportunity discovery</h1>
+<p class="mb-4">Give Finder a direction. Validator will try to disprove its proposal and send back objections or promising alternatives. The agents can explore services, manufacturing, intelligence, physical products, software, B2B or B2C.</p>
+<p class="mb-4">20 turns means 10 Finder–Validator exchanges. A validated agreement can finish earlier. Both roles default to DeepSeek V4.1 Flash batch through OpenRouter; batch jobs may wait hours. Choose a duration that permits that wait. No automatic switch to a faster model.</p>
+<form method="post" class="discovery-form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="rounded bg-blue-600 text-white px-4 py-2">Start discovery</button>
+  <a class="ml-4 underline" href="{% url 'admin:discovery_discovery_changelist' %}">All discoveries</a>
+</form>
+<details class="mt-6">
+  <summary class="font-semibold cursor-pointer">Available research connectors</summary>
+  <p class="mt-2">Only selected connectors are exposed to the agents. Required credentials must be configured before starting; configuration status never displays secret values.</p>
+  {% for connector in connector_status %}
+    <pre style="white-space:pre-wrap;overflow-wrap:anywhere" class="mt-3 text-sm">{{ connector }}</pre>
+  {% endfor %}
+</details>
+{% endblock %}

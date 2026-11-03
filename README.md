@@ -1,143 +1,103 @@
-# Pain-Mining Opportunity Agent
+# Opportunity Finder
 
-An open-source agentic system that ingests public discussions from Hacker News, GitHub,
-Stack Overflow, and Product Hunt, identifies clusters of related complaints and unmet
-needs, and uses an LLM-powered investigation agent to produce structured opportunity
-briefs for human review.
+Search-led business opportunity research with two agents: **Finder** proposes an
+opportunity and **Validator** tries to falsify it. Their durable internal mail
+preserves objections, revisions and pivots until they agree or reach the turn
+limit. The final report explains what survived scrutiny, what remains disputed,
+and which assumptions a human should test next.
 
-## Architecture
+Opportunities can be services, manufacturing, intelligence, physical products,
+software, B2B, B2C or another model. The agents do not default to SaaS.
 
-The system is a **workflow with one agentic step**, following Anthropic's
-"Building Effective Agents" guidance — use the simplest pattern that works, only
-introduce autonomy where it earns its complexity:
+## Discovery workflow
 
+```text
+Human objective → Finder research + proposal → Validator independent research
+                         ↑                          │
+                         └── objections / pivot ────┘
+                                       ↓
+                          agreement or turn/budget limit
+                                       ↓
+                            cited human-readable report
 ```
-[ingestion firehose] → [Haiku classifier filter — deterministic] →
-[online clustering — deterministic] → [investigation agent — agentic loop] →
-[brief produced] → [Django admin human review]
-```
 
-The first three stages are workflows (predefined code paths with LLM calls).
-Only the investigation step is a true agent — it has autonomy over tool selection
-and termination because investigating a cluster genuinely requires open-ended
-exploration.
+A discovery starts from an objective such as “Look for opportunities in the
+travel space.” It requires no ingested data, cluster or embeddings. Default:
+20 individual turns, meaning ten Finder–Validator exchanges, with configurable
+research, cost and duration limits. Agreement can finish earlier; it applies to
+an exact proposal revision and must pass evidence checks. Model agreement is
+not proof of commercial viability.
 
-**Prompts live in git, not in the database.** The `prompts/` directory is the
-source of truth. The database tracks which prompt hash was used in which run,
-but never stores or edits prompt content. To change a prompt, edit the file,
-commit, deploy.
+Both roles default to OpenRouter's `deepseek/deepseek-v4.1-flash:batch`. Batch
+inference is asynchronous and can wait hours; choose a suitable duration limit.
+The runtime does not silently switch to synchronous or different models.
 
-**Tools follow an MCP-compatible shape.** Each tool has a `name`, `description`,
-JSON-Schema `input_schema`/`output_schema`. For v1 they are internal Python
-functions; in v2 we can expose them through an MCP server with no change to
-the agent loop.
+Research connectors expose search/fetch capabilities independently of ingestion:
+Tavily general web search, bounded web page retrieval, Hacker News, GitHub,
+Stack Exchange, and stored local records. Additional connectors implement the
+same interface. See [the discovery guide](docs/discovery.md) for configuration,
+connector availability, API usage and recovery.
 
-**Clustering is the substrate everything else stands on.** Online assignment
-(nearest centroid above threshold or new singleton) happens at ingestion. A
-nightly refinement task recomputes centroids, finds orphans, and queues merge
-and split proposals for human approval through Django admin.
+## Run locally
 
-## Quickstart
+Follow [QUICKSTART.md](QUICKSTART.md). Keep credentials in the ignored `.env`.
+Discovery needs an OpenRouter key and a configured general web-search connector.
+The historical ingestion workflow separately requires its classifier and
+embedding credentials.
 
 ```sh
-cp .env.example .env
-docker-compose build
-docker-compose up
+make build
 make migrate
 make createsuperuser
-docker-compose run --rm web python manage.py setup_schedules   # seed Celery Beat jobs
+make up
 ```
 
-To run ingestion you also need `ANTHROPIC_API_KEY` (classifier) and
-`VOYAGE_API_KEY` (embeddings) in `.env`. Once `setup_schedules` has run,
-the `celery_beat` service ingests Hacker News hourly; trigger it manually
-with `ingestion.tasks.ingest_source.delay("hacker_news")` from `make shell`.
+Open `/admin/discovery/discovery/` to start a run, inspect mail, evidence and
+provider status, or download a completed Markdown report. The authenticated
+API lives under `/api/v1/discoveries/`; `/api/v1/connectors/` describes available
+research capabilities without returning secret values.
 
-Then navigate to `http://localhost:8000/admin/`.
-
-## Where to find each major component
+## Layout
 
 | Concern | Location |
 |---|---|
-| Django project | `config/` |
-| Prompt files (source of truth) | `prompts/` |
-| Cluster models + online/refinement algorithms | `clusters/` |
-| Ingestion adapters + Haiku filter | `ingestion/` |
-| Agent loop, orchestrator, tools, prompt loader | `agents/` |
-| Investigation review queue | `investigations/` |
-| Approver interface + daily digest | `notifications/` |
-| Pydantic schemas + context helpers | `core/` |
+| Finder–Validator workflow, durable mail and reports | `discovery/` |
+| Read-only search/data connectors | `discovery/connectors/` |
+| Git-managed agent prompts | `prompts/finder/`, `prompts/validator/` |
+| Django project, Celery and configuration | `config/` |
+| Authenticated operator API | `api/`, `discovery/api.py` |
+| Historical ingestion, classification and clustering | `ingestion/`, `clusters/` |
+| Historical investigation/ideation workflow | `agents/`, `investigations/`, `ideation/` |
 
-### Admin pages worth knowing
+## Legacy ingestion workflow
 
-- `/admin/` — index of all models
-- `/admin/agents/cost-dashboard/` — daily spend, per-model, top expensive runs
-- `/admin/agents/prompts/` — read-only prompt inspector (current hashes + history)
-- `/admin/agents/agentrun/<id>/trajectory/` — step-by-step trajectory viewer
-- `/admin/ingestion/filter-labeling/` — keyboard-driven labeling UI for the eval set
-- `/admin/ingestion/filter-eval-history/` — eval run history, per-tier breakdown
-- `/admin/clusters/clustermergeproposal/` — pending merges awaiting human approval
-- `/admin/clusters/clustersplitproposal/` — pending splits awaiting human approval
-- `/admin/investigations/investigation/` — triage queue of generated briefs
+The earlier pipeline remains available:
+public-source ingestion → classifier → vector clustering → investigation →
+human review → ideation. Existing records and schedules are retained. New
+search-led discoveries do not depend on that pipeline. Its admin tools remain
+accessible for historical data and optional local-corpus research.
 
-## Status
+Do not run `setup_schedules` merely to enable Discovery: existing ingestion jobs
+are a separate opt-in workflow. Review enabled periodic tasks before using
+provider credentials; migrations do not disable existing schedules.
 
-**v1 (this commit):** Runnable skeleton. All data models, abstractions, admin
-surfaces, and orchestration scaffolding in place. The clustering control flow
-is complete and uses mock random embeddings. The agent loop control flow is
-complete with stubbed LLM and tool implementations. Prompts are TODO stubs.
+## Development
 
-**Deferred (see `NEXT_STEPS.md`):**
-
-1. Author the filter classifier prompt and build the seed eval set
-2. Plug in a real embedding model
-3. Implement the Hacker News ingestion adapter
-4. Implement `query_cluster` and other tools
-5. Author the investigation system + procedural prompts
-6. Plumb real Anthropic API calls into the filter and investigation agent
-7. Implement the LLM judge for merge/split proposals
-8. Implement remaining adapters and tools
-9. Polish the trajectory viewer
-10. Cross-run caching for `fetch_url`, `fetch_hn_item`, `query_trustmrr`
-
-## Design
-
-See `docs/DESIGN.md` (placeholder — to be authored alongside the prompt
-authoring session).
-
-## Contributing
-
-This is a public, MIT-licensed repository. It is deliberately AI-coded —
-the rules and hooks below exist so review burden stays minimal.
-
-**Read [`AGENTS.md`](AGENTS.md) first.** It documents the discipline this
-codebase holds itself to: never swallow exceptions, never silently fall
-back, every change has a test, coverage only ratchets up.
-
-One-time setup after cloning:
+Read [AGENTS.md](AGENTS.md) before changing code. Prompts and versioned contracts
+live in git, failures remain visible, and state changes belong to orchestration.
+The current feature prioritizes a working prototype with focused smoke checks;
+extensive tests and coverage work follow in the final hardening phase, as
+requested by the user. The committed coverage threshold is not lowered.
 
 ```sh
-make hooks-install   # installs pre-commit + pre-push git hooks
+make lint
+make discipline
+make validate-prompts
+make check-migrations
+make test
 ```
 
-The hooks do the rest:
+Design: [specification](docs/superpowers/specs/2026-11-03-finder-validator-design.md)
+and [implementation plan](docs/superpowers/plans/2026-11-03-finder-validator-plan.md).
 
-- **pre-commit (fast):** `ruff format`, `ruff check`, the custom
-  exception-discipline checker, plus standard whitespace / large-file
-  guards.
-- **pre-push (slow):** full `pytest` against Postgres + Redis with the
-  coverage gate from `pyproject.toml`.
-
-Useful commands:
-
-```sh
-make test                # run the suite
-make coverage            # run with coverage report
-make coverage-ratchet    # bump the coverage gate to today's floor
-make discipline          # just the exception-discipline check
-make hooks-run           # run all configured hooks against every file
-```
-
-## License
-
-MIT — see `LICENSE`.
+MIT licensed; see [LICENSE](LICENSE).

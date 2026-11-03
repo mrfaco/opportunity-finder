@@ -1,5 +1,29 @@
 # Next steps
 
+## Current direction: search-led Finder–Validator prototype
+
+The primary workflow is now a free-text discovery with general web research,
+Finder proposals, Validator falsification and a final human-readable report.
+It supports services, manufacturing, intelligence, physical goods, software and
+other business models across B2B/B2C.
+
+See the [current specification](docs/superpowers/specs/2026-11-03-finder-validator-design.md),
+[implementation plan](docs/superpowers/plans/2026-11-03-finder-validator-plan.md)
+and [operator guide](docs/discovery.md). Default role model:
+`deepseek/deepseek-v4.1-flash:batch` via OpenRouter asynchronous batch inference.
+
+First get the full start → research → mail → challenge/pivot → report flow
+working with focused smoke checks. Extensive regression coverage, concurrency
+failure injection and coverage verification belong to the final hardening phase.
+Do not lower the committed coverage threshold. Confirm real provider behavior
+and run a bounded live scenario only with an explicitly authorized budget.
+
+## Historical ingestion roadmap
+
+The notes below describe the earlier ingestion/clustering/investigation system.
+They remain useful for that separate workflow; they are not prerequisites for
+new search-led discoveries. Existing records and schedules are preserved.
+
 The v1 commit ships a runnable skeleton. The work below is the path to a real,
 end-to-end system, in the order that makes earlier work pay off as quickly as
 possible.

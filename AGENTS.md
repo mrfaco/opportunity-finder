@@ -57,6 +57,19 @@ ruff check .
 
 The pre-commit hook runs both on staged files.
 
+## Finder/Validator prototype sequencing (user instruction, 2026-11-03)
+
+Prioritize a working search-led prototype. Focused smoke checks are required;
+extensive new regression tests, failure injection and coverage verification are
+deferred until the prototype works. This overrides the same-commit test rule
+below for discovery prototyping; do not lower the committed coverage threshold.
+
+The discovery workflow has two reasoning roles (Finder and Validator), durable
+internal mail and independent records, not legacy cluster-backed AgentRuns.
+Discovery persistence belongs to its orchestrator, mail, loop and research
+services. Connector implementations return evidence without writing it.
+Discovery role models use OpenRouter DeepSeek V4.1 Flash batch by default.
+
 ## 2. Test discipline — every change has a test
 
 - New behavior gets a test in the same commit.
@@ -143,7 +156,8 @@ The pre-commit hook runs both on staged files.
 - **Adapters don't classify or cluster.** They emit `IngestedItem`
   records; the pipeline drives the next steps.
 - **Workflows vs agents.** Anything deterministic stays in a function or
-  Celery task. Only the investigation loop is an agent. Don't reach for
+  Celery task. The legacy investigation/ideation loop and the discovery Finder/Validator roles
+  are agents. Don't reach for
   agentic patterns where a workflow does the job.
 
 ## 11. Schema versioning

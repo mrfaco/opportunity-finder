@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "notifications",
     "rest_framework",
     "api",
+    "discovery",
 ]
 
 MIDDLEWARE = [
@@ -83,10 +84,15 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
-                "title": "Dashboards",
+                "title": "Discovery and legacy workflows",
                 "separator": True,
                 "collapsible": False,
                 "items": [
+                    {
+                        "title": "Opportunity discoveries",
+                        "icon": "explore",
+                        "link": "/admin/discovery/discovery/",
+                    },
                     {
                         "title": "Triage queue",
                         "icon": "playlist_play",
@@ -125,6 +131,7 @@ UNFOLD = {
 }
 
 ROOT_URLCONF = "config.urls"
+LOGIN_REDIRECT_URL = "/admin/"
 
 TEMPLATES = [
     {
@@ -325,5 +332,29 @@ LOGGING = {
     "root": {
         "handlers": ["console"],
         "level": "INFO",
+    },
+}
+
+# Search-led Finder/Validator discoveries. Batch submissions never fall back to
+# synchronous inference. Each dependent completion is polled durably by Celery.
+DISCOVERY_FINDER_MODEL = env("DISCOVERY_FINDER_MODEL", default="deepseek/deepseek-v4.1-flash:batch")
+DISCOVERY_VALIDATOR_MODEL = env("DISCOVERY_VALIDATOR_MODEL", default=DISCOVERY_FINDER_MODEL)
+DISCOVERY_BATCH_PROVIDER = env("DISCOVERY_BATCH_PROVIDER", default="sail-research")
+DISCOVERY_BATCH_POLL_SECONDS = env.int("DISCOVERY_BATCH_POLL_SECONDS", default=60)
+DISCOVERY_LEASE_SECONDS = env.int("DISCOVERY_LEASE_SECONDS", default=180)
+DISCOVERY_CONNECTORS = env.list("DISCOVERY_CONNECTORS", default=["web_search", "web_fetch"])
+DISCOVERY_CONNECTOR_CLASSES = env.list("DISCOVERY_CONNECTOR_CLASSES", default=[])
+DISCOVERY_TAVILY_SEARCH_COST_USD = env("DISCOVERY_TAVILY_SEARCH_COST_USD", default="0.01")
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("DISCOVERY_CACHE_URL", default=REDIS_URL.rsplit("/", 1)[0] + "/2"),
+        "KEY_PREFIX": "opportunity-finder",
+    },
+}
+CELERY_BEAT_SCHEDULE = {
+    "discovery-dispatch-repair": {
+        "task": "discovery.tasks.dispatch_pending",
+        "schedule": 30.0,
     },
 }

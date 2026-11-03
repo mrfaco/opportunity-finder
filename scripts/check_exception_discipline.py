@@ -39,6 +39,7 @@ DEFAULT_TARGETS = [
     "ingestion",
     "investigations",
     "notifications",
+    "discovery",
 ]
 
 EXCLUDE_DIR_PARTS = {"migrations", "__pycache__", ".venv", "venv"}
