@@ -201,6 +201,9 @@ Acceptance failures on an immutable proposal's evidence set must become a
 Validator challenge, so Finder can revise the proposal. Adding citations only
 to a Validator review does not repair Finder's sources. The tool reports this
 recovery direction instead of encouraging repeated acceptance attempts.
+Unknown citation errors include full captured-source ID/title/URL candidates
+when a prefix matches exactly one source. These are correction hints: unknown
+IDs are still rejected, and no citation is silently substituted.
 
 An operator can explicitly authorize a bounded correction of a settled wake
 with a UUID `claude_recovery_id` in task context. It opens a distinct ledger/log

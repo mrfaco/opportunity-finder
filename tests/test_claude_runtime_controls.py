@@ -21,7 +21,23 @@ from discovery.errors import DiscoveryStop
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn, Evidence, ResearchOperation
 from discovery.orchestrator import finish_discovery
 from discovery.research import begin_operation, research_calls_used
-from discovery.termination import SubmissionError, has_independent_research
+from discovery.termination import SubmissionError, has_independent_research, validate_references
+
+
+@pytest.mark.django_db
+def test_unknown_citation_gets_a_full_id_hint_but_is_not_silently_accepted():
+    discovery = Discovery.objects.create(objective="citations", request_hash="citations")
+    source = Evidence.objects.create(
+        discovery=discovery,
+        url="https://source.example/",
+        title="Original source",
+        retrieved_at=timezone.now(),
+    )
+    with pytest.raises(SubmissionError) as failure:
+        validate_references(discovery, {"evidence_ids": [str(source.pk)[:8]]})
+    assert str(source.pk) in str(failure.value)
+    assert "Original source" in str(failure.value)
+    validate_references(discovery, {"evidence_ids": [str(source.pk)]})
 
 
 @pytest.mark.django_db

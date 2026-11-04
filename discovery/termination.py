@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from discovery.models import (
@@ -33,10 +34,24 @@ def evidence_references(content: dict[str, Any]) -> set[str]:
 
 def validate_references(discovery: Discovery, content: dict[str, Any]) -> None:
     refs = evidence_references(content)
-    valid = {str(pk) for pk in discovery.evidence.values_list("pk", flat=True)}
-    if refs - valid:
-        raise SubmissionError(f"Unknown evidence IDs: {sorted(refs - valid)}")
     by_id = {str(e.pk): e for e in discovery.evidence.all()}
+    valid = set(by_id)
+    if refs - valid:
+        candidates = {}
+        for ref in sorted(refs - valid)[:50]:
+            matches = [key for key in valid if len(ref) >= 8 and key.startswith(ref[:8])]
+            if len(matches) == 1:
+                source = by_id[matches[0]]
+                candidates[ref] = {
+                    "evidence_id": str(source.pk),
+                    "title": source.title,
+                    "url": source.url,
+                }
+        raise SubmissionError(
+            f"Unknown evidence IDs: {sorted(refs - valid)}. Copy exact full IDs. "
+            "Unambiguous source candidates (verify the source before citing): "
+            + json.dumps(candidates)
+        )
     for claim in content.get("claims", []):
         for ref in claim.get("evidence", []):
             quote = ref.get("quote", "")
