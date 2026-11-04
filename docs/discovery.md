@@ -207,6 +207,11 @@ with a UUID `claude_recovery_id` in task context. It opens a distinct ledger/log
 identity, preserves the original logs and allows at most two model calls. Prior
 unsettled model outcomes block it; reusing the token cannot replay the wake.
 This is not an automatic retry or a reset of turn, time or spending limits.
+For a proven pre-inference executable launch failure, `claude_recovery_mode`
+may be `launch_failure`: it restores the original call allowance only when a
+prior failed wake records `launch_failed_before_model=true`. Empty output and
+an explicit exec failure must establish that no inference started; absent such
+proof the billing outcome remains unknown and blocks retries.
 
 External operation records distinguish planned, submitted, completed and unknown
 outcomes. A Claude Code process interrupted after inference may have incurred a

@@ -4,6 +4,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
+
 from discovery.claude_runtime import build_launch
 from discovery.loop import tools_for_role
 from discovery.schemas import DiscoveryConfig
@@ -19,7 +21,10 @@ def test_judge_has_only_research_and_judgment_tools():
     assert "worth_pursuing" in properties
 
 
-def test_ollama_judge_launch_pins_kimi_and_uses_a_fresh_session(tmp_path):
+@pytest.mark.parametrize(
+    "mode,expected_calls", [(None, 8), ("submission", 2), ("launch_failure", 8)]
+)
+def test_ollama_judge_launch_pins_kimi_and_uses_a_fresh_session(tmp_path, mode, expected_calls):
     config = DiscoveryConfig(judge_model="kimi-k3:cloud")
     discovery = SimpleNamespace(
         pk=uuid4(),
@@ -41,7 +46,8 @@ def test_ollama_judge_launch_pins_kimi_and_uses_a_fresh_session(tmp_path):
     )
     sessions = []
     for _ in range(2):
-        task = SimpleNamespace(pk=uuid4(), role="judge", discovery=discovery, context={})
+        context = {"claude_recovery_id": str(uuid4()), "claude_recovery_mode": mode} if mode else {}
+        task = SimpleNamespace(pk=uuid4(), role="judge", discovery=discovery, context=context)
         argv, environment, session = build_launch(task, tmp_path, bridge, None, Decimal("1"))
         assert argv[:7] == [
             "/fixture/ollama",
@@ -53,6 +59,7 @@ def test_ollama_judge_launch_pins_kimi_and_uses_a_fresh_session(tmp_path):
             "--",
         ]
         assert argv.count("--model") == 1
+        assert int(argv[argv.index("--max-turns") + 1]) == expected_calls
         assert argv[argv.index("--allowedTools") + 1] == (
             "mcp__discovery__research,mcp__discovery__submit_judgment"
         )

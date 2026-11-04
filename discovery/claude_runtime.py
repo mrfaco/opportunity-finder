@@ -290,6 +290,7 @@ def build_launch(
         str(
             min(config.max_model_calls_per_turn, 2)
             if task.context.get("claude_recovery_id")
+            and task.context.get("claude_recovery_mode") != "launch_failure"
             else config.max_model_calls_per_turn
         ),
         "--output-format",
@@ -465,6 +466,13 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
         ).exists()
     ):
         raise OutcomeUnknown("Settle prior model outcomes before opening a recovery wake")
+    if (
+        task.context.get("claude_recovery_mode") == "launch_failure"
+        and not task.operations.filter(
+            kind="agent_wake", state="failed", response__launch_failed_before_model=True
+        ).exists()
+    ):
+        raise DiscoveryError("A launch retry needs a recorded pre-inference launch failure")
     profile = task.discovery.runtime_snapshot["profiles"][task.role]
     run_dir = Path(settings.BASE_DIR) / ".tmp" / "claude-runs" / str(task.discovery_id)
     run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
