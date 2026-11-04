@@ -5,6 +5,7 @@ import subprocess
 import sys
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
 import httpx
 import psutil
@@ -12,12 +13,54 @@ import pytest
 from django.utils import timezone
 
 from discovery.agent_tools import AgentTools
-from discovery.claude_runtime import _descendants, _stop
+from discovery.claude_runtime import _descendants, _run_process, _stop
 from discovery.connectors.web import DuckDuckGoConnector, WebFetchConnector
 from discovery.errors import DiscoveryStop
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn, Evidence, ResearchOperation
 from discovery.orchestrator import finish_discovery
-from discovery.termination import has_independent_research
+from discovery.termination import SubmissionError, has_independent_research
+
+
+def test_explicit_recovery_keeps_original_wake_logs(tmp_path):
+    task = SimpleNamespace(
+        pk=uuid4(), lease_token=uuid4(), context={"claude_recovery_id": str(uuid4())}
+    )
+    original = tmp_path / f"{task.pk}.jsonl"
+    original.write_text("original paid wake audit")
+    with (
+        patch("discovery.claude_runtime.renew_task"),
+        patch("discovery.claude_runtime.check_limits"),
+    ):
+        result = _run_process(
+            task,
+            [
+                sys.executable,
+                "-c",
+                'print(\'{"type":"result","subtype":"success","is_error":false}\')',
+            ],
+            {},
+            tmp_path,
+            SimpleNamespace(failure=None),
+            None,
+            {},
+        )
+    assert result["subtype"] == "success"
+    assert original.read_text() == "original paid wake audit"
+    assert len(list(tmp_path.glob("*.jsonl"))) == 2
+
+
+def test_invalid_immutable_proposal_routes_validator_back_to_finder():
+    with AgentTools(SimpleNamespace(), []) as bridge:
+        with patch.object(
+            bridge, "call", side_effect=SubmissionError("Two distinct source origins are required")
+        ):
+            response = bridge.handle(
+                {"method": "tools/call", "params": {"name": "submit_validation"}}
+            )
+        result = json.loads(response["content"][0]["text"])
+        assert result["status"] == "validation_failed"
+        assert "Submit a challenge" in result["recovery_hint"]
+        assert bridge.failure is None
 
 
 @pytest.mark.django_db

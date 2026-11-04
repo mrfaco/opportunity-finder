@@ -120,6 +120,16 @@ class AgentTools:
             except (ValueError, ValidationError) as exc:  # allow: suppress-exception
                 # Versioned tool validation errors are visible self-correction input.
                 result = {"schema_version": "1.0", "status": "validation_failed", "error": str(exc)}
+                if params.get("name") == "submit_validation" and str(exc) in {
+                    "Two distinct source origins are required",
+                    "Cited demand and competitor evidence are both required",
+                    "Search snippets alone cannot establish demand or competition",
+                }:
+                    result["recovery_hint"] = (
+                        "Finder's proposal is immutable. Your review cannot repair its cited "
+                        "evidence by repeating accept. Submit a challenge explaining this gap "
+                        "so Finder can submit a corrected proposal with adequate sources."
+                    )
             except DiscoveryStop as exc:  # allow: suppress-exception
                 # Research exhaustion is a visible tool quota, not an aborted
                 # dialogue. Leave the agent able to submit its current findings.

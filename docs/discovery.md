@@ -189,6 +189,17 @@ persisted. Reading mail is not task completion. Transactional dispatch records
 allow committed tasks to be published after temporary broker failures. Leases
 and fencing prevent a stale worker from committing another handoff.
 
+Acceptance failures on an immutable proposal's evidence set must become a
+Validator challenge, so Finder can revise the proposal. Adding citations only
+to a Validator review does not repair Finder's sources. The tool reports this
+recovery direction instead of encouraging repeated acceptance attempts.
+
+An operator can explicitly authorize a bounded correction of a settled wake
+with a UUID `claude_recovery_id` in task context. It opens a distinct ledger/log
+identity, preserves the original logs and allows at most two model calls. Prior
+unsettled model outcomes block it; reusing the token cannot replay the wake.
+This is not an automatic retry or a reset of turn, time or spending limits.
+
 External operation records distinguish planned, submitted, completed and unknown
 outcomes. A Claude Code process interrupted after inference may have incurred a
 charge; do not blindly start a second billed attempt. Historical batch jobs use

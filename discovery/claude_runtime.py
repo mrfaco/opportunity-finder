@@ -287,7 +287,11 @@ def build_launch(
         "--disable-slash-commands",
         "--no-chrome",
         "--max-turns",
-        str(config.max_model_calls_per_turn),
+        str(
+            min(config.max_model_calls_per_turn, 2)
+            if task.context.get("claude_recovery_id")
+            else config.max_model_calls_per_turn
+        ),
         "--output-format",
         "stream-json",
         "--verbose",
@@ -381,6 +385,13 @@ def _result(path: Path) -> dict[str, Any]:
     return results[-1]
 
 
+def _wake_stem(task: DiscoveryTask) -> str:
+    # Only an explicit recovery token opens a new paid wake. Reusing that token
+    # still hits the ledger's existing-outcome guard and cannot replay it.
+    recovery = task.context.get("claude_recovery_id")
+    return f"{task.pk}-{uuid.UUID(recovery)}" if recovery else str(task.pk)
+
+
 def _run_process(
     task: DiscoveryTask,
     argv: list[str],
@@ -391,7 +402,7 @@ def _run_process(
     inputs: dict[str, Any],
 ) -> dict[str, Any]:
     input_path, output_path, error_path = [
-        run_dir / f"{task.pk}.{suffix}" for suffix in ("input.json", "jsonl", "stderr")
+        run_dir / f"{_wake_stem(task)}.{suffix}" for suffix in ("input.json", "jsonl", "stderr")
     ]
     _private_write(input_path, json.dumps(inputs))
     for path in (output_path, error_path):
@@ -447,6 +458,13 @@ def _run_process(
 
 def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, Any]]) -> None:
     config = DiscoveryConfig.model_validate(task.discovery.config_snapshot)
+    if (
+        task.context.get("claude_recovery_id")
+        and task.operations.filter(
+            kind__in=["model", "agent_wake"], state__in=["pending", "started", "unknown"]
+        ).exists()
+    ):
+        raise OutcomeUnknown("Settle prior model outcomes before opening a recovery wake")
     profile = task.discovery.runtime_snapshot["profiles"][task.role]
     run_dir = Path(settings.BASE_DIR) / ".tmp" / "claude-runs" / str(task.discovery_id)
     run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -468,7 +486,7 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
         )
     wake = begin_operation(
         task,
-        f"{task.pk}:claude:wake",
+        f"{_wake_stem(task)}:claude:wake",
         "agent_wake",
         {"provider": profile["provider"], "model": profile["model"]},
         model_budget
@@ -544,6 +562,7 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
             **task.context,
             "claude_session_id": session,
             "claude_log_dir": str(run_dir),
+            "claude_log_stem": _wake_stem(task),
         }
         task.save(update_fields=["context"])
         result = _run_process(task, argv, env, run_dir, bridge, gateway, inputs)

@@ -41,7 +41,7 @@ def test_ollama_judge_launch_pins_kimi_and_uses_a_fresh_session(tmp_path):
     )
     sessions = []
     for _ in range(2):
-        task = SimpleNamespace(pk=uuid4(), role="judge", discovery=discovery)
+        task = SimpleNamespace(pk=uuid4(), role="judge", discovery=discovery, context={})
         argv, environment, session = build_launch(task, tmp_path, bridge, None, Decimal("1"))
         assert argv[:7] == [
             "/fixture/ollama",
