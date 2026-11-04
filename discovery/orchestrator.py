@@ -438,7 +438,7 @@ def _finish_locked(
         kind="note",
         subject=f"Discovery {outcome.replace('_', ' ')}",
         body=f"Stopped: {stop_reason}.",
-        operation_key="terminal-note",
+        operation_key=f"terminal-note:{discovery.turns_completed}:{stop_reason}:{outcome}",
     )
     markdown, report = render_report(discovery)
     discovery.report_markdown = markdown

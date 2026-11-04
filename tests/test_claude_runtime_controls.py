@@ -16,7 +16,20 @@ from discovery.claude_runtime import _descendants, _stop
 from discovery.connectors.web import DuckDuckGoConnector, WebFetchConnector
 from discovery.errors import DiscoveryStop
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn, Evidence, ResearchOperation
+from discovery.orchestrator import finish_discovery
 from discovery.termination import has_independent_research
+
+
+@pytest.mark.django_db
+def test_recovered_run_can_record_a_different_terminal_outcome():
+    discovery = Discovery.objects.create(objective="recovered lifecycle", request_hash="test")
+    finish_discovery(discovery.pk, "invalid_submission", status="failed")
+    Discovery.objects.filter(pk=discovery.pk).update(status="running", ended_at=None)
+    result = finish_discovery(discovery.pk, "turn_limit", status="completed")
+    assert result.status == "completed"
+    assert result.messages.filter(sender="system", recipient="human").count() == 2
+    finish_discovery(discovery.pk, "turn_limit", status="completed")
+    assert result.messages.filter(sender="system", recipient="human").count() == 2
 
 
 @pytest.mark.django_db
