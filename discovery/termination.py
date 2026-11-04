@@ -220,7 +220,11 @@ def require_agreement(
             and objection.severity != "critical"
             and objection.id not in resolutions
         ):
-            raise SubmissionError("An unresolved critical objection cannot be downgraded")
+            raise SubmissionError(
+                "An unresolved critical objection cannot be downgraded: "
+                f"{objection.id}. Retain its critical severity in a challenge, "
+                "or provide an evidenced resolution."
+            )
         if objection.severity == "critical" and objection.resolved:
             if not objection.resolution or not objection.evidence_ids:
                 raise SubmissionError("Resolved critical objections need rationale and evidence")
