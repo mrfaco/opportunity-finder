@@ -9,7 +9,8 @@
 </style>
 <h1 class="text-2xl font-semibold mb-3">Start an opportunity discovery</h1>
 <p class="mb-4">Give Finder a direction. Validator will try to disprove its proposal and send back objections or promising alternatives. The agents can explore services, manufacturing, intelligence, physical products, software, B2B or B2C.</p>
-<p class="mb-4">100 turns means 50 Finder–Validator exchanges. Agreement can finish earlier. Both roles run in Claude Code. Choose OpenRouter, Anthropic or Ollama independently for each role and provide its exact model ID. A different model family for Validator helps reduce shared blind spots. Provider and model selections are frozen when the discovery starts; there is no automatic fallback.</p>
+<p class="mb-4">Finder and Validator explore and challenge opportunities. When they agree, Judge assesses whether the opportunity is worth pursuing. A Judge no-go sends them to find a new opportunity and preserves the rejection reasons. All agent turns, including Judge reviews, share the 100-turn maximum, time limit and spending budget. Judge approval can finish earlier.</p>
+<p class="mb-4">All roles run in Claude Code. Choose OpenRouter, Anthropic or Ollama independently for each role and provide its exact model ID. A different model family for Validator helps reduce shared blind spots; Judge defaults to Ollama Kimi K3. Provider and model selections are frozen when the discovery starts; there is no automatic fallback.</p>
 <form method="post" class="discovery-form">
   {% csrf_token %}
   {{ form.as_p }}

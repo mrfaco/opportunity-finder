@@ -35,6 +35,7 @@
   <p>{{ discovery.turns_completed }} of {{ discovery.config_snapshot.max_turns }} turns · Spend incl. estimates ${{ discovery.cost_used_usd }}</p>
   <p>Agent harness: {{ runtime_name }}</p>
   {% for profile in execution_profiles %}<p>{{ profile.role }}: {{ profile.provider }} · {{ profile.model }}</p>{% endfor %}
+  {% if judge_required %}<p>Judge approval is required. Finder–Validator agreement alone does not finish the run; a Judge no-go sends them to find a new opportunity within the same limits.</p>{% else %}<p>Judge review is disabled for this discovery.</p>{% endif %}
   {% if discovery.stop_reason %}<p>Stop reason: {{ discovery.stop_reason }}</p>{% endif %}
   {% if discovery.error_summary %}<p class="discovery-text" style="color:#f87171">{{ discovery.error_summary }}</p>{% endif %}
   {% if active %}<p class="mt-2">{% if runtime_name == "openrouter_batch" %}This historical batch run may remain queued while its provider processes the request.{% else %}Claude Code is researching or preparing the next mail handoff.{% endif %} Refresh to see persisted mail, evidence and execution status.</p>{% endif %}
@@ -44,7 +45,16 @@
 <h2 class="discovery-title">Final report</h2>
 <div class="discovery-panel discovery-report">{{ report_html }}</div>
 {% endif %}
-<h2 class="discovery-title">Finder–Validator mail</h2>
+<h2 class="discovery-title">Judge reviews</h2>
+{% for row in judgments %}
+<details class="discovery-panel">
+  <summary class="font-semibold cursor-pointer">Turn {{ row.judgment.turn.number }} · {{ row.judgment.verdict|title }} · {{ row.judgment.proposal.content.title }}</summary>
+  <p class="discovery-text mt-2">{{ row.judgment.content.summary }}</p>
+  {% if row.judgment.verdict == "reject" %}<p>No-go for this opportunity. Finder and Validator must find a new one.</p>{% endif %}
+  <pre class="discovery-text mt-3 text-sm">{{ row.formatted_assessment }}</pre>
+</details>
+{% empty %}<p>{% if judge_required %}No completed Judge review yet. Agreement must still pass Judge.{% else %}No Judge reviews in this historical or explicitly disabled workflow.{% endif %}</p>{% endfor %}
+<h2 class="discovery-title">Agent mail</h2>
 {% for message in mail %}
 <article class="discovery-panel" id="message-{{ message.id }}">
   <p class="discovery-meta">{{ message.sender|title }} → {{ message.recipient|title }} · {{ message.kind }} · {{ message.created_at|date:"Y-m-d H:i:s" }}{% if message.reply_to_id %} · <a class="underline" href="#message-{{ message.reply_to_id }}">Reply to prior message</a>{% endif %}</p>

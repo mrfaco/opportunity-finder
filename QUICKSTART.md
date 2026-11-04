@@ -1,7 +1,8 @@
 # Local quickstart
 
-The primary workflow is a search-led dialogue between Finder and Validator.
-Both agents run in Claude Code, following Video Swarm's harness pattern. Choose
+The primary workflow is a search-led dialogue between Finder and Validator,
+followed by Judge review of agreement. All agents run in Claude Code, following
+Video Swarm's harness pattern. Choose
 Ollama, OpenRouter or Anthropic separately for each role; all three use the same
 durable mail, research connectors and final-report workflow.
 
@@ -27,11 +28,16 @@ DISCOVERY_FINDER_PROVIDER=openrouter
 DISCOVERY_VALIDATOR_PROVIDER=openrouter
 DISCOVERY_FINDER_MODEL=deepseek/deepseek-v4.1-flash
 DISCOVERY_VALIDATOR_MODEL=deepseek/deepseek-v4.1-flash
+DISCOVERY_JUDGE_ENABLED=True
+DISCOVERY_JUDGE_PROVIDER=ollama
+DISCOVERY_JUDGE_MODEL=kimi-k3:cloud
 ```
 
 Claude Code uses an interactive model to research and exchange mail. Do not use
 `:batch` model IDs for new runs: they are rejected instead of silently converted.
 Previously created schema-1.0 batch discoveries retain their historical path.
+Judge defaults to Kimi K3 in Ollama. A Judge no-go sends the agents to find a new
+opportunity; all three roles share the same turn, time and spending limits.
 
 ## Start host processes
 

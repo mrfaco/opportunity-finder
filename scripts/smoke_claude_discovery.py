@@ -22,7 +22,8 @@ from discovery.claude_runtime import Gateway  # noqa: E402
 from discovery.loop import run_task  # noqa: E402
 from discovery.models import ResearchOperation  # noqa: E402
 from discovery.orchestrator import cancel_discovery, start_discovery  # noqa: E402
-from scripts.smoke_discovery import _response  # noqa: E402
+from discovery.schemas import Judgment  # noqa: E402
+from scripts.smoke_discovery import _call, _response  # noqa: E402
 
 
 def _stream(message, model):
@@ -108,7 +109,36 @@ def main():
             }
             if call == 2:
                 pseudo["messages"].append({"role": "tool"})
-            message = _response(pseudo, operation.pk)["choices"][0]["message"]
+            if task.role == "judge" and call == 2:
+                context = task.turn.input_snapshot
+                ids = [str(e.pk) for e in task.discovery.evidence.filter(turn=task.turn)]
+                artifact = Judgment(
+                    reviewed_proposal_id=context["proposal"]["id"],
+                    reviewed_proposal_hash=context["proposal"]["hash"],
+                    reviewed_validation_id=context["accepted_validation"]["id"],
+                    reviewed_validation_hash=context["accepted_validation"]["hash"],
+                    verdict="approve",
+                    worth_pursuing=True,
+                    summary="Synthetic Judge approval; not real market research.",
+                    assessment={
+                        key: "Synthetic positive fixture assessment only."
+                        for key in (
+                            "economics",
+                            "opportunity_cost",
+                            "observed_transaction",
+                            "competitive_pressure",
+                            "objective_fit",
+                            "convergence_risk",
+                        )
+                    },
+                    evidence_ids=ids,
+                    next_tests=["Interview real customers before investing."],
+                )
+                message = {
+                    "tool_calls": [_call("submit_judgment", artifact.model_dump(mode="json"))]
+                }
+            else:
+                message = _response(pseudo, operation.pk)["choices"][0]["message"]
         else:
             message = {}
         body = json.loads(request.content)
@@ -135,15 +165,24 @@ def main():
         discovery = start_discovery(
             "SYNTHETIC CLAUDE CODE SMOKE — travel service opportunity",
             config={
-                "max_turns": 4,
-                "max_duration_s": 180,
+                "schema_version": "1.2",
+                "runtime": "claude_code",
+                "finder_provider": "openrouter",
+                "validator_provider": "openrouter",
+                "finder_model": "deepseek/deepseek-v4.1-flash",
+                "validator_model": "deepseek/deepseek-v4.1-flash",
+                "judge_enabled": True,
+                "judge_provider": "openrouter",
+                "judge_model": "moonshotai/kimi-k3",
+                "max_turns": 5,
+                "max_duration_s": 240,
                 "connectors": ["duckduckgo", "prototype_fixture"],
             },
             constraints="Synthetic evidence and model responses; actual Claude Code agent harness.",
             enqueue=False,
         )
         try:
-            for _ in range(4):
+            for _ in range(5):
                 discovery.refresh_from_db()
                 if discovery.status == "completed":
                     break
@@ -153,14 +192,22 @@ def main():
                 print(f"Claude Code turn {task.turn_number} completed", flush=True)
             discovery.refresh_from_db()
             assert discovery.outcome == "converged", discovery.error_summary
-            assert discovery.turns_completed == 4
+            assert discovery.turns_completed == 5
             tasks = list(discovery.tasks.order_by("turn_number"))
             assert tasks[0].context["claude_session_id"] == tasks[2].context["claude_session_id"]
             assert tasks[1].context["claude_session_id"] != tasks[3].context["claude_session_id"]
+            assert tasks[4].role == "judge"
+            assert tasks[4].context["claude_session_id"] not in {
+                task.context["claude_session_id"] for task in tasks[:4]
+            }
+            assert discovery.judgments.get().verdict == "approve"
             assert discovery.cost_used_usd == 0
             path = Path(".tmp/claude-discovery-smoke-report.md")
             path.write_text(discovery.report_markdown)
-            print(f"PASS: real Claude Code, MCP research/mail, four turns, no paid calls. {path}")
+            print(
+                "PASS: real Claude Code, Judge approval, MCP mail, five turns, no paid calls. "
+                f"{path}"
+            )
         finally:
             discovery.refresh_from_db()
             if discovery.status in {"queued", "running"}:

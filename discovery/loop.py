@@ -1,4 +1,4 @@
-"""Two alternating roles, durable mail handoffs and asynchronous model steps."""
+"""Research dialogue and independent Judge, with durable role handoffs."""
 
 from __future__ import annotations
 
@@ -30,14 +30,19 @@ from discovery.research import (
     lease_token,
     perform_research,
 )
-from discovery.schemas import DiscoveryConfig, Proposal, Validation
+from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 from discovery.termination import SubmissionError, unresolved_objections
 
 logger = logging.getLogger(__name__)
 
 
 def tools_for_role(role: str) -> list[dict[str, Any]]:
-    schema = Proposal if role == "finder" else Validation
+    roles: dict[str, tuple[type[Contract], str]] = {
+        "finder": (Proposal, "submit_proposal"),
+        "validator": (Validation, "submit_validation"),
+        "judge": (Judgment, "submit_judgment"),
+    }
+    schema, submit = roles[role]
     return [
         {
             "type": "function",
@@ -53,8 +58,8 @@ def tools_for_role(role: str) -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "submit_proposal" if role == "finder" else "submit_validation",
-                "description": "Finish the turn and mail this artifact to the other role.",
+                "name": submit,
+                "description": "Finish this role's turn and deliver the artifact to the workflow.",
                 "parameters": schema.model_json_schema(),
             },
         },
@@ -65,10 +70,18 @@ def _initial_context(task: DiscoveryTask) -> dict[str, Any]:
     discovery = task.discovery
     latest_proposal = discovery.proposals.order_by("-turn__number").first()
     latest_validation = discovery.validations.order_by("-turn__number").first()
+    accepted_validation = (
+        discovery.validations.filter(proposal=latest_proposal, verdict="accept")
+        .order_by("-turn__number")
+        .first()
+        if latest_proposal
+        else None
+    )
+    judgments = list(discovery.judgments.select_related("proposal").order_by("turn__number"))
     # Summaries keep prior turns bounded. Current artifacts and all unresolved
     # objections are preserved intact, with evidence available by source URL.
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "role": task.role,
         "objective": discovery.objective,
         "constraints": discovery.constraints,
@@ -83,6 +96,38 @@ def _initial_context(task: DiscoveryTask) -> dict[str, Any]:
         if latest_proposal
         else None,
         "validation": latest_validation.content if latest_validation else None,
+        "accepted_validation": {
+            "id": str(accepted_validation.pk),
+            "hash": accepted_validation.content_hash,
+            "content": accepted_validation.content,
+        }
+        if accepted_validation
+        else None,
+        "judgment": {
+            "id": str(judgments[-1].pk),
+            "hash": judgments[-1].content_hash,
+            "content": judgments[-1].content,
+        }
+        if judgments
+        else None,
+        "judgment_history": [
+            {
+                "proposal_id": str(judgment.proposal_id),
+                "proposal_title": judgment.proposal.content.get("title", ""),
+                "verdict": judgment.verdict,
+                "content": judgment.content,
+            }
+            for judgment in judgments
+        ],
+        "rejected_opportunities": [
+            {
+                "proposal_id": str(judgment.proposal_id),
+                "proposal": judgment.proposal.content,
+                "judgment": judgment.content,
+            }
+            for judgment in judgments
+            if judgment.verdict == "reject"
+        ],
         "unresolved_objections": unresolved_objections(discovery),
         "history": [
             {"turn": turn.number, "role": turn.role, "summary": turn.submission.get("summary", "")}
@@ -130,7 +175,7 @@ def _execute(task: DiscoveryTask) -> None:
 
         run_turn(task, _initial_context(task), tools_for_role(task.role))
         return
-    model = config.finder_model if task.role == "finder" else config.validator_model
+    model = getattr(config, f"{task.role}_model")
     prompt = task.discovery.prompt_snapshot[task.role]
     context = task.context
     if not context:
@@ -207,7 +252,14 @@ def _execute(task: DiscoveryTask) -> None:
                 arguments = json.loads(call["function"]["arguments"])
                 if name == "research":
                     output = perform_research(task, f"{key}:tool:{call['id']}", arguments)
-                elif name == ("submit_proposal" if task.role == "finder" else "submit_validation"):
+                elif (
+                    name
+                    == {
+                        "finder": "submit_proposal",
+                        "validator": "submit_validation",
+                        "judge": "submit_judgment",
+                    }[task.role]
+                ):
                     commit_turn(
                         task.pk,
                         lease_token(task),

@@ -54,6 +54,36 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         if final
         else None
     )
+    judgments = list(discovery.judgments.select_related("turn").order_by("turn__number"))
+    current_judgment = next(
+        (
+            row
+            for row in reversed(judgments)
+            if final
+            and final_review
+            and row.proposal_id == final.pk
+            and row.validation_id == final_review.pk
+        ),
+        None,
+    )
+    judge_required = bool(discovery.config_snapshot.get("judge_enabled", False))
+    judge_approved = bool(
+        current_judgment
+        and current_judgment.verdict == "approve"
+        and current_judgment.content.get("worth_pursuing")
+        and final_review
+        and final_review.verdict == "accept"
+    )
+    judgment_rows = [
+        {
+            "id": str(row.pk),
+            "turn_number": row.turn.number,
+            "proposal_id": str(row.proposal_id),
+            "validation_id": str(row.validation_id),
+            "content": row.content,
+        }
+        for row in judgments
+    ]
     turns = list(discovery.turns.filter(completed_at__isnull=False))
     evidence = list(discovery.evidence.all())
     unsettled = list(
@@ -73,11 +103,16 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
     known = discovery.cost_used_usd - estimated
     unresolved = list(unresolved_objections(discovery).values())
     limitations = [
-        "Agreement between two models is not proof of demand or commercial viability.",
+        "Agent agreement and Judge approval are not proof of demand or commercial viability.",
         "Customer interviews and real purchasing tests remain necessary.",
         "Research covers the enabled connectors and retrieved sources, not the entire market.",
     ]
     config = discovery.config_snapshot
+    if judge_required and not judge_approved:
+        limitations.append(
+            "The latest candidate has not received Judge approval. "
+            "Finder–Validator agreement alone is not final approval."
+        )
     if (
         config.get("finder_model")
         and config.get("finder_model") == config.get("validator_model")
@@ -167,16 +202,32 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         turns=turn_rows,
         unresolved_objections=unresolved,
         limitations=limitations,
+        judgments=judgment_rows,
+        latest_judgment=judgments[-1].content if judgments else None,
+        judge_required=judge_required,
+        judge_approved=judge_approved,
     ).model_dump(mode="json")
     duration = (
         (discovery.ended_at - (discovery.started_at or discovery.created_at)).total_seconds()
         if discovery.ended_at
         else 0
     )
+    outcome_label = OUTCOME_LABELS.get(discovery.outcome, discovery.outcome)
+    if judge_required:
+        if judge_approved:
+            outcome_label = "Judge approved an opportunity for human validation"
+        elif current_judgment and current_judgment.verdict == "reject":
+            outcome_label = "Judge no-go; no approved opportunity"
+        elif current_judgment and current_judgment.verdict == "revise":
+            outcome_label = "Judge requested revision; no approved opportunity"
+        elif final_review and final_review.verdict == "accept":
+            outcome_label = "Finder and Validator agreed; Judge approval not completed"
+        elif discovery.outcome == "converged":
+            outcome_label = "Judge approval missing; no approved opportunity"
     lines = [
         "# Opportunity discovery report",
         "",
-        f"**Outcome: {OUTCOME_LABELS.get(discovery.outcome, discovery.outcome)}**",
+        f"**Outcome: {outcome_label}**",
         "",
         f"Objective: {discovery.objective}",
         "",
@@ -188,7 +239,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         f"Stop reason: {discovery.stop_reason} · Lifecycle: {discovery.status}",
         "",
         "## Final assessment"
-        if discovery.outcome == "converged"
+        if judge_approved or (not judge_required and discovery.outcome == "converged")
         else "## Strongest remaining candidate (not validated)",
         "",
     ]
@@ -220,6 +271,36 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         lines.extend(["### Remaining risks", "", _bullets(content.get("risks", [])), ""])
     else:
         lines.extend(["No Finder proposal was completed before this run stopped.", ""])
+    lines.extend(["## Judge assessment", ""])
+    if current_judgment:
+        judgment = current_judgment.content
+        lines.extend([f"**Verdict: {current_judgment.verdict}**", "", judgment["summary"], ""])
+        for key, value in judgment.get("assessment", {}).items():
+            if key == "schema_version":
+                continue
+            lines.extend([f"**{key.replace('_', ' ').title()}:** {value}", ""])
+        if current_judgment.verdict == "reject":
+            lines.extend(
+                [
+                    "This opportunity is a no-go. Finder and Validator must find a new "
+                    "opportunity within the remaining run limits.",
+                    "",
+                ]
+            )
+    elif judge_required:
+        lines.extend(["No completed Judge assessment of the latest agreed candidate.", ""])
+    else:
+        lines.extend(["Judge review was not enabled for this discovery.", ""])
+    if judgments:
+        lines.extend(["### Judge review history", ""])
+        for row in judgments:
+            lines.extend(
+                [
+                    f"- Turn {row.turn.number}: **{row.verdict}**, proposal `{row.proposal_id}` "
+                    f"— {row.content['summary']}",
+                ]
+            )
+        lines.append("")
     lines.extend(["## Evidence for and against", ""])
     lines.extend(
         ["Current proposal and its latest review; earlier findings remain in the history.", ""]
@@ -232,13 +313,14 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
                     f"  - {reference['relationship']}: evidence `{reference['evidence_id']}`"
                     f"; locator: {reference.get('locator') or 'whole source'}"
                 )
-    if final_review:
-        objections = {
-            objection["id"]: objection
-            for objection in final_review.content.get("objections", [])
-            if not objection.get("resolved")
-        }
+    latest_objections = list(final_review.content.get("objections", [])) if final_review else []
+    if current_judgment:
+        latest_objections.extend(current_judgment.content.get("objections", []))
+    if latest_objections:
+        objections = {objection["id"]: objection for objection in latest_objections}
         for objection in objections.values():
+            if objection.get("resolved"):
+                continue
             refs = (
                 ", ".join(dict.fromkeys(objection.get("evidence_ids", []))) or "No source recorded"
             )
@@ -292,6 +374,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         # The latest review refines the proposal's checklist. Concatenating both
         # duplicates the same tests with slightly different wording.
         tests = final_review.content["next_tests"]
+    if current_judgment:
+        tests = current_judgment.content.get("next_tests", [])
     lines.extend(
         [
             _bullets(_distinct_text(tests)),

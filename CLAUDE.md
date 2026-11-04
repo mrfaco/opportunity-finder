@@ -6,15 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `AGENTS.md` is the rulebook for any AI agent touching this repo. It covers exception discipline, the test/coverage ratchet, prompts-in-git, migration sync, module boundaries, and more — all enforced by pre-commit/pre-push hooks. Don't restate or override it here; defer to it.
 
-## Primary workflow: Finder and Validator
+## Primary workflow: Finder, Validator and Judge
 
 The search-led `discovery/` app accepts an objective without ingestion or a
 cluster. Finder researches and proposes a business opportunity; Validator
-independently falsifies it through durable internal mail. Default 20 individual
-turns, a Claude Code agent harness with per-role Anthropic/OpenRouter/Ollama
+independently falsifies it through durable internal mail. Judge reviews their
+agreement for commercial merit, objective fit and opportunity cost; only Judge
+approval converges a new run. A no-go sends Finder to a new opportunity and
+preserves rejection reasons. Default 100 individual submissions shared by all
+three roles, a Claude Code agent harness with per-role Anthropic/OpenRouter/Ollama
 selection (OpenRouter `deepseek/deepseek-v4.1-flash` by default), extensible read-only
 connectors and a deterministic final Markdown report. Business models include
 services, manufacturing, intelligence, B2B, B2C and software without SaaS bias.
+Judge defaults to Ollama `kimi-k3:cloud`. Explicit schema-1.0/1.1 configurations
+retain two-role execution; new schema 1.2 enables Judge by default.
 The user explicitly deferred extensive coverage until a working prototype;
 use focused smoke checks first, then complete the hardening backlog.
 

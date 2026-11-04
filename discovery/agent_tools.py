@@ -17,7 +17,7 @@ from discovery.errors import DiscoveryStop
 from discovery.models import DiscoveryTask
 from discovery.orchestrator import check_lease, commit_turn, content_hash
 from discovery.research import check_limits, lease_token, perform_research
-from discovery.schemas import DiscoveryConfig, Proposal, Validation
+from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 
 
 class AgentTools:
@@ -217,7 +217,12 @@ class AgentTools:
                     "Prioritize decisive pages and submit your brief."
                 )
             return result
-        schema = Proposal if self.task.role == "finder" else Validation
+        schemas: dict[str, type[Contract]] = {
+            "finder": Proposal,
+            "validator": Validation,
+            "judge": Judgment,
+        }
+        schema = schemas[self.task.role]
         normalized = schema.model_validate(arguments).model_dump(mode="json")
         # Validate now so the agent can repair a citation/schema problem. Commit
         # the mail handoff only after the supervisor settles the wake's usage.

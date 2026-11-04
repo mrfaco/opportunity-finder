@@ -21,6 +21,8 @@ def check_configuration(config: DiscoveryConfig) -> dict[str, Any]:
         from discovery.claude_runtime import check_configuration as check_claude  # noqa: PLC0415
 
         return check_claude(config)
+    if config.judge_enabled:
+        raise ValueError("Judge requires the Claude Code runtime; historical batch runs omit Judge")
     if not settings.OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY is required for discovery")
     provider = settings.DISCOVERY_BATCH_PROVIDER

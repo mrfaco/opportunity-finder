@@ -101,3 +101,23 @@ The research quota now returns a visible submit-now message with remaining-call
 notices. Cleanup tracks process identities/creation times and signals only owned
 processes individually, preserving unrelated processes. Two focused regressions
 cover these cases and pass. Full coverage remains deferred.
+
+## Judge commercial-merit gate (2026-11-04)
+
+- Added the third role, defaulting to Ollama `kimi-k3:cloud`, with a fresh
+  session, independent prompt, frozen provider/model/pricing and durable judgment.
+- The installed Claude Code/MCP harness passed a five-turn fixture through
+  Validator challenge, Finder pivot, Validator agreement and Judge approval.
+  Fifteen scripted model responses used MockTransport; no paid inference ran.
+- Legacy four-turn asynchronous-batch smoke still passes with Judge disabled.
+- Twenty-one focused tests cover the existing controls/accounting/reporting and
+  Judge identity fencing, stable rejection feedback, material objections,
+  turn limits, historical configurations, tool/session isolation and API/report
+  approval semantics. Extensive coverage remains deferred per the user.
+- Local start, approved-review and no-go-review pages returned HTTP 200 with
+  zero page/console errors. Judge defaults, shared output limit, verdict history
+  and no-go instructions rendered correctly. Temporary QA user and no-go fixture
+  were removed; clearly labelled offline smoke artifacts remain for inspection.
+- Ruff, formatting, mypy, exception discipline, prompt validation, Django checks
+  and migration synchronization passed. Migration `0002_judgmentrevision` is
+  applied locally. No historical discovery's model choices were rewritten.

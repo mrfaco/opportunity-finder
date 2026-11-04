@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from discovery.models import Discovery, DiscoveryTask, ProposalRevision
-from discovery.schemas import Validation
+from discovery.schemas import Judgment, Validation
 
 
 class SubmissionError(ValueError):
@@ -40,13 +40,92 @@ def validate_references(discovery: Discovery, content: dict[str, Any]) -> None:
 
 def unresolved_objections(discovery: Discovery) -> dict[str, dict[str, Any]]:
     objections: dict[str, dict[str, Any]] = {}
-    for validation in discovery.validations.order_by("turn__number"):
-        for objection in validation.content.get("objections", []):
+    reviews = list(discovery.validations.select_related("turn")) + list(
+        discovery.judgments.select_related("turn")
+    )
+    for review in sorted(reviews, key=lambda row: row.turn.number):
+        for objection in review.content.get("objections", []):
             objections[objection["id"]] = objection
-        for resolved_id in validation.content.get("resolved_objection_ids", []):
+        for resolved_id in review.content.get("resolved_objection_ids", []):
             if resolved_id in objections:
                 objections[resolved_id] = {**objections[resolved_id], "resolved": True}
     return {key: value for key, value in objections.items() if not value.get("resolved")}
+
+
+def business_fingerprint(content: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        " ".join(str(content.get(key, "")).casefold().split())
+        for key in ("target_customer", "buyer", "problem", "offering", "business_model")
+    )
+
+
+def require_judge_feedback(discovery: Discovery, content: dict[str, Any]) -> None:
+    latest = discovery.judgments.select_related("proposal").order_by("-turn__number").first()
+    if latest is None or latest.verdict == "approve":
+        return
+    responses = {row["objection_id"]: row for row in content.get("objection_responses", [])}
+    unresolved = unresolved_objections(discovery)
+    required = {
+        objection["id"]
+        for objection in latest.content.get("objections", [])
+        if objection["id"] in unresolved
+    }
+    if required - responses.keys():
+        raise SubmissionError("Finder must answer every unresolved Judge objection by ID")
+    for rejected in discovery.judgments.filter(verdict="reject").select_related("proposal"):
+        if business_fingerprint(content) == business_fingerprint(rejected.proposal.content):
+            raise SubmissionError(
+                "Judge rejected this direction; Finder must propose a new opportunity"
+            )
+    current = discovery.proposals.order_by("-turn__number").first()
+    if latest.verdict == "reject" and current is not None and current.pk == latest.proposal_id:
+        if not any(
+            row["disposition"] in {"pivot", "abandon"}
+            for key, row in responses.items()
+            if key in required
+        ):
+            raise SubmissionError(
+                "Judge rejection requires an explicit pivot or abandonment disposition"
+            )
+
+
+def require_judge_approval(
+    discovery: Discovery, proposal: ProposalRevision, judgment: Judgment
+) -> None:
+    for objection in judgment.objections:
+        if objection.resolved and objection.severity in {"critical", "major"}:
+            if not objection.resolution or not objection.evidence_ids:
+                raise SubmissionError("Resolved Judge objections require rationale and evidence")
+    if judgment.verdict != "approve":
+        return
+    for previous in discovery.judgments.filter(verdict="reject").select_related("proposal"):
+        if business_fingerprint(proposal.content) == business_fingerprint(
+            previous.proposal.content
+        ):
+            raise SubmissionError("Judge cannot approve an unchanged previously rejected business")
+    prior = {
+        key: value
+        for key, value in unresolved_objections(discovery).items()
+        if value.get("severity") in {"critical", "major"}
+    }
+    resolutions = {
+        objection.id: objection for objection in judgment.objections if objection.resolved
+    }
+    responses = {
+        row["objection_id"]: row for row in proposal.content.get("objection_responses", [])
+    }
+    for key in prior:
+        resolution = resolutions.get(key)
+        if (
+            resolution is None
+            or not resolution.resolution
+            or not resolution.evidence_ids
+            or key not in responses
+        ):
+            raise SubmissionError(
+                f"Material objection {key} needs a Finder disposition "
+                "and explicit evidenced Judge resolution"
+            )
 
 
 def _normalized_query(value: str) -> str:

@@ -213,6 +213,9 @@ def main():
             config={
                 "schema_version": "1.0",
                 "runtime": "openrouter_batch",
+                "finder_provider": "openrouter",
+                "validator_provider": "openrouter",
+                "judge_enabled": False,
                 "finder_model": "deepseek/deepseek-v4.1-flash:batch",
                 "validator_model": "deepseek/deepseek-v4.1-flash:batch",
                 "max_turns": 4,

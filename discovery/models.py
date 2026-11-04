@@ -147,6 +147,25 @@ class ValidationRevision(models.Model):
         ordering = ["turn__number"]
 
 
+class JudgmentRevision(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    discovery = models.ForeignKey(Discovery, on_delete=models.CASCADE, related_name="judgments")
+    turn = models.OneToOneField(DiscoveryTurn, on_delete=models.CASCADE, related_name="judgment")
+    proposal = models.ForeignKey(
+        ProposalRevision, on_delete=models.PROTECT, related_name="judgments"
+    )
+    validation = models.ForeignKey(
+        ValidationRevision, on_delete=models.PROTECT, related_name="judgments"
+    )
+    verdict = models.CharField(max_length=16)
+    content = models.JSONField()
+    content_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["turn__number"]
+
+
 class ResearchOperation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     discovery = models.ForeignKey(Discovery, on_delete=models.CASCADE, related_name="operations")

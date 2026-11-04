@@ -15,6 +15,10 @@ prompts/
     └── classifier.md   # Binary opportunity classifier prompt
 ```
 
+Discovery prompts live in `finder/system.md`, `validator/system.md` and
+`judge/system.md`. Judge is the commercial-merit gate after Finder/Validator
+agreement; a no-go sends the agents to find a new opportunity.
+
 The directory name is the `agent_name`. The filename (without extension) is the
 `kind`. The loader (`agents.prompts.load_prompt`) reads
 `prompts/<agent_name>/<kind>.md`.

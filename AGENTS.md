@@ -64,7 +64,7 @@ extensive new regression tests, failure injection and coverage verification are
 deferred until the prototype works. This overrides the same-commit test rule
 below for discovery prototyping; do not lower the committed coverage threshold.
 
-The discovery workflow has two reasoning roles (Finder and Validator), durable
+The discovery workflow has three reasoning roles (Finder, Validator and Judge), durable
 internal mail and independent records, not legacy cluster-backed AgentRuns.
 Discovery persistence belongs to its orchestrator, mail, loop and research
 services. Connector implementations return evidence without writing it.
@@ -73,6 +73,11 @@ harness pattern. Select Anthropic, OpenRouter or Ollama per role; new defaults
 use OpenRouter's interactive DeepSeek V4.1 Flash. Historical batch snapshots
 retain their original path. New Claude Code configs reject :batch model IDs.
 Provider secrets remain host configuration, never agent context or form data.
+New schema-1.2 runs send Finder/Validator agreement to an independent Judge.
+Judge approval is required for final convergence; no-go sends the agents to
+find a new opportunity under the original objective and the same global limits.
+Historical schema-1.0/1.1 runs retain two-role execution. Judge reviews exact
+proposal and accepted-validation identities/hashes; judgment records are immutable.
 
 ## 2. Test discipline — every change has a test
 

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash"
 LEGACY_BATCH_MODEL = DEFAULT_MODEL + ":batch"
 Provider = Literal["anthropic", "openrouter", "ollama"]
-Role = Literal["finder", "validator"]
+Role = Literal["finder", "validator", "judge"]
 
 
 class Contract(BaseModel):
@@ -20,26 +20,30 @@ class Contract(BaseModel):
 
 class DiscoveryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     runtime: Literal["claude_code", "openrouter_batch"] = "claude_code"
     finder_provider: Provider = "openrouter"
     validator_provider: Provider = "openrouter"
+    judge_enabled: bool = True
+    judge_provider: Provider = "ollama"
     max_turns: int = Field(default=100, ge=2, le=200)
     max_cost_usd: Decimal = Field(default=Decimal("10.00"), gt=0)
     max_duration_s: int = Field(default=1800, ge=1)
     max_model_calls_per_turn: int = Field(default=8, ge=1, le=50)
     max_research_calls_per_turn: int = Field(default=8, ge=1, le=50)
-    max_output_tokens: int = Field(default=6000, ge=256, le=32000)
+    max_output_tokens: int = Field(default=24000, ge=256, le=32000)
     finder_model: str = DEFAULT_MODEL
     validator_model: str = DEFAULT_MODEL
+    judge_model: str = "kimi-k3:cloud"
     connectors: list[str] = Field(default_factory=lambda: ["web_search", "web_fetch"])
 
     @model_validator(mode="before")
     @classmethod
     def historical_batch_config(cls, value: Any) -> Any:
-        if isinstance(value, dict) and value.get("schema_version") == "1.0":
+        if isinstance(value, dict) and value.get("schema_version") in {"1.0", "1.1"}:
             migrated = dict(value)
-            if "runtime" not in migrated:
+            migrated.setdefault("judge_enabled", False)
+            if value.get("schema_version") == "1.0" and "runtime" not in migrated:
                 migrated["runtime"] = "openrouter_batch"
                 migrated.setdefault("finder_model", LEGACY_BATCH_MODEL)
                 migrated.setdefault("validator_model", LEGACY_BATCH_MODEL)
@@ -48,7 +52,11 @@ class DiscoveryConfig(BaseModel):
 
     @model_validator(mode="after")
     def provider_models(self) -> "DiscoveryConfig":
-        for role in ("finder", "validator"):
+        if self.runtime == "openrouter_batch" and self.judge_enabled:
+            raise ValueError("Judge requires the Claude Code runtime, not historical batch mode")
+        for role in (
+            ("finder", "validator", "judge") if self.judge_enabled else ("finder", "validator")
+        ):
             provider = getattr(self, f"{role}_provider")
             model = getattr(self, f"{role}_model")
             if any(char.isspace() for char in model) or model.startswith("-"):
@@ -68,7 +76,7 @@ class DiscoveryConfig(BaseModel):
                 raise ValueError(f"{role}: Anthropic uses a native Claude model ID, such as sonnet")
         return self
 
-    @field_validator("finder_model", "validator_model")
+    @field_validator("finder_model", "validator_model", "judge_model")
     @classmethod
     def nonempty_model(cls, value: str) -> str:
         if not value:
@@ -164,7 +172,49 @@ class Validation(Contract):
         return self
 
 
-class Report(Contract):
+class JudgmentAssessment(Contract):
+    economics: str = Field(min_length=1)
+    opportunity_cost: str = Field(min_length=1)
+    observed_transaction: str = Field(min_length=1)
+    competitive_pressure: str = Field(min_length=1)
+    objective_fit: str = Field(min_length=1)
+    convergence_risk: str = Field(min_length=1)
+
+
+class Judgment(Contract):
+    reviewed_proposal_id: str = Field(min_length=1)
+    reviewed_proposal_hash: str = Field(min_length=1)
+    reviewed_validation_id: str = Field(min_length=1)
+    reviewed_validation_hash: str = Field(min_length=1)
+    verdict: Literal["approve", "revise", "reject"]
+    worth_pursuing: bool
+    summary: str = Field(min_length=1)
+    assessment: JudgmentAssessment
+    objections: list[Objection] = Field(default_factory=list)
+    resolved_objection_ids: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    next_research: list[str] = Field(default_factory=list)
+    next_tests: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def approval_shape(self) -> "Judgment":
+        if self.verdict == "approve":
+            if not self.worth_pursuing:
+                raise ValueError("Judge cannot approve a no-go or a candidate not worth pursuing")
+            if any(o.severity in {"critical", "major"} and not o.resolved for o in self.objections):
+                raise ValueError(
+                    "Judge approval cannot leave critical or major objections unresolved"
+                )
+        elif not self.objections:
+            raise ValueError("Judge revision or rejection needs stable objections for Finder")
+        if self.verdict != "approve" and self.worth_pursuing:
+            raise ValueError("Only an approved opportunity can be marked worth pursuing")
+        return self
+
+
+class Report(BaseModel):
+    model_config = Contract.model_config
+    schema_version: Literal["1.1"] = "1.1"
     discovery_id: str
     objective: str
     status: str
@@ -179,3 +229,7 @@ class Report(Contract):
     turns: list[dict[str, Any]]
     unresolved_objections: list[dict[str, Any]]
     limitations: list[str]
+    judgments: list[dict[str, Any]] = Field(default_factory=list)
+    latest_judgment: dict[str, Any] | None = None
+    judge_required: bool = False
+    judge_approved: bool = False

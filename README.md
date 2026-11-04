@@ -1,10 +1,11 @@
 # Opportunity Finder
 
-Search-led business opportunity research with two agents: **Finder** proposes an
-opportunity and **Validator** tries to falsify it. Their durable internal mail
-preserves objections, revisions and pivots until they agree or reach the turn
-limit. The final report explains what survived scrutiny, what remains disputed,
-and which assumptions a human should test next.
+Search-led business opportunity research with three agents: **Finder** proposes
+an opportunity, **Validator** tries to falsify it, and **Judge** reviews their
+agreement for commercial merit and whether it is worth the human's time. Durable
+internal mail preserves objections, revisions, rejected ideas and pivots. A Judge
+no-go sends the agents to find a new opportunity within the original objective.
+The final report explains what survived scrutiny and what remains uncertain.
 
 Opportunities can be services, manufacturing, intelligence, physical products,
 software, B2B, B2C or another model. The agents do not default to SaaS.
@@ -12,27 +13,26 @@ software, B2B, B2C or another model. The agents do not default to SaaS.
 ## Discovery workflow
 
 ```text
-Human objective → Finder research + proposal → Validator independent research
-                         ↑                          │
-                         └── objections / pivot ────┘
-                                       ↓
-                          agreement or turn/budget limit
-                                       ↓
-                            cited human-readable report
+Human objective → Finder → Validator → agreement → Judge
+                    ↑          │                     │
+                    └── challenge                    ├── approve → report
+                    ↑                                │
+                    └── revise or no-go/new idea ─────┘
+                Shared turn/time/spend limits → partial report
 ```
 
 A discovery starts from an objective such as “Look for opportunities in the
 travel space.” It requires no ingested data, cluster or embeddings. Default:
-100 individual turns, meaning fifty Finder–Validator exchanges, with configurable
-research, cost and duration limits. Agreement can finish earlier; it applies to
-an exact proposal revision and must pass evidence checks. Model agreement is
-not proof of commercial viability.
+100 individual turns shared across all three roles, with configurable research,
+cost and duration limits. Judge approval can finish earlier; it applies to the
+exact proposal and Validator agreement reviewed. A no-go consumes a turn and
+preserves the existing limits. Model agreement is not proof of commercial viability.
 
-Both roles run through Claude Code, using the same harness pattern as Video
+All roles run through Claude Code, using the same harness pattern as Video
 Swarm. Select **Ollama, OpenRouter or Anthropic** independently for each role.
-New discoveries default to OpenRouter's interactive
-`deepseek/deepseek-v4.1-flash`. Existing batch records retain their original
-configuration. Claude Code discoveries reject `:batch` model IDs explicitly.
+Judge defaults to Ollama `kimi-k3:cloud` and is configurable independently.
+Historical two-role discoveries retain their original configuration; new schema
+1.2 discoveries enable Judge. Claude Code discoveries reject `:batch` model IDs.
 The runtime never silently changes the selected provider or model.
 
 Research connectors expose search/fetch capabilities independently of ingestion:
@@ -68,9 +68,9 @@ research capabilities without returning secret values.
 
 | Concern | Location |
 |---|---|
-| Finder–Validator workflow, durable mail and reports | `discovery/` |
+| Finder–Validator–Judge workflow, durable mail and reports | `discovery/` |
 | Read-only search/data connectors | `discovery/connectors/` |
-| Git-managed agent prompts | `prompts/finder/`, `prompts/validator/` |
+| Git-managed agent prompts | `prompts/finder/`, `prompts/validator/`, `prompts/judge/` |
 | Django project, Celery and configuration | `config/` |
 | Authenticated operator API | `api/`, `discovery/api.py` |
 | Historical ingestion, classification and clustering | `ingestion/`, `clusters/` |

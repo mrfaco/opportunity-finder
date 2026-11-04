@@ -1,4 +1,4 @@
-# Finder–Validator discovery guide
+# Finder–Validator–Judge discovery guide
 
 ## What a discovery does
 
@@ -10,17 +10,31 @@ pivot or abandon a proposal. Both agents consider services, manufacturing,
 intelligence, physical goods, software and other business models across B2B,
 B2C and mixed customer relationships.
 
-The default limit is 100 individual agent submissions: Finder turns 1, 3, 5, …
-and Validator turns 2, 4, 6, …. Research/model calls inside a turn have separate
-limits. The loop can stop early when Validator accepts Finder's exact immutable
-proposal revision and evidence checks pass. Validator's suggested niche is not
-agreement until Finder adopts it and Validator reviews the new revision.
+The default limit is 100 individual submissions shared by Finder, Validator and
+Judge. Research/model calls inside a turn have separate limits. Validator accepts
+Finder's exact immutable proposal revision after evidence checks; the agreement
+is then mailed to Judge. Only Judge approval completes a new run as converged.
+Validator's suggested niche must first be adopted by Finder and reviewed again.
 
-The report's main evidence section uses the final proposal and its latest
-Validator review. Repeated claims and citations are collapsed. Next human tests
+Judge defaults to Ollama `kimi-k3:cloud` in a fresh Claude Code session, with its
+own frozen provider/model and usage accounting. It examines economics after
+overhead and founder effort, opportunity cost, observed buying transactions,
+competitive pressure, fit to the original objective, and convergence by exhaustion.
+Honest reporting and correct arithmetic alone do not make an opportunity worthwhile.
+
+Judge can approve, request revision, or reject/no-go. A revision returns to Finder
+and then Validator; a no-go requires a materially different opportunity within the
+original objective. The rejection and its reasons remain in context and the report.
+The agents cannot reset turn/time/spending limits after a rejection. If no approved
+opportunity is found before a limit, the run ends with a partial report, not approval.
+Approval is a research judgment, not proof of willingness to pay.
+
+The report's main evidence section uses the final proposal, its latest
+Validator review and current Judge verdict. Repeated claims and citations are
+collapsed. Next human tests
 use the latest review of the exact proposal when it supplies a checklist,
-otherwise the final proposal. Tests from abandoned directions remain under their
-original turns in the history.
+otherwise the final proposal. A current Judge checklist takes precedence. Tests
+from abandoned directions remain under their original turns in the history.
 
 Completion distinguishes convergence, continued disagreement and insufficient
 evidence. Failed or cancelled discoveries preserve partial findings. A report
@@ -29,7 +43,7 @@ consensus between agents, not verified demand, profitability or legal clearance.
 
 ## Runtime and credentials
 
-Both reasoning roles run as **Claude Code subprocesses**, following Video
+All reasoning roles run as **Claude Code subprocesses**, following Video
 Swarm's agent-harness pattern. The application owns durable tasks, internal
 mail, tools, budgets and report generation; Claude Code owns each role's model
 conversation. In the start form, choose a provider and model separately for
@@ -59,9 +73,13 @@ next handoff can proceed. Use `deepseek/deepseek-v4.1-flash` rather than its
 silently removes the suffix or switches a provider. Existing schema-1.0 batch
 records retain their historical execution configuration and remain inspectable.
 
-New configuration schema version `1.1` adds `runtime`, `finder_provider` and
-`validator_provider`. Old schema-1.0 snapshots without `runtime` are interpreted
-as `openrouter_batch`; no historical record is rewritten. All role selections,
+Configuration schema `1.1` added `runtime`, `finder_provider` and
+`validator_provider`. New schema `1.2` adds `judge_enabled`, `judge_provider` and
+`judge_model`, defaulting to enabled, Ollama and `kimi-k3:cloud`. Explicit schema
+1.0/1.1 configurations keep Judge disabled unless explicitly configured; stored
+historical records are not rewritten. Legacy batch execution cannot enable Judge.
+Old schema-1.0 snapshots without `runtime` are interpreted as `openrouter_batch`.
+All role selections,
 connectors, maximum turns, cost ceilings and call limits are frozen when a new
 discovery starts. Changing deployment defaults affects subsequent discoveries.
 
@@ -110,6 +128,11 @@ The API uses the existing `Authorization: Bearer <application-api-key>`
 authentication. This is an application key created through the API-key admin,
 not the OpenRouter provider key. All endpoints require authentication.
 
+The request envelope remains version 1.0, configuration is version 1.2, and
+discovery/report responses are version 1.1. Responses include Judge execution
+settings, the latest verdict and judgment history. Judge approval is tied to
+the exact latest proposal and accepted validation; stale approval is not reused.
+
 Start with a stable idempotency key. Reusing it with the same request returns
 the same discovery; a different request conflicts rather than starting another
 paid run.
@@ -125,7 +148,7 @@ Content-Type: application/json
   "objective": "Look for opportunities in the travel space",
   "constraints": "Argentina; include service and intelligence businesses",
   "config": {
-    "schema_version": "1.1",
+    "schema_version": "1.2",
     "runtime": "claude_code",
     "finder_provider": "openrouter",
     "validator_provider": "anthropic",
@@ -134,6 +157,9 @@ Content-Type: application/json
     "max_duration_s": 86400,
     "finder_model": "deepseek/deepseek-v4.1-flash",
     "validator_model": "sonnet",
+    "judge_enabled": true,
+    "judge_provider": "ollama",
+    "judge_model": "kimi-k3:cloud",
     "connectors": ["duckduckgo", "web_fetch"]
   }
 }
@@ -268,6 +294,9 @@ DISCOVERY_FINDER_PROVIDER=openrouter
 DISCOVERY_VALIDATOR_PROVIDER=openrouter
 DISCOVERY_FINDER_MODEL=deepseek/deepseek-v4.1-flash
 DISCOVERY_VALIDATOR_MODEL=deepseek/deepseek-v4.1-flash
+DISCOVERY_JUDGE_ENABLED=True
+DISCOVERY_JUDGE_PROVIDER=ollama
+DISCOVERY_JUDGE_MODEL=kimi-k3:cloud
 ```
 
 
@@ -322,7 +351,7 @@ repeat `--discovery` to reconcile predecessors as well. Each run keeps its own
 charges, so continuation totals must include their original runs. Unsettled
 wakes remain explicitly incomplete. The command preserves Claude's original
 valuation and records the published pricing source/date alongside the estimate.
-New runtime snapshots use version 1.2 and cloud wake accounting uses version 1.1;
+New runtime snapshots use version 1.3 and cloud wake accounting uses version 1.1;
 historical model/provider snapshots stay intact while their operation responses
 gain the dated reconciliation basis. Refresh a persisted report with
 `discovery.orchestrator.regenerate_report` after applying reconciliation.

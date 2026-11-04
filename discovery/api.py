@@ -38,8 +38,37 @@ class DiscoveryStartSerializer(serializers.Serializer):
 
 
 def discovery_view(discovery: Discovery) -> dict:
+    judge_required = bool(discovery.config_snapshot.get("judge_enabled", False))
+    latest_proposal = discovery.proposals.order_by("-turn__number").first()
+    latest_validation = (
+        discovery.validations.filter(proposal=latest_proposal).order_by("-turn__number").first()
+        if latest_proposal
+        else None
+    )
+    judgments = [
+        {
+            "id": str(row.pk),
+            "turn_number": row.turn.number,
+            "proposal_id": str(row.proposal_id),
+            "validation_id": str(row.validation_id),
+            "verdict": row.verdict,
+            "content": row.content,
+        }
+        for row in discovery.judgments.select_related("turn").order_by("turn__number")
+    ]
+    latest_judgment = judgments[-1] if judgments else None
+    judge_approved = bool(
+        latest_proposal
+        and latest_validation
+        and latest_validation.verdict == "accept"
+        and latest_judgment
+        and latest_judgment["proposal_id"] == str(latest_proposal.pk)
+        and latest_judgment["validation_id"] == str(latest_validation.pk)
+        and latest_judgment["verdict"] == "approve"
+        and latest_judgment["content"].get("worth_pursuing")
+    )
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "id": str(discovery.id),
         "objective": discovery.objective,
         "constraints": discovery.constraints,
@@ -62,7 +91,18 @@ def discovery_view(discovery: Discovery) -> dict:
                 "provider": discovery.config_snapshot.get("validator_provider", "openrouter"),
                 "model": discovery.config_snapshot.get("validator_model"),
             },
+            "judge": {
+                "enabled": judge_required,
+                "provider": discovery.config_snapshot.get("judge_provider")
+                if judge_required
+                else None,
+                "model": discovery.config_snapshot.get("judge_model") if judge_required else None,
+            },
         },
+        "judge_required": judge_required,
+        "judge_approved": judge_approved,
+        "latest_judgment": latest_judgment,
+        "judgments": judgments,
         "error_summary": discovery.error_summary,
         "report_ready": bool(discovery.report_markdown),
         "report_url": f"/api/v1/discoveries/{discovery.id}/report/",

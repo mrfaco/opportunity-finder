@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from discovery.models import DiscoveryMessage, DiscoveryTask
 
-PARTIES = {"human", "system", "finder", "validator"}
+PARTIES = {"human", "system", "finder", "validator", "judge"}
 
 
 def send_message(

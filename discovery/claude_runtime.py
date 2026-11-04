@@ -121,7 +121,8 @@ def check_configuration(config: DiscoveryConfig) -> dict[str, Any]:
                     "Managed Claude routing conflicts with explicit provider selection"
                 )
     profiles: dict[str, Any] = {}
-    for role in ("finder", "validator"):
+    roles = ("finder", "validator", "judge") if config.judge_enabled else ("finder", "validator")
+    for role in roles:
         provider = getattr(config, f"{role}_provider")
         model = getattr(config, f"{role}_model")
         profile: dict[str, Any] = {"provider": provider, "model": model}
@@ -192,7 +193,7 @@ def check_configuration(config: DiscoveryConfig) -> dict[str, Any]:
                 )
         profiles[role] = profile
     return {
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "runtime": "claude_code",
         "claude_bin": claude,
         "claude_version": version,

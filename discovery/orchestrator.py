@@ -21,16 +21,19 @@ from discovery.models import (
     DiscoveryDispatch,
     DiscoveryTask,
     DiscoveryTurn,
+    JudgmentRevision,
     ProposalRevision,
     ValidationRevision,
 )
 from discovery.reporting import render_report
-from discovery.schemas import DiscoveryConfig, Proposal, Validation
+from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 from discovery.termination import (
     SubmissionError,
     evidence_gaps,
     has_independent_research,
     require_agreement,
+    require_judge_approval,
+    require_judge_feedback,
     validate_references,
 )
 
@@ -73,6 +76,8 @@ def start_discovery(
         "validator_provider": getattr(settings, "DISCOVERY_VALIDATOR_PROVIDER", "openrouter"),
         "finder_model": getattr(settings, "DISCOVERY_FINDER_MODEL", None),
         "validator_model": getattr(settings, "DISCOVERY_VALIDATOR_MODEL", None),
+        "judge_provider": getattr(settings, "DISCOVERY_JUDGE_PROVIDER", "ollama"),
+        "judge_model": getattr(settings, "DISCOVERY_JUDGE_MODEL", "kimi-k3:cloud"),
         "connectors": getattr(settings, "DISCOVERY_CONNECTORS", None),
     }
     values = {key: value for key, value in defaults.items() if value is not None}
@@ -80,6 +85,8 @@ def start_discovery(
         values.update(config.model_dump())
     elif config:
         values.update(config)
+    if "judge_enabled" not in values and values.get("schema_version") not in {"1.0", "1.1"}:
+        values["judge_enabled"] = getattr(settings, "DISCOVERY_JUDGE_ENABLED", True)
     try:
         cfg = DiscoveryConfig.model_validate(values)
     except ValidationError as exc:
@@ -113,7 +120,7 @@ def start_discovery(
 
     runtime_snapshot = check_configuration(cfg)
     prompts = {}
-    for role in ("finder", "validator"):
+    for role in ("finder", "validator", "judge") if cfg.judge_enabled else ("finder", "validator"):
         prompt = load_prompt(role, "system")
         prompts[role] = {"content": prompt.content, "hash": prompt.hash, "path": prompt.path}
     with transaction.atomic():
@@ -270,7 +277,14 @@ def commit_turn(
     validate_only: bool = False,
 ) -> Discovery:
     base = DiscoveryTask.objects.get(pk=task_id)
-    schema = Proposal if base.role == "finder" else Validation
+    schemas: dict[str, type[Contract]] = {
+        "finder": Proposal,
+        "validator": Validation,
+        "judge": Judgment,
+    }
+    if base.role not in schemas:
+        raise DiscoveryError("Unknown discovery role")
+    schema = schemas[base.role]
     parsed = schema.model_validate(submission)
     normalized = parsed.model_dump(mode="json")
     digest = content_hash(normalized)
@@ -295,6 +309,7 @@ def commit_turn(
         if task.turn_number != discovery.turns_completed + 1:
             raise DiscoveryConflict("Turn is out of sequence")
         latest_proposal = discovery.proposals.order_by("-turn__number").first()
+        latest_validation = discovery.validations.order_by("-turn__number").first()
         if task.role == "finder":
             proposal = Proposal.model_validate(normalized)
             if proposal.parent_revision_id:
@@ -302,7 +317,8 @@ def commit_turn(
                     raise SubmissionError("Parent must be the latest proposal in this discovery")
             elif latest_proposal:
                 raise SubmissionError("A revised proposal must reference the previous revision")
-        else:
+            require_judge_feedback(discovery, normalized)
+        elif task.role == "validator":
             validation = Validation.model_validate(normalized)
             if not latest_proposal or validation.reviewed_proposal_id != str(latest_proposal.pk):
                 raise SubmissionError("Validator must review the latest Finder revision")
@@ -315,6 +331,25 @@ def commit_turn(
                     "Acceptance always requires a new successful search."
                 )
             require_agreement(discovery, task, latest_proposal, validation)
+        else:
+            judgment = Judgment.model_validate(normalized)
+            if not cfg.judge_enabled:
+                raise SubmissionError("Judge is not enabled in this discovery")
+            if not latest_proposal or judgment.reviewed_proposal_id != str(latest_proposal.pk):
+                raise SubmissionError("Judge must review the latest Finder revision")
+            if judgment.reviewed_proposal_hash != latest_proposal.content_hash:
+                raise SubmissionError("Judge reviewed proposal hash does not match")
+            if (
+                latest_validation is None
+                or latest_validation.proposal_id != latest_proposal.pk
+                or latest_validation.verdict != "accept"
+                or judgment.reviewed_validation_id != str(latest_validation.pk)
+                or judgment.reviewed_validation_hash != latest_validation.content_hash
+            ):
+                raise SubmissionError(
+                    "Judge must review the exact latest accepted Validator revision"
+                )
+            require_judge_approval(discovery, latest_proposal, judgment)
         if validate_only:
             return discovery
         now = timezone.now()
@@ -326,7 +361,7 @@ def commit_turn(
         if input_snapshot is not None:
             turn.input_snapshot = input_snapshot
         turn.save()
-        revision: ProposalRevision | ValidationRevision
+        revision: ProposalRevision | ValidationRevision | JudgmentRevision
         if task.role == "finder":
             revision = ProposalRevision.objects.create(
                 discovery=discovery,
@@ -335,13 +370,25 @@ def commit_turn(
                 content=normalized,
                 content_hash=digest,
             )
-        else:
+        elif task.role == "validator":
             if latest_proposal is None:
                 raise SubmissionError("Validation requires an existing proposal")
             revision = ValidationRevision.objects.create(
                 discovery=discovery,
                 turn=turn,
                 proposal=latest_proposal,
+                verdict=normalized["verdict"],
+                content=normalized,
+                content_hash=digest,
+            )
+        else:
+            if latest_proposal is None or latest_validation is None:
+                raise SubmissionError("Judgment requires an accepted proposal and validation")
+            revision = JudgmentRevision.objects.create(
+                discovery=discovery,
+                turn=turn,
+                proposal=latest_proposal,
+                validation=latest_validation,
                 verdict=normalized["verdict"],
                 content=normalized,
                 content_hash=digest,
@@ -353,7 +400,13 @@ def commit_turn(
         discovery.turns_completed += 1
         discovery.save(update_fields=["turns_completed", "updated_at"])
         prior_message = task.messages.order_by("-created_at").first()
-        recipient = "validator" if task.role == "finder" else "finder"
+        recipient = (
+            "judge"
+            if task.role == "validator" and normalized["verdict"] == "accept" and cfg.judge_enabled
+            else "validator"
+            if task.role == "finder"
+            else "finder"
+        )
         message = send_message(
             discovery_id=discovery.pk,
             sender=task.role,
@@ -366,12 +419,17 @@ def commit_turn(
             reply_to=prior_message,
             artifact_id=revision.pk,
         )
-        if task.role == "validator" and normalized["verdict"] == "accept":
+        if task.role == "judge" and normalized["verdict"] == "approve":
+            return _finish_locked(discovery, "judge_approval", "converged", "completed", "")
+        if task.role == "validator" and normalized["verdict"] == "accept" and not cfg.judge_enabled:
             return _finish_locked(discovery, "agreement", "converged", "completed", "")
         if discovery.turns_completed >= cfg.max_turns:
             outcome = (
                 "not_converged"
-                if task.role == "validator"
+                if (
+                    task.role == "judge"
+                    or (task.role == "validator" and normalized["verdict"] != "accept")
+                )
                 and latest_proposal is not None
                 and not evidence_gaps(discovery, latest_proposal)
                 else "inconclusive"
@@ -387,10 +445,19 @@ def commit_turn(
             sender=task.role,
             recipient=recipient,
             kind="request",
-            subject="Validate this proposal"
+            subject="Judge this agreed proposal"
+            if recipient == "judge"
+            else "Validate this proposal"
             if recipient == "validator"
+            else "Find a new opportunity after Judge rejection"
+            if task.role == "judge" and normalized["verdict"] == "reject"
             else "Revise or find a new opportunity",
-            body=normalized["summary"],
+            body=(
+                "Judge rejected this direction. Abandon it and find a new opportunity. "
+                if task.role == "judge" and normalized["verdict"] == "reject"
+                else ""
+            )
+            + normalized["summary"],
             operation_key=f"turn-{task.turn_number}-handoff",
             task=next_task,
             reply_to=message,

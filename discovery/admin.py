@@ -1,4 +1,4 @@
-"""Operator interface for starting and inspecting two-agent discoveries."""
+"""Operator interface for starting and inspecting opportunity discoveries."""
 
 from __future__ import annotations
 
@@ -52,6 +52,12 @@ class DiscoveryStartForm(forms.Form):
     max_duration_s = forms.IntegerField(initial=1800, min_value=1)
     max_model_calls_per_turn = forms.IntegerField(initial=8, min_value=1, max_value=50)
     max_research_calls_per_turn = forms.IntegerField(initial=8, min_value=1, max_value=50)
+    max_output_tokens = forms.IntegerField(
+        initial=24000,
+        min_value=256,
+        max_value=32000,
+        help_text="Maximum response size for each model call, shared by all enabled roles.",
+    )
     finder_provider = forms.ChoiceField(
         choices=[
             ("openrouter", "OpenRouter"),
@@ -80,6 +86,27 @@ class DiscoveryStartForm(forms.Form):
         help_text="Prefer a different model family from Finder. Independent sessions of "
         "the same model can share blind spots. Select the provider separately above.",
     )
+    judge_enabled = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Require Judge approval",
+        help_text="Finder–Validator agreement goes to Judge. A no-go sends the agents "
+        "to find a new opportunity within the same turn, time and spending limits.",
+    )
+    judge_provider = forms.ChoiceField(
+        choices=[
+            ("openrouter", "OpenRouter"),
+            ("anthropic", "Anthropic / Claude Code login"),
+            ("ollama", "Ollama"),
+        ],
+        initial="ollama",
+    )
+    judge_model = forms.CharField(
+        initial="kimi-k3:cloud",
+        max_length=160,
+        help_text="Use a stronger independent model for commercial judgment. "
+        "The default is Ollama Kimi K3; its usage consumes the same run budget.",
+    )
     connectors = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple)
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
 
@@ -93,6 +120,13 @@ class DiscoveryStartForm(forms.Form):
         self.fields["validator_provider"].initial = settings.DISCOVERY_VALIDATOR_PROVIDER
         self.fields["finder_model"].initial = settings.DISCOVERY_FINDER_MODEL
         self.fields["validator_model"].initial = settings.DISCOVERY_VALIDATOR_MODEL
+        self.fields["judge_enabled"].initial = getattr(settings, "DISCOVERY_JUDGE_ENABLED", True)
+        self.fields["judge_provider"].initial = getattr(
+            settings, "DISCOVERY_JUDGE_PROVIDER", "ollama"
+        )
+        self.fields["judge_model"].initial = getattr(
+            settings, "DISCOVERY_JUDGE_MODEL", "kimi-k3:cloud"
+        )
         self.fields["idempotency_key"].initial = uuid.uuid4()
 
     def discovery_config(self):
@@ -102,14 +136,18 @@ class DiscoveryStartForm(forms.Form):
             "max_duration_s",
             "max_model_calls_per_turn",
             "max_research_calls_per_turn",
+            "max_output_tokens",
             "finder_provider",
             "finder_model",
             "validator_provider",
             "validator_model",
+            "judge_enabled",
+            "judge_provider",
+            "judge_model",
             "connectors",
         )
         return {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "runtime": "claude_code",
             **{key: self.cleaned_data[key] for key in keys},
         }
@@ -229,13 +267,21 @@ class DiscoveryAdmin(ModelAdmin):
                 "discovery": discovery,
                 "mail": discovery.messages.order_by("created_at", "id"),
                 "turns": turns,
+                "judgments": [
+                    {"judgment": row, "formatted_assessment": json.dumps(row.content, indent=2)}
+                    for row in discovery.judgments.select_related("turn", "proposal").order_by(
+                        "turn__number"
+                    )
+                ],
                 "evidence": evidence,
                 "operations": discovery.operations.order_by("created_at", "id"),
                 "config_json": json.dumps(discovery.config_snapshot, indent=2),
                 # Model prose and source URLs are untrusted even in our own report.
                 "report_html": mark_safe(
                     bleach.clean(
-                        markdown.markdown(discovery.report_markdown, extensions=["tables"]),
+                        markdown.markdown(
+                            discovery.report_markdown, extensions=["tables", "fenced_code"]
+                        ),
                         tags={
                             "h1",
                             "h2",
@@ -271,8 +317,13 @@ class DiscoveryAdmin(ModelAdmin):
                         "provider": discovery.config_snapshot.get(f"{role}_provider", "openrouter"),
                         "model": discovery.config_snapshot.get(f"{role}_model", ""),
                     }
-                    for role in ("finder", "validator")
+                    for role in (
+                        ("finder", "validator", "judge")
+                        if discovery.config_snapshot.get("judge_enabled", False)
+                        else ("finder", "validator")
+                    )
                 ],
+                "judge_required": discovery.config_snapshot.get("judge_enabled", False),
                 "runtime_name": discovery.config_snapshot.get("runtime", "openrouter_batch"),
                 "active": discovery.status in {"queued", "running"},
                 "can_cancel": self.has_change_permission(request, discovery),
