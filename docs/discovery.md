@@ -207,6 +207,11 @@ with a UUID `claude_recovery_id` in task context. It opens a distinct ledger/log
 identity, preserves the original logs and allows at most two model calls. Prior
 unsettled model outcomes block it; reusing the token cannot replay the wake.
 This is not an automatic retry or a reset of turn, time or spending limits.
+Research requests denied locally during a shared connector cooldown retain
+their audit records but do not consume a source-call slot. Actual outbound
+requests, including provider-side rate limits, and cached research results still
+count. Local-denial responses use schema 1.1 with `request_performed=false`;
+historical local denials are recognized by their existing error reason.
 For a proven pre-inference executable launch failure, `claude_recovery_mode`
 may be `launch_failure`: it restores the original call allowance only when a
 prior failed wake records `launch_failed_before_model=true`. Empty output and

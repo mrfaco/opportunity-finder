@@ -41,6 +41,21 @@ def lease_token(task: DiscoveryTask) -> UUID:
     return task.lease_token
 
 
+def research_calls_used(task: DiscoveryTask) -> int:
+    # Local cooldown denials never reached a source. Retain their audit rows,
+    # but do not let repeated denied calls exhaust the actual research budget.
+    return (
+        task.operations.filter(kind="research")
+        .exclude(response__contains={"request_performed": False})
+        .exclude(
+            response__contains={
+                "error_reason": "Shared connector rate limit; retry on a later call"
+            }
+        )
+        .count()
+    )
+
+
 def check_limits(task: DiscoveryTask) -> None:
     check_lease(task.pk, lease_token(task))
     discovery = Discovery.objects.get(pk=task.discovery_id)
@@ -77,7 +92,12 @@ def begin_operation(
             if kind == "model"
             else config.max_research_calls_per_turn
         )
-        if kind in {"model", "research"} and task.operations.filter(kind=kind).count() >= max_calls:
+        used_calls = (
+            research_calls_used(task)
+            if kind == "research"
+            else task.operations.filter(kind=kind).count()
+        )
+        if kind in {"model", "research"} and used_calls >= max_calls:
             raise DiscoveryStop("turn_call_limit", f"Maximum {kind} calls reached")
         held = discovery.operations.exclude(state__in=["completed", "failed"]).aggregate(
             value=Sum("reserved_usd")
@@ -182,8 +202,9 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
         throttle = f"discovery:throttle:{inp.connector}:{_scope()}"
         if interval and not cache.add(throttle, interval, timeout=interval):
             result: dict[str, Any] = {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "status": "rate_limited",
+                "request_performed": False,
                 "documents": [],
                 "retry_after_seconds": cache.get(throttle) or interval,
                 "cost_usd": "0",

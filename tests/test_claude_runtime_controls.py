@@ -3,6 +3,8 @@
 import json
 import subprocess
 import sys
+from datetime import timedelta
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
@@ -18,7 +20,39 @@ from discovery.connectors.web import DuckDuckGoConnector, WebFetchConnector
 from discovery.errors import DiscoveryStop
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn, Evidence, ResearchOperation
 from discovery.orchestrator import finish_discovery
+from discovery.research import begin_operation, research_calls_used
 from discovery.termination import SubmissionError, has_independent_research
+
+
+@pytest.mark.django_db
+def test_local_cooldown_denial_preserves_real_research_slot():
+    discovery = Discovery.objects.create(
+        objective="quota",
+        request_hash="quota",
+        config_snapshot={"schema_version": "1.1", "max_research_calls_per_turn": 1},
+    )
+    task = DiscoveryTask.objects.create(
+        discovery=discovery,
+        role="validator",
+        turn_number=1,
+        state="working",
+        lease_token=uuid4(),
+        lease_expires_at=timezone.now() + timedelta(minutes=3),
+    )
+    DiscoveryTurn.objects.create(discovery=discovery, task=task, role="validator", number=1)
+    ResearchOperation.objects.create(
+        discovery=discovery,
+        task=task,
+        kind="research",
+        operation_key="local-denial",
+        state="completed",
+        response={"request_performed": False, "status": "rate_limited"},
+    )
+    assert research_calls_used(task) == 0
+    begin_operation(task, "real-fetch", "research", {"action": "fetch"}, Decimal("0"))
+    assert research_calls_used(task) == 1
+    with pytest.raises(DiscoveryStop, match="Maximum research calls reached"):
+        begin_operation(task, "extra-fetch", "research", {"action": "fetch"}, Decimal("0"))
 
 
 def test_explicit_recovery_keeps_original_wake_logs(tmp_path):

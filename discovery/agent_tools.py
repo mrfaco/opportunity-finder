@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from discovery.errors import DiscoveryStop
 from discovery.models import DiscoveryTask
 from discovery.orchestrator import check_lease, commit_turn, content_hash
-from discovery.research import check_limits, lease_token, perform_research
+from discovery.research import check_limits, lease_token, perform_research, research_calls_used
 from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 
 
@@ -217,8 +217,7 @@ class AgentTools:
             config = DiscoveryConfig.model_validate(self.task.discovery.config_snapshot)
             remaining = max(
                 0,
-                config.max_research_calls_per_turn
-                - self.task.operations.filter(kind="research").count(),
+                config.max_research_calls_per_turn - research_calls_used(self.task),
             )
             result = {**result, "research_calls_remaining": remaining}
             if remaining <= 2:
