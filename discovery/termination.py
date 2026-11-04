@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from discovery.models import Discovery, DiscoveryTask, ProposalRevision
+from discovery.models import (
+    Discovery,
+    DiscoveryTask,
+    JudgmentRevision,
+    ProposalRevision,
+    ValidationRevision,
+)
 from discovery.schemas import Judgment, Validation
 
 
@@ -40,15 +46,51 @@ def validate_references(discovery: Discovery, content: dict[str, Any]) -> None:
 
 def unresolved_objections(discovery: Discovery) -> dict[str, dict[str, Any]]:
     objections: dict[str, dict[str, Any]] = {}
-    reviews = list(discovery.validations.select_related("turn")) + list(
-        discovery.judgments.select_related("turn")
-    )
-    for review in sorted(reviews, key=lambda row: row.turn.number):
+    events: list[ProposalRevision | ValidationRevision | JudgmentRevision] = []
+    events.extend(discovery.proposals.select_related("turn"))
+    events.extend(discovery.validations.select_related("turn"))
+    events.extend(discovery.judgments.select_related("turn", "proposal"))
+    rejection: JudgmentRevision | None = None
+    rejected_ids: set[str] = set()
+    archived: set[str] = set()
+    previous_proposal: ProposalRevision | None = None
+    for review in sorted(events, key=lambda row: row.turn.number):
+        if isinstance(review, ProposalRevision):
+            if previous_proposal and business_fingerprint(review.content) != business_fingerprint(
+                previous_proposal.content
+            ):
+                archived.update(
+                    row["objection_id"]
+                    for row in review.content.get("objection_responses", [])
+                    if row["disposition"] in {"pivot", "abandon"}
+                    and row.get("rationale")
+                    and row.get("evidence_ids")
+                )
+            if (
+                rejection is not None
+                and business_fingerprint(review.content)
+                != business_fingerprint(rejection.proposal.content)
+                and any(
+                    row["disposition"] in {"pivot", "abandon"}
+                    for row in review.content.get("objection_responses", [])
+                )
+            ):
+                # Rejected-business objections stay in immutable history. A new
+                # business need not prove the abandoned business viable; carried
+                # copies of its stable IDs must not resurrect those obligations.
+                archived.update(rejected_ids)
+            objections = {key: value for key, value in objections.items() if key not in archived}
+            previous_proposal = review
+            continue
         for objection in review.content.get("objections", []):
-            objections[objection["id"]] = objection
+            if objection["id"] not in archived:
+                objections[objection["id"]] = objection
         for resolved_id in review.content.get("resolved_objection_ids", []):
             if resolved_id in objections:
                 objections[resolved_id] = {**objections[resolved_id], "resolved": True}
+        if isinstance(review, JudgmentRevision) and review.verdict == "reject":
+            rejection = review
+            rejected_ids = set(objections)
     return {key: value for key, value in objections.items() if not value.get("resolved")}
 
 

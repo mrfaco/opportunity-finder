@@ -29,6 +29,14 @@ The agents cannot reset turn/time/spending limits after a rejection. If no appro
 opportunity is found before a limit, the run ends with a partial report, not approval.
 Approval is a research judgment, not proof of willingness to pay.
 
+Objections are scoped to the business they challenge. A cited Finder pivot or
+abandonment archives the named prior-business objections; a new opportunity
+after Judge no-go archives that rejected business's objection set. Archival
+does not claim the old objections were resolved: immutable reviews and rejection
+history keep them intact. Repeating their stable IDs later does not resurrect
+requirements to prove an abandoned business viable. New-business objections use
+new IDs and still block approval until properly addressed.
+
 The report's main evidence section uses the final proposal, its latest
 Validator review and current Judge verdict. Repeated claims and citations are
 collapsed. Next human tests

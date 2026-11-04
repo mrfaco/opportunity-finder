@@ -195,11 +195,22 @@ def test_judge_rejection_requires_new_business_and_stable_objection_response():
     discovery.refresh_from_db()
     assert discovery.turns_completed == 4
     assert discovery.tasks.get(state="open").role == "validator"
-    assert "J-1" in unresolved_objections(discovery)
+    assert "J-1" not in unresolved_objections(discovery)
     assert discovery.judgments.get().verdict == "reject"
+    assert discovery.judgments.get().content["objections"][0]["resolved"] is False
     validator = _claim(discovery)
     review = _accept(validator)
-    review.update(verdict="challenge", resolved_objection_ids=["J-1"])
+    review.update(
+        verdict="challenge",
+        objections=[
+            objection,
+            {
+                "id": "NEW-1",
+                "severity": "critical",
+                "text": "New business economics need checking.",
+            },
+        ],
+    )
     commit_turn(validator.pk, validator.lease_token, review, enqueue=False)
     followup = _claim(discovery)
     revision = {**pivot, "parent_revision_id": str(discovery.proposals.latest("created_at").pk)}
@@ -208,6 +219,50 @@ def test_judge_rejection_requires_new_business_and_stable_objection_response():
     discovery.refresh_from_db()
     assert discovery.turns_completed == 6
     assert "J-1" not in unresolved_objections(discovery)
+    assert unresolved_objections(discovery)["NEW-1"]["severity"] == "critical"
+
+
+@pytest.mark.django_db
+def test_cited_abandonment_archives_old_business_objection_without_proving_it_resolved():
+    discovery = _start()
+    finder = _claim(discovery)
+    original = _proposal(finder)
+    commit_turn(finder.pk, finder.lease_token, original, enqueue=False)
+    validator = _claim(discovery)
+    obsolete = {"id": "OLD-1", "severity": "critical", "text": "Old buyer never paid."}
+    review = _accept(validator, objections=[obsolete])
+    review["verdict"] = "challenge"
+    commit_turn(validator.pk, validator.lease_token, review, enqueue=False)
+    finder = _claim(discovery)
+    pivot = {
+        **original,
+        "buyer": "A different buyer with observed purchases",
+        "offering": "A different paid workflow",
+        "parent_revision_id": str(discovery.proposals.latest("created_at").pk),
+        "objection_responses": [
+            {
+                "objection_id": "OLD-1",
+                "disposition": "abandon",
+                "rationale": "Abandoned the old buyer; this source supports the new one.",
+                "evidence_ids": original["demand_evidence_ids"],
+            }
+        ],
+    }
+    commit_turn(finder.pk, finder.lease_token, pivot, enqueue=False)
+    assert "OLD-1" not in unresolved_objections(discovery)
+    assert discovery.validations.first().content["objections"][0]["resolved"] is False
+    validator = _claim(discovery)
+    review = _accept(
+        validator,
+        objections=[
+            obsolete,
+            {"id": "NEW-1", "severity": "critical", "text": "New business margin is unknown."},
+        ],
+    )
+    review["verdict"] = "challenge"
+    commit_turn(validator.pk, validator.lease_token, review, enqueue=False)
+    assert "OLD-1" not in unresolved_objections(discovery)
+    assert unresolved_objections(discovery)["NEW-1"]["severity"] == "critical"
 
 
 @pytest.mark.django_db
