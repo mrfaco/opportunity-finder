@@ -162,8 +162,65 @@ def _scope() -> str:
 
 def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -> dict[str, Any]:
     inp = ResearchInput.model_validate(arguments)
+    if inp.connector != "search_auto":
+        return _perform_research(task, key, arguments)
     config = DiscoveryConfig.model_validate(task.discovery.config_snapshot)
-    if inp.connector not in config.connectors:
+    if "search_auto" not in config.connectors or inp.action != "search":
+        raise ValueError("Automatic search is not enabled or action is not search")
+    get_connector("search_auto").validate_search(inp.query, inp.filters, inp.cursor, inp.limit)
+    attempts: list[dict[str, Any]] = []
+    result: dict[str, Any] = {}
+    for backend in ("duckduckgo", "bing"):
+        backend_key = f"{key}:backend:{backend}"
+        if (
+            attempts
+            and research_calls_used(task) >= config.max_research_calls_per_turn
+            and not task.operations.filter(operation_key=backend_key).exists()
+        ):
+            result = {**result, "fallback_not_attempted": "Research quota exhausted"}
+            break
+        result = _perform_research(
+            task,
+            backend_key,
+            {**arguments, "connector": backend},
+            routed_backend=True,
+        )
+        attempts.append(
+            {
+                "connector": backend,
+                "status": result["status"],
+                "error_reason": result.get("error_reason"),
+                "request_performed": result.get(
+                    "request_performed", not result.get("cached", False)
+                ),
+                "cached": result.get("cached", False),
+                "cost_usd": result.get("cost_usd", "0"),
+            }
+        )
+        if result["status"] not in {"rate_limited", "timeout", "access_denied", "error"}:
+            break
+    return {
+        **result,
+        "schema_version": "1.1",
+        "search_attempts": attempts,
+        "requested_connector": "search_auto",
+    }
+
+
+def _perform_research(
+    task: DiscoveryTask,
+    key: str,
+    arguments: dict[str, Any],
+    *,
+    routed_backend: bool = False,
+) -> dict[str, Any]:
+    inp = ResearchInput.model_validate(arguments)
+    config = DiscoveryConfig.model_validate(task.discovery.config_snapshot)
+    if inp.connector not in config.connectors and not (
+        routed_backend
+        and "search_auto" in config.connectors
+        and inp.connector in {"duckduckgo", "bing"}
+    ):
         raise ValueError("Connector is not enabled for this discovery")
     connector = get_connector(inp.connector)
     description = connector.describe()
@@ -199,7 +256,10 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
         page.cost_is_estimate = False
     else:
         interval = max(0, int(description.minimum_interval_seconds))
-        throttle = f"discovery:throttle:{inp.connector}:{_scope()}"
+        target_scope = (
+            (urlsplit(inp.target).hostname or "").lower() if inp.action == "fetch" else ""
+        )
+        throttle = f"discovery:throttle:{inp.connector}:{target_scope}:{_scope()}"
         if interval and not cache.add(throttle, interval, timeout=interval):
             result: dict[str, Any] = {
                 "schema_version": "1.1",

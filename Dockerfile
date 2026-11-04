@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
         curl \
         ca-certificates \
+        poppler-utils \
         # WeasyPrint backends — Pango for text shaping, Cairo for the
         # actual rasterization/PDF write. Without these the python
         # wheel imports fine but raises at first render call.

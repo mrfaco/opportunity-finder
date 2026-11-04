@@ -170,6 +170,7 @@ class AgentTools:
                         "external_id",
                         "retrieved_at",
                         "published_at",
+                        "metadata",
                     )
                 }
                 | {

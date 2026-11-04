@@ -100,17 +100,41 @@ General search is explicitly configured:
 | Connector | Configuration / purpose |
 |---|---|
 | `web_search` | Tavily general search; requires `TAVILY_API_KEY` |
-| `web_fetch` | Bounded public-page retrieval; no separate API key |
-| `duckduckgo` | Optional free general web search; explicit selection, no fallback |
+| `web_fetch` | Bounded HTML/text and page-addressable PDF retrieval; Poppler required |
+| `duckduckgo` | DuckDuckGo HTML general search |
+| `bing` | Independent Bing RSS general search; no API key |
+| `search_auto` | Explicit DuckDuckGo → Bing fallback on rate limit, timeout, denial or source error |
 | `hacker_news` | Search/fetch public Hacker News material |
 | `github` | GitHub public research with `GITHUB_TOKEN` |
 | `stack_exchange` | Public Stack Exchange research; optional `STACKEXCHANGE_KEY` |
 | `local_corpus` | Read-only search of existing local cluster/item records |
 
-Use `DISCOVERY_CONNECTORS=web_search,web_fetch` for Tavily, or explicitly choose
-`duckduckgo,web_fetch` when using the free connector. Connector availability and
-required settings are shown by `/api/v1/connectors/` and the start form. Missing
-configuration is an error; a failed source is not silently substituted.
+New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
+Tavily remains available with `web_search,web_fetch` and `TAVILY_API_KEY`.
+`search_auto` makes at most one attempt at each backend; every attempt has its own
+operation key, quota accounting, evidence provenance and cooldown. The tool response
+uses schema 1.1 with `requested_connector` and `search_attempts`; existing schema-1.0
+single-backend responses remain supported. Empty successful results do not trigger
+fallback. Exhausting the quota prevents the next backend call. Local cooldown denials
+remain audited without spending a source-call slot. No challenge is bypassed.
+Connector availability and settings appear at `/api/v1/connectors/` and the start form.
+Existing stored connector selections and run histories are unchanged.
+
+`web_fetch` connector version 1.1 adds PDF extraction via Poppler (`brew install poppler`
+on macOS; `poppler-utils` is installed in Docker). PDFs are bounded to 20 MB and ten
+pages / 120 KB extracted text per call, with subprocess timeouts. Use a URL fragment
+`#page=21` or `#page=21-30` to retrieve a later page window. Each readable page is an
+independently citable evidence record with its page URL, page count, source-file SHA256,
+extraction method and next-page link. These metadata are visible to the model. The
+ResearchDocument schema remains 1.0 because page locators live in the existing metadata.
+HTML captures also expose up to 30 linked PDF URLs in metadata, so agents can open
+annexes linked by a regulator. Original public-IP checks, pinned DNS, TLS verification
+and redirect validation apply.
+Scanned pages with no text return an explicit OCR-needed outcome; corrupt, encrypted,
+oversized and timed-out files are visible errors, never successful empty evidence.
+HTML/text keeps the 200 KB bound. A source 429 gets a bounded cooldown (numeric
+Retry-After is honored), scoped to its host, so a datospublicos limit cannot block
+unrelated government/regulator sites.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct
@@ -168,7 +192,7 @@ Content-Type: application/json
     "judge_enabled": true,
     "judge_provider": "ollama",
     "judge_model": "kimi-k3:cloud",
-    "connectors": ["duckduckgo", "web_fetch"]
+    "connectors": ["search_auto", "web_fetch"]
   }
 }
 ```

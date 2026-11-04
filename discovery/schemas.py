@@ -35,7 +35,7 @@ class DiscoveryConfig(BaseModel):
     finder_model: str = DEFAULT_MODEL
     validator_model: str = DEFAULT_MODEL
     judge_model: str = "kimi-k3:cloud"
-    connectors: list[str] = Field(default_factory=lambda: ["web_search", "web_fetch"])
+    connectors: list[str] = Field(default_factory=lambda: ["search_auto", "web_fetch"])
 
     @model_validator(mode="before")
     @classmethod
@@ -86,9 +86,9 @@ class DiscoveryConfig(BaseModel):
     @field_validator("connectors")
     @classmethod
     def require_search(cls, value: list[str]) -> list[str]:
-        if not {"web_search", "duckduckgo"} & set(value):
+        if not {"web_search", "duckduckgo", "bing", "search_auto"} & set(value):
             raise ValueError(
-                "A general web search connector (web_search or duckduckgo) must be enabled"
+                "Enable general web search: web_search, duckduckgo, bing or search_auto"
             )
         if len(value) != len(set(value)):
             raise ValueError("Connector IDs must be unique")

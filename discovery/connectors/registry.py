@@ -8,6 +8,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 from discovery.connectors.base import Connector, ConnectorConfigurationError
+from discovery.connectors.search import AutoSearchConnector, BingConnector
 from discovery.connectors.sources import (
     GitHubConnector,
     HackerNewsConnector,
@@ -18,6 +19,8 @@ from discovery.connectors.web import DuckDuckGoConnector, TavilyConnector, WebFe
 
 _BUILTINS: tuple[type[Connector], ...] = (
     TavilyConnector,
+    AutoSearchConnector,
+    BingConnector,
     WebFetchConnector,
     DuckDuckGoConnector,
     HackerNewsConnector,

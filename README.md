@@ -36,7 +36,8 @@ Historical two-role discoveries retain their original configuration; new schema
 The runtime never silently changes the selected provider or model.
 
 Research connectors expose search/fetch capabilities independently of ingestion:
-Tavily general web search, bounded web page retrieval, Hacker News, GitHub,
+DuckDuckGo/Bing search with audited fallback, Tavily search, bounded HTML/PDF retrieval,
+Hacker News, GitHub,
 Stack Exchange, and stored local records. Additional connectors implement the
 same interface. See [the discovery guide](docs/discovery.md) for configuration,
 connector availability, API usage and recovery.

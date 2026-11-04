@@ -7,6 +7,7 @@ import ipaddress
 import re
 import socket
 import ssl
+import subprocess
 from decimal import Decimal
 from html.parser import HTMLParser
 from typing import Any
@@ -23,6 +24,7 @@ from discovery.connectors.base import (
     ResearchDocument,
     ResearchPage,
 )
+from discovery.connectors.pdf import PDF_MAX_BYTES, extract_pdf
 
 _USER_AGENT = "OpportunityFinder/0.2 (read-only opportunity research)"
 _MAX_BYTES = 200_000
@@ -31,13 +33,39 @@ _MAX_REDIRECTS = 5
 _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 
 
-def _status_page(status_code: int) -> ResearchPage | None:
+class _PdfLinks(HTMLParser):
+    def __init__(self, base: str) -> None:
+        super().__init__()
+        self.base = base
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a" or len(self.links) >= 30:
+            return
+        target = urljoin(self.base, dict(attrs).get("href") or "")
+        parsed = urlsplit(target)
+        if (
+            parsed.scheme in ("https", "http")
+            and parsed.path.lower().endswith(".pdf")
+            and target not in self.links
+        ):
+            self.links.append(target)
+
+
+def _status_page(status_code: int, retry_after: str | None = None) -> ResearchPage | None:
     if status_code == 404:
         return ResearchPage(status="not_found", error_reason="Source was not found")
     if status_code in (401, 403):
         return ResearchPage(status="access_denied", error_reason="Source denied access")
     if status_code == 429:
-        return ResearchPage(status="rate_limited", error_reason="Source rate limited this request")
+        cooldown = (
+            min(max(int(retry_after), 1), 3600) if retry_after and retry_after.isdigit() else 60
+        )
+        return ResearchPage(
+            status="rate_limited",
+            retry_after_seconds=cooldown,
+            error_reason="Source rate limited this request",
+        )
     return None
 
 
@@ -101,19 +129,34 @@ def fetch_public_url(url: str) -> ResearchPage:
                 if not location:
                     raise ConnectorError("Redirect did not supply a Location header")
                 current = urljoin(current, location)
+                if parsed.fragment and not urlsplit(current).fragment:
+                    current += "#" + parsed.fragment
                 continue
-            expected_error = _status_page(response.status)
+            expected_error = _status_page(response.status, response.getheader("Retry-After"))
             if expected_error:
                 return expected_error
             if not 200 <= response.status < 300:
                 raise ConnectorError(f"Web source returned HTTP {response.status}")
             content_type = (response.getheader("Content-Type") or "").lower()
-            if not any(value in content_type for value in ("text/html", "text/plain", "xhtml")):
-                raise ConnectorError("Web source is not supported HTML or plain text")
+            is_pdf = "application/pdf" in content_type or parsed.path.lower().endswith(".pdf")
+            if not is_pdf and not any(
+                value in content_type
+                for value in ("text/html", "text/plain", "xhtml", "application/octet-stream")
+            ):
+                raise ConnectorError("Web source is not supported HTML, plain text or PDF")
             encoding = (response.getheader("Content-Encoding") or "identity").lower()
             if encoding != "identity":
                 raise ConnectorError("Web source ignored the uncompressed response requirement")
-            raw = response.read(_MAX_BYTES + 1)
+            prefix = response.read(1024)
+            is_pdf = is_pdf or prefix.startswith(b"%PDF-")
+            byte_limit = PDF_MAX_BYTES if is_pdf else _MAX_BYTES
+            raw = prefix + response.read(max(0, byte_limit + 1 - len(prefix)))
+            if is_pdf:
+                if len(raw) > PDF_MAX_BYTES:
+                    raise ConnectorError("PDF exceeds the 20 MB download limit")
+                return extract_pdf(raw, current, content_type)
+            if "octet-stream" in content_type:
+                raise ConnectorError("Binary source is not a PDF")
             truncated = len(raw) > _MAX_BYTES
             charset_match = re.search(r"charset=[\"']?([\w-]+)", content_type)
             charset = charset_match[1] if charset_match else "utf-8"
@@ -121,16 +164,24 @@ def fetch_public_url(url: str) -> ResearchPage:
             title = _TITLE.search(text)
             title_text = html_to_text(title[1]) if title else current
             body = html_to_text(text) if "html" in content_type else text
+            links = _PdfLinks(current)
+            if "html" in content_type:
+                links.feed(text)
             return ResearchPage(
                 documents=[
                     ResearchDocument(
                         connector="web_fetch",
+                        connector_version="1.1",
                         external_id=current,
                         url=current,
                         title=title_text,
                         text=body,
                         kind="fetched_page",
-                        metadata={"truncated": truncated, "content_type": content_type},
+                        metadata={
+                            "truncated": truncated,
+                            "content_type": content_type,
+                            "pdf_links": links.links,
+                        },
                     )
                 ],
                 truncated=truncated,
@@ -142,28 +193,35 @@ def fetch_public_url(url: str) -> ResearchPage:
 
 class WebFetchConnector(Connector):
     id = "web_fetch"
+    version = "1.1"
 
     def describe(self) -> ConnectorDescription:
         return ConnectorDescription(
             id=self.id,
-            name="Public web pages",
+            version=self.version,
+            name="Public web pages and PDFs",
             capabilities=["fetch"],
-            access_limitations="HTML/plain text only; 200 KB; public ports 80/443; five redirects",
+            access_limitations=(
+                "HTML/text 200 KB; PDF 20 MB, 10 pages per fetch, 120k text; "
+                "use #page=N or #page=N-M for later pages; scanned PDFs require OCR; "
+                "public ports 80/443; five redirects"
+            ),
         )
 
     def fetch(self, target: str) -> ResearchPage:
         try:
             return fetch_public_url(target)
-        except TimeoutError:  # allow: suppress-exception
+        except (TimeoutError, subprocess.TimeoutExpired):  # allow: suppress-exception
             # One slow public page is a visible tool outcome. The agent can
             # choose another source rather than losing the whole dialogue.
             return ResearchPage(
                 status="timeout", error_reason="Source page timed out; try another source"
             )
+        except ConnectorError as exc:  # allow: suppress-exception — visible extraction failure
+            return ResearchPage(status="error", error_reason=str(exc))
         except (  # allow: suppress-exception — explicit source-error tool protocol
             OSError,
             http.client.HTTPException,
-            ConnectorError,
         ) as exc:  # allow: suppress-exception
             return ResearchPage(
                 status="error",
@@ -213,7 +271,7 @@ class TavilyConnector(Connector):
             },
             timeout=_TIMEOUT_SECONDS,
         )
-        expected_error = _status_page(response.status_code)
+        expected_error = _status_page(response.status_code, response.headers.get("Retry-After"))
         if expected_error:
             return expected_error
         if not response.is_success:
@@ -277,7 +335,7 @@ class DuckDuckGoConnector(Connector):
             capabilities=["search"],
             access_limitations=(
                 "Public HTML endpoint; best effort availability; challenges return rate limits; "
-                "no pagination; explicitly select instead of Tavily, never a fallback"
+                "no pagination; search_auto can try Bing on failure"
             ),
             minimum_interval_seconds=2.0,
         )
@@ -299,15 +357,20 @@ class DuckDuckGoConnector(Connector):
                 timeout=_TIMEOUT_SECONDS,
                 follow_redirects=False,
             )
-        except httpx.TimeoutException:  # allow: suppress-exception
-            return ResearchPage(status="timeout", error_reason="DuckDuckGo search timed out")
+        except httpx.RequestError as exc:  # allow: suppress-exception — visible source outcome
+            return ResearchPage(
+                status="timeout" if isinstance(exc, httpx.TimeoutException) else "error",
+                error_reason="DuckDuckGo search transport failed",
+            )
         if response.status_code == 202:
             return self._challenge()
-        expected_error = _status_page(response.status_code)
+        expected_error = _status_page(response.status_code, response.headers.get("Retry-After"))
         if expected_error:
             return expected_error
         if response.status_code != 200:
-            raise ConnectorError(f"DuckDuckGo search returned HTTP {response.status_code}")
+            return ResearchPage(
+                status="error", error_reason=f"DuckDuckGo HTTP {response.status_code}"
+            )
         parser = _DuckDuckGoParser()
         parser.feed(response.text[:1_000_000])
         if not parser.results and ("anomaly" in response.text or "challenge" in response.text):
