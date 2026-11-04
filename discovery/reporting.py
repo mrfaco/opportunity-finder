@@ -6,12 +6,14 @@ import json
 from decimal import Decimal
 from typing import Any
 
+from django.db.models import Q
+
 from discovery.models import Discovery
 from discovery.schemas import Report
 from discovery.termination import evidence_gaps, unresolved_objections
 
 OUTCOME_LABELS = {
-    "converged": "Converged on an opportunity",
+    "converged": "Agents reached agreement",
     "not_converged": "Did not converge",
     "inconclusive": "Insufficient evidence or incomplete validation",
 }
@@ -21,12 +23,44 @@ def _bullets(values: list[str]) -> str:
     return "\n".join(f"- {value}" for value in values) or "- None recorded."
 
 
+def _distinct_text(values: list[str]) -> list[str]:
+    unique: dict[str, str] = {}
+    for value in values:
+        unique.setdefault(" ".join(value.casefold().split()), value.strip())
+    return list(unique.values())
+
+
+def _current_claims(content: dict[str, Any]) -> list[dict[str, Any]]:
+    claims: dict[tuple[str, str], dict[str, Any]] = {}
+    for claim in content.get("claims", []):
+        key = (claim["kind"], " ".join(claim["text"].casefold().split()))
+        if key not in claims:
+            claims[key] = {**claim, "evidence": []}
+        claims[key]["evidence"].extend(claim.get("evidence", []))
+    for claim in claims.values():
+        claim["evidence"] = list(
+            {json.dumps(ref, sort_keys=True): ref for ref in claim["evidence"]}.values()
+        )
+    return list(claims.values())
+
+
 def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
     proposals = list(discovery.proposals.order_by("turn__number"))
     final = proposals[-1] if proposals else None
+    final_review = (
+        discovery.validations.filter(proposal=final, turn__completed_at__isnull=False)
+        .order_by("-turn__number")
+        .first()
+        if final
+        else None
+    )
     turns = list(discovery.turns.filter(completed_at__isnull=False))
     evidence = list(discovery.evidence.all())
-    unsettled = list(discovery.operations.filter(state__in=["pending", "started", "unknown"]))
+    unsettled = list(
+        discovery.operations.filter(
+            Q(state__in=["pending", "started", "unknown"]) | Q(response__cost_unknown=True)
+        )
+    )
     unknown = len(unsettled)
     estimated = sum(
         (
@@ -43,18 +77,52 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         "Customer interviews and real purchasing tests remain necessary.",
         "Research covers the enabled connectors and retrieved sources, not the entire market.",
     ]
-    if any(op.response.get("cloud_charges_unverified") for op in discovery.operations.all()):
+    config = discovery.config_snapshot
+    if (
+        config.get("finder_model")
+        and config.get("finder_model") == config.get("validator_model")
+        and config.get("finder_provider") == config.get("validator_provider")
+    ):
         limitations.append(
-            "Ollama cloud-plan charges were not verified; "
-            "zero recorded incremental API cost is not proof of free cloud usage."
+            "Finder and Validator used the same provider and model. Separate sessions do not "
+            "remove shared model blind spots; consider a different Validator model."
+        )
+    if any(
+        op.response.get("cloud_charges_unverified")
+        or (
+            op.request.get("provider") == "ollama"
+            and op.request.get("model", "").endswith(":cloud")
+        )
+        for op in discovery.operations.all()
+    ):
+        limitations.append(
+            "Ollama Cloud charges are token-based estimates at published rates, not verified "
+            "account deductions. Recorded zeroes do not establish free cloud usage."
+        )
+        limitations.append(
+            "Ollama Cloud's spending limit is checked between agent wakes. "
+            "A multi-request wake can exceed it before usage is returned; "
+            "this is not a provider-enforced billing cap."
         )
     if unknown:
         limitations.append(
-            "Local cancellation or termination does not cancel outstanding remote batches; "
-            "they may still complete and bill. Reconcile the listed operation/batch IDs."
+            "Local cancellation or termination does not establish the billing outcome of "
+            "outstanding remote work. Reconcile the listed operation/provider IDs."
         )
         limitations.append(
             f"{unknown} operation(s) have unknown billing outcomes; spend is incomplete."
+        )
+    predecessors = sorted(
+        {
+            str(turn.input_snapshot["restored_from_discovery"])
+            for turn in turns
+            if turn.input_snapshot.get("restored_from_discovery")
+        }
+    )
+    if predecessors:
+        limitations.append(
+            "Cost totals cover this discovery only. Original model work in predecessor "
+            "discoveries is not duplicated or included here: " + ", ".join(predecessors) + "."
         )
     if final:
         limitations.extend(evidence_gaps(discovery, final))
@@ -119,7 +187,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         "",
         f"Stop reason: {discovery.stop_reason} · Lifecycle: {discovery.status}",
         "",
-        "## Final opportunity"
+        "## Final assessment"
         if discovery.outcome == "converged"
         else "## Strongest remaining candidate (not validated)",
         "",
@@ -153,17 +221,27 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
     else:
         lines.extend(["No Finder proposal was completed before this run stopped.", ""])
     lines.extend(["## Evidence for and against", ""])
-    for turn in turns:
-        content = turn.submission
-        for claim in content.get("claims", []):
+    lines.extend(
+        ["Current proposal and its latest review; earlier findings remain in the history.", ""]
+    )
+    if final:
+        for claim in _current_claims(final.content):
             lines.extend([f"- **{claim['kind']}**: {claim['text']}"])
             for reference in claim.get("evidence", []):
                 lines.append(
                     f"  - {reference['relationship']}: evidence `{reference['evidence_id']}`"
                     f"; locator: {reference.get('locator') or 'whole source'}"
                 )
-        for objection in content.get("objections", []):
-            refs = ", ".join(objection.get("evidence_ids", [])) or "No source recorded"
+    if final_review:
+        objections = {
+            objection["id"]: objection
+            for objection in final_review.content.get("objections", [])
+            if not objection.get("resolved")
+        }
+        for objection in objections.values():
+            refs = (
+                ", ".join(dict.fromkeys(objection.get("evidence_ids", []))) or "No source recorded"
+            )
             lines.append(
                 f"- **Counterevidence / {objection['severity']}**: {objection['text']} ({refs})"
             )
@@ -196,15 +274,27 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             if content.get("counterproposal"):
                 lines.extend(["", f"Suggested alternative: {content['counterproposal']}", ""])
             lines.extend(["", "Next research:", "", _bullets(content.get("next_research", [])), ""])
+        if content.get("next_tests"):
+            lines.extend(
+                [
+                    "",
+                    "Human tests proposed at this turn (historical):",
+                    "",
+                    _bullets(content["next_tests"]),
+                    "",
+                ]
+            )
     lines.extend(["", "## Unresolved objections", ""])
     lines.extend([_bullets([f"{o['id']} ({o['severity']}): {o['text']}" for o in unresolved]), ""])
     lines.extend(["## Next human tests", ""])
     tests = list(final.content.get("next_tests", [])) if final else []
-    for turn in turns:
-        tests.extend(turn.submission.get("next_tests", []))
+    if final_review and final_review.content.get("next_tests"):
+        # The latest review refines the proposal's checklist. Concatenating both
+        # duplicates the same tests with slightly different wording.
+        tests = final_review.content["next_tests"]
     lines.extend(
         [
-            _bullets(list(dict.fromkeys(tests))),
+            _bullets(_distinct_text(tests)),
             "",
             "## Limitations and provenance",
             "",
@@ -236,10 +326,18 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             )
     lines.extend(["", "### Research and model call ledger", ""])
     for operation in discovery.operations.order_by("created_at"):
+        cost_label = (
+            "unsettled (charge unknown), recorded"
+            if operation.state in {"pending", "started", "unknown"}
+            or operation.response.get("cost_unknown")
+            else "estimated"
+            if operation.response.get("cost_is_estimate")
+            else "known"
+        )
         lines.append(
             f"- `{operation.pk}` — {operation.kind}/{operation.connector or 'model'}, "
             f"{operation.state}; "
-            f"{'estimated' if operation.response.get('cost_is_estimate') else 'known'} "
+            f"{cost_label} "
             f"cost USD {operation.cost_usd}; "
             f"tokens {operation.input_tokens} input / {operation.output_tokens} output / "
             f"{operation.cached_tokens} cached."

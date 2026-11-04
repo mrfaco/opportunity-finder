@@ -19,7 +19,9 @@ import httpx
 import psutil
 from django.conf import settings
 from django.db import close_old_connections
+from django.utils import timezone
 
+from discovery.accounting import estimate_ollama_usage, normalize_claude_usage, ollama_pricing
 from discovery.agent_tools import AgentTools
 from discovery.errors import DiscoveryError, DiscoveryStop, OutcomeUnknown
 from discovery.models import Discovery, DiscoveryTask, ResearchOperation
@@ -181,9 +183,16 @@ def check_configuration(config: DiscoveryConfig) -> dict[str, Any]:
             profile["accounting"] = (
                 "Local inference has no per-token API bill; cloud-plan charges unverified"
             )
+            if model.endswith(":cloud"):
+                profile["pricing"] = ollama_pricing(model)
+                profile["budget_enforcement"] = "between_wake_estimate"
+                profile["accounting"] = (
+                    "Published-rate token estimate after each multi-call wake; "
+                    "may overshoot the budget within a wake; actual account charges unverified"
+                )
         profiles[role] = profile
     return {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "runtime": "claude_code",
         "claude_bin": claude,
         "claude_version": version,
@@ -461,7 +470,10 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
         f"{task.pk}:claude:wake",
         "agent_wake",
         {"provider": profile["provider"], "model": profile["model"]},
-        model_budget if profile["provider"] == "anthropic" else Decimal("0"),
+        model_budget
+        if profile["provider"] == "anthropic"
+        or (profile["provider"] == "ollama" and profile["model"].endswith(":cloud"))
+        else Decimal("0"),
     )
     if wake.state != "planned":
         raise OutcomeUnknown(
@@ -547,6 +559,35 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
         if profile["provider"] == "anthropic"
         else Decimal("0")
     )
+    observed_usage = {}
+    cloud_estimate = {}
+    if profile["provider"] == "ollama" and profile["model"].endswith(":cloud"):
+        try:
+            observed_usage = normalize_claude_usage(usage)
+        except ValueError as exc:
+            wake.response = {
+                "schema_version": "1.1",
+                "result": summary,
+                "raw_usage": usage,
+                "cloud_charges_unverified": True,
+                "cost_unknown": True,
+                "accounting_note": str(exc),
+            }
+            wake.save(update_fields=["response"])
+            raise OutcomeUnknown("Ollama Cloud token accounting is incomplete") from exc
+        cloud_estimate = estimate_ollama_usage(
+            profile.get("pricing") or ollama_pricing(profile["model"]),
+            observed_usage,
+            wake.created_at,
+            timezone.now(),
+        )
+    else:
+        observed_usage = {
+            "prompt_tokens": usage.get("input_tokens", 0)
+            + usage.get("cache_creation_input_tokens", 0),
+            "completion_tokens": usage.get("output_tokens", 0),
+            "prompt_tokens_details": {"cached_tokens": usage.get("cache_read_input_tokens", 0)},
+        }
     complete_operation(
         task,
         wake,
@@ -555,15 +596,13 @@ def run_turn(task: DiscoveryTask, inputs: dict[str, Any], tools: list[dict[str, 
             "result": summary,
             "cost_usd": str(cost),
             "cost_is_estimate": profile["provider"] != "openrouter",
-            "usage": {
-                "prompt_tokens": usage.get("input_tokens", 0),
-                "completion_tokens": usage.get("output_tokens", 0),
-                "prompt_tokens_details": {"cached_tokens": usage.get("cache_read_input_tokens", 0)},
-            },
+            "usage": observed_usage,
             "accounting_note": profile.get("accounting", "Per-request gateway ledger"),
             "cloud_charges_unverified": profile["provider"] == "ollama"
             and profile["model"].endswith(":cloud"),
+            **cloud_estimate,
         },
+        enforce_limit=not bool(cloud_estimate),
     )
     submission = task.context.get("claude_submission")
     if submission is None:

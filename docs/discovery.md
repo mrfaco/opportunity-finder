@@ -16,6 +16,12 @@ limits. The loop can stop early when Validator accepts Finder's exact immutable
 proposal revision and evidence checks pass. Validator's suggested niche is not
 agreement until Finder adopts it and Validator reviews the new revision.
 
+The report's main evidence section uses the final proposal and its latest
+Validator review. Repeated claims and citations are collapsed. Next human tests
+use the latest review of the exact proposal when it supplies a checklist,
+otherwise the final proposal. Tests from abandoned directions remain under their
+original turns in the history.
+
 Completion distinguishes convergence, continued disagreement and insufficient
 evidence. Failed or cancelled discoveries preserve partial findings. A report
 states the actual stop reason and remaining objections. Agreement is research
@@ -34,6 +40,11 @@ Finder and Validator:
 | OpenRouter | `deepseek/deepseek-v4.1-flash` | `OPENROUTER_API_KEY` |
 | Anthropic | `sonnet` or a native Claude model ID | Host Claude Code login or `ANTHROPIC_API_KEY` |
 | Ollama | An exact installed/cloud Ollama model tag | `ollama` executable and configured Ollama service |
+
+Prefer a different model family for Validator to reduce shared blind spots.
+Providers and models can be selected independently. Separate sessions of the same
+model do not supply model diversity; reports flag identical selections. Existing
+run snapshots retain the original choices.
 
 All three choices use Claude Code; this is not three different reasoning loops.
 The default for new discoveries is OpenRouter with interactive DeepSeek V4.1
@@ -288,6 +299,36 @@ otherwise. Native Anthropic uses Claude Code's spending cap and reported usage;
 that cap is checked at client turn boundaries and is not a strict prepaid wallet.
 Subscription valuations and Ollama cloud-plan charges are not verified invoices.
 Unsettled operations remain visible rather than being assumed free.
+
+Ollama Cloud usage is estimated from observed input, cached-input and output
+tokens using published model rates, recorded with their source and verification
+date. Claude Code's own dollar valuation is not an Ollama bill. Its reported
+cached tokens are a separate category, not subtracted from uncached input twice.
+Actual account credit deductions still require reconciliation with Ollama.
+
+Ollama's dollar limit is checked between agent wakes. A wake can contain several
+model requests and exceed the remaining estimate before usage is returned.
+It is a soft application limit, not a provider-enforced billing cap.
+
+Reconcile historical completed wakes without making model calls:
+
+```sh
+.venv/bin/python manage.py reconcile_discovery_costs --discovery DISCOVERY_ID
+.venv/bin/python manage.py reconcile_discovery_costs --discovery DISCOVERY_ID --apply
+```
+
+The default is a dry run. Apply is idempotent and limited to terminal runs;
+repeat `--discovery` to reconcile predecessors as well. Each run keeps its own
+charges, so continuation totals must include their original runs. Unsettled
+wakes remain explicitly incomplete. The command preserves Claude's original
+valuation and records the published pricing source/date alongside the estimate.
+New runtime snapshots use version 1.2 and cloud wake accounting uses version 1.1;
+historical model/provider snapshots stay intact while their operation responses
+gain the dated reconciliation basis. Refresh a persisted report with
+`discovery.orchestrator.regenerate_report` after applying reconciliation.
+
+Cloud models need a checked rate entry in `discovery/accounting.py`; unknown
+tags are rejected during preflight until their published rates are registered.
 
 Repeat the real-harness, provider-free demonstration with:
 

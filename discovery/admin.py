@@ -43,7 +43,11 @@ class DiscoveryStartForm(forms.Form):
     )
     max_turns = forms.IntegerField(initial=100, min_value=2, max_value=200)
     max_cost_usd = forms.DecimalField(
-        initial="10.00", min_value=Decimal("0.0001"), decimal_places=4
+        initial="10.00",
+        min_value=Decimal("0.0001"),
+        decimal_places=4,
+        help_text="Ollama Cloud uses estimated spend checked between agent wakes. "
+        "A wake can exceed this amount; this is not a provider billing cap.",
     )
     max_duration_s = forms.IntegerField(initial=1800, min_value=1)
     max_model_calls_per_turn = forms.IntegerField(initial=8, min_value=1, max_value=50)
@@ -70,7 +74,12 @@ class DiscoveryStartForm(forms.Form):
         ],
         initial="openrouter",
     )
-    validator_model = forms.CharField(initial=DEFAULT_MODEL, max_length=160)
+    validator_model = forms.CharField(
+        initial=DEFAULT_MODEL,
+        max_length=160,
+        help_text="Prefer a different model family from Finder. Independent sessions of "
+        "the same model can share blind spots. Select the provider separately above.",
+    )
     connectors = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple)
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
 
