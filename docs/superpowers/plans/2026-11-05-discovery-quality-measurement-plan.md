@@ -225,8 +225,9 @@ Done: a dated baseline exists that Phases 1–3 can be compared against.
   records which proposal and judgment were current. Confirm this is the
   granularity reviewers want; an alternative is one verdict per proposal
   revision, which is heavier and rarely needed.
-- API-key callers may record verdicts (`recorded_by` null, `recorded_via`
-  `api`). Confirm that is acceptable or restrict verdicts to admin users.
+- API-key callers may record verdicts; the key's owner is recorded as
+  `recorded_by` with `recorded_via` `api`. Confirm that is acceptable or
+  restrict verdicts to admin users.
 - Twelve objectives is the first set size. Confirm the regions and
   languages to prioritize (the roadmap's open decision on Argentina-first
   applies here too).

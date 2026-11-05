@@ -244,7 +244,8 @@ class DiscoveryVerdictView(APIView):
         except SchemaValidationError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
         try:
-            row = record_verdict(discovery, data.verdict, data.notes, user=None, via="api")
+            # API keys belong to a user (ApiKeyAuthentication returns key.user).
+            row = record_verdict(discovery, data.verdict, data.notes, user=request.user, via="api")
         except VerdictNotAllowed as exc:  # allow: suppress-exception
             # A non-terminal discovery is an expected transport-level 409.
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)

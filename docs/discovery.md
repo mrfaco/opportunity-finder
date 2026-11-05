@@ -221,7 +221,7 @@ Other endpoints:
 | `GET /api/v1/discoveries/<id>/evidence/` | Paginated captured evidence |
 | `GET /api/v1/discoveries/<id>/report/` | Markdown attachment; 409 until ready |
 | `POST /api/v1/discoveries/<id>/cancel/` | Idempotent cancellation |
-| `POST /api/v1/discoveries/<id>/verdict/` | Record a human verdict `{"schema_version": "1.0", "verdict": "good", "notes": "..."}`; 201 with the record, 409 unless terminal, 400 on contract errors. `recorded_by` is null for API-key callers |
+| `POST /api/v1/discoveries/<id>/verdict/` | Record a human verdict `{"schema_version": "1.0", "verdict": "good", "notes": "..."}`; 201 with the record, 409 unless terminal, 400 on contract errors. `recorded_by` is the API key's owner |
 | `GET /api/v1/connectors/` | Capability and safe configuration status |
 
 Paginated responses contain `count`, `limit`, `offset`, `next_offset` and

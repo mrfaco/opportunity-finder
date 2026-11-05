@@ -104,6 +104,20 @@ def test_verdict_captures_final_proposal_and_its_current_judgment():
 
 
 @pytest.mark.django_db
+def test_discovery_with_verdicts_can_still_be_deleted():
+    # Regression: PROTECT on proposal/judgment made the discovery cascade fail.
+    discovery = _discovery("completed")
+    final = ProposalRevision.objects.create(
+        discovery=discovery, turn=_turn(discovery, 1, "finder"), content=CONTENT, content_hash="1"
+    )
+    row = record_verdict(discovery, "weak", "", user=None, via="api")
+    assert row.proposal_id == final.pk
+    discovery.delete()
+    assert not DiscoveryVerdict.objects.filter(pk=row.pk).exists()
+    assert not ProposalRevision.objects.filter(pk=final.pk).exists()
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("status", ["queued", "running"])
 def test_non_terminal_discoveries_refuse_verdicts(client, admin_user, api_headers, status):
     discovery = _discovery(status)
@@ -154,7 +168,7 @@ def test_two_verdicts_keep_history_and_api_reports_latest(client, admin_user, ap
     assert response.status_code == 201
     body = response.json()
     assert body["verdict"] == "weak" and body["recorded_via"] == "api"
-    assert body["recorded_by"] is None
+    assert body["recorded_by"] == "apiuser"
     client.force_login(admin_user)
     response = client.post(
         reverse("admin:discovery-verdict", args=[discovery.pk]),

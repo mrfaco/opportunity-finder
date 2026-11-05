@@ -230,11 +230,14 @@ class DiscoveryVerdict(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     schema_version = models.CharField(max_length=16, default="1.0")
     discovery = models.ForeignKey(Discovery, on_delete=models.CASCADE, related_name="verdicts")
+    # A verdict is part of its discovery's record. Proposals and judgments are
+    # only ever deleted with their discovery, and PROTECT here would make that
+    # cascade fail once a verdict exists.
     proposal = models.ForeignKey(
-        ProposalRevision, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+        ProposalRevision, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
     )
     judgment = models.ForeignKey(
-        JudgmentRevision, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+        JudgmentRevision, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
     )
     verdict = models.CharField(max_length=16, choices=[(v, v) for v in VERDICTS])
     notes = models.TextField(blank=True)

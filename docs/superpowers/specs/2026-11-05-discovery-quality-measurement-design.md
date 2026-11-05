@@ -57,7 +57,7 @@ New append-only model `DiscoveryVerdict`:
 | `judgment` | FK `JudgmentRevision`, nullable | The current Judge verdict at the time, if any |
 | `verdict` | char | `good`, `weak`, `wrong`, `untested` |
 | `notes` | text | Free text; may be empty except for `wrong` |
-| `recorded_by` | FK `AUTH_USER_MODEL`, nullable (`SET_NULL`) | Null for API-key callers |
+| `recorded_by` | FK `AUTH_USER_MODEL`, nullable (`SET_NULL`) | The admin user or the API key's owner; null only after that user is deleted |
 | `recorded_via` | char | `admin` or `api` |
 | `recorded_at` | datetime | |
 
@@ -304,8 +304,12 @@ so for that row.
   revision pattern; nothing is updated in place.
 - Report `1.1 → 1.2` and API detail `1.1 → 1.2` are additive. Stored
   `report_json` is regenerated on demand, not migrated.
-- `DiscoveryVerdict.recorded_by` is nullable so API-key callers can record a
-  verdict; `recorded_via` keeps the provenance visible.
+- `DiscoveryVerdict.recorded_by` records the admin user or the API key's
+  owner (`ApiKeyAuthentication` resolves a key to its user); it is nullable
+  only so a deleted user does not take verdicts with it. `recorded_via` keeps
+  the channel visible. `proposal` and `judgment` cascade with their rows:
+  they are only deleted together with the discovery, and a protecting FK
+  would make that cascade fail once a verdict exists.
 - The metrics module is deterministic and versioned so a number from a
   November run can be compared with a December run only when the schema
   matches; the quality run row records the schema it used.
