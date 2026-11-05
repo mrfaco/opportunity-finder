@@ -10,7 +10,7 @@ Three sources of truth, all persisted and none needing a model call:
    recorded on a terminal discovery from the admin review page or
    `POST /api/v1/discoveries/<id>/verdict/`. Append-only; the newest is current.
 2. **Quality metrics.** `discovery/quality.py` computes `QualityMetrics`
-   (schema 1.0) from stored proposals, reviews, evidence and research
+   (schema 1.1) from stored proposals, reviews, evidence and research
    operations. A metric that cannot be computed is `None` with a reason in
    `notes`, never zero. Metrics observe; acceptance gates enforce.
 3. **Quality runs.** `score_discoveries` persists an append-only
@@ -70,6 +70,64 @@ When every benchmark discovery is terminal:
   changed. Say so in that row's notes.
 - Query novelty is a crude token Jaccard with no stop-word list in 1.0; read
   it as a signal, not a threshold.
+- Research budget counting groups a `search_auto` fallback pair into one
+  slot at read time, so turns recorded before roadmap Phase 1 are recounted
+  under the new rule when inspected; that can only lower their count.
+
+### Metrics 1.1 without a 1.0 counterpart
+
+Roadmap Phase 1 (evidence substance) bumped the metrics schema to 1.1. These
+metrics have no 1.0 counterpart, so a comparison against a 1.0 run shows them
+without an earlier mean (`score_discoveries --compare-to` lists them under
+the schema warning):
+
+- `cited_source_type_counts` — cited rows per `source_type`.
+- `demand_independent_source_share` — demand citations of an independent type
+  (forum, review, job post, tender, regulator, statistics, news, marketplace
+  listing) ÷ demand citations.
+- `competitor_offer_source_share` — competitor citations of an offer-level type
+  (vendor, marketplace listing, job post, tender, review) ÷ competitor
+  citations.
+- `stale_cited_share` — cited rows older than 24 months at retrieval ÷ cited
+  rows with a known date; unknown when none is dated.
+- `business_model_kind` — from the final proposal; `unspecified` for proposals
+  stored under contract 1.0.
+- `benchmark_focus_match` — whether that kind is in the benchmark objective's
+  `business_model_focus`; not applicable off-benchmark.
+- `evidence_policy`, `min_validator_query_novelty` — from the frozen config.
+  The command warns when one quality run mixes evidence policies.
+
+Source types are assigned at capture time by the rules in
+`discovery/source_type_rules.json`. Discoveries captured before Phase 1 read
+as `unclassified` until `manage.py classify_evidence --apply` is run, which
+makes their 1.1 shares meaningful; run it before scoring a pre-Phase-1 tag.
+
+### Evidence-policy comparison (roadmap Phase 1, step 7)
+
+Paid and human-authorized. The defaults stay `evidence_policy="origins"` and
+`min_validator_query_novelty=0.0` until this comparison justifies a change.
+
+1. Confirm the baseline row for the current objective set exists below.
+2. Run the benchmark under the typed policy (dry run first, then with spend
+   authorization):
+
+   ```sh
+   python manage.py run_discovery_benchmark --tag phase1-typed-<yyyy-mm> \
+       --config-json '{"evidence_policy": "typed", "min_validator_query_novelty": 0.4}'
+   python manage.py run_discovery_benchmark --tag phase1-typed-<yyyy-mm> \
+       --authorize-spend --max-total-usd 120 \
+       --config-json '{"evidence_policy": "typed", "min_validator_query_novelty": 0.4}'
+   ```
+
+3. Record human verdicts on all twelve, then score against the baseline:
+   `score_discoveries --tag phase1-typed-<yyyy-mm> --compare-to <baseline run id>`.
+4. Add a row with the deltas on `demand_independent_source_share`,
+   `competitor_offer_source_share`, `validator_query_novelty_min`, the outcome
+   distribution, cost per approved proposal and the verdict split.
+5. Decide: flip both defaults, flip one, adjust the threshold (0.4 is a
+   starting proposal; the baseline's novelty distribution may move it) and
+   re-run, or keep `origins`. A flip is its own commit citing both quality-run
+   IDs.
 
 ## Results
 

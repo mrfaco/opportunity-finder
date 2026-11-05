@@ -11,12 +11,14 @@ from typing import Any
 
 from django.db.models import Q
 
+from discovery.eval.benchmark import load_benchmark
 from discovery.independence import novelty as query_novelty
 from discovery.models import Discovery, Evidence, ProposalRevision, ResearchOperation
-from discovery.schemas import QualityMetrics
-from discovery.termination import business_fingerprint
+from discovery.schemas import QualityMetrics, evidence_settings
+from discovery.source_types import INDEPENDENT_DEMAND_TYPES, OFFER_TYPES
+from discovery.termination import business_fingerprint, proposal_kind
 
-METRICS_SCHEMA_VERSION = "1.0"
+METRICS_SCHEMA_VERSION = "1.1"
 # Evidence older than this at retrieval is reported as stale; it never blocks.
 STALE_EVIDENCE_MONTHS = 24
 _DAYS_PER_MONTH = 365.25 / 12
@@ -29,6 +31,11 @@ QUANTITATIVE_METRICS = (
     "claims_with_evidence_rate",
     "published_at_known_share",
     "median_evidence_age_days",
+    "demand_independent_source_share",
+    "competitor_offer_source_share",
+    "stale_cited_share",
+    "benchmark_focus_match",
+    "min_validator_query_novelty",
     "validator_query_novelty_min",
     "accepting_turn_query_novelty",
     "validator_new_origin_share",
@@ -46,7 +53,13 @@ QUANTITATIVE_METRICS = (
     "judge_approved",
     "same_model_family",
 )
-CATEGORICAL_METRICS = ("outcome", "stop_reason", "human_verdict")
+CATEGORICAL_METRICS = (
+    "outcome",
+    "stop_reason",
+    "human_verdict",
+    "business_model_kind",
+    "evidence_policy",
+)
 
 
 def evidence_age_months(evidence: Evidence) -> float | None:
@@ -102,6 +115,10 @@ def _evidence_metrics(
         "claims_with_evidence_rate": None,
         "published_at_known_share": None,
         "median_evidence_age_days": None,
+        "cited_source_type_counts": None,
+        "demand_independent_source_share": None,
+        "competitor_offer_source_share": None,
+        "stale_cited_share": None,
     }
     if final is None:
         notes.append("No Finder proposal was completed; evidence metrics are not computable.")
@@ -117,6 +134,7 @@ def _evidence_metrics(
         )
     cited = [by_id[ref] for ref in sorted(refs & by_id.keys())]
     metrics = dict(empty, cited_evidence_count=len(cited))
+    metrics.update(_typed_shares(content, by_id, notes))
     claims = content.get("claims", [])
     facts = [claim for claim in claims if claim.get("kind") == "fact"]
     metrics["claims_with_evidence_rate"] = _share(
@@ -149,9 +167,16 @@ def _evidence_metrics(
         if _origin(row):
             origins.add(_origin(row))
     connectors: dict[str, int] = {}
+    source_types: dict[str, int] = {}
     for row in cited:
         connectors[row.connector] = connectors.get(row.connector, 0) + 1
+        source_types[row.source_type] = source_types.get(row.source_type, 0) + 1
     dated = [row for row in cited if row.published_at is not None]
+    ages = [age for row in cited if (age := evidence_age_months(row)) is not None]
+    metrics.update(
+        cited_source_type_counts=dict(sorted(source_types.items())),
+        stale_cited_share=_share(sum(1 for age in ages if age > STALE_EVIDENCE_MONTHS), len(ages)),
+    )
     metrics.update(
         cited_origin_count=len(origins),
         cited_connector_counts=dict(sorted(connectors.items())),
@@ -168,9 +193,72 @@ def _evidence_metrics(
         )
     else:
         notes.append(
-            "No cited evidence has a known publication date; median_evidence_age_days is unknown."
+            "No cited evidence has a known publication date; median_evidence_age_days and "
+            "stale_cited_share are unknown."
         )
     return metrics
+
+
+def _typed_shares(
+    content: dict[str, Any], by_id: dict[str, Evidence], notes: list[str]
+) -> dict[str, float | None]:
+    """Shares of demand/competitor citations whose type satisfies the typed policy."""
+    demand = [
+        by_id[ref] for ref in dict.fromkeys(content.get("demand_evidence_ids", [])) if ref in by_id
+    ]
+    competitors = [
+        by_id[ref]
+        for ref in dict.fromkeys(content.get("competitor_evidence_ids", []))
+        if ref in by_id
+    ]
+    if not demand:
+        notes.append(
+            "The final proposal cites no demand evidence; demand_independent_source_share "
+            "is unknown."
+        )
+    if not competitors:
+        notes.append(
+            "The final proposal cites no competitor evidence; competitor_offer_source_share is "
+            "unknown."
+        )
+    return {
+        "demand_independent_source_share": _share(
+            sum(1 for row in demand if row.source_type in INDEPENDENT_DEMAND_TYPES), len(demand)
+        ),
+        "competitor_offer_source_share": _share(
+            sum(1 for row in competitors if row.source_type in OFFER_TYPES), len(competitors)
+        ),
+    }
+
+
+def _kind_metrics(
+    discovery: Discovery, final: ProposalRevision | None, notes: list[str]
+) -> dict[str, Any]:
+    kind = proposal_kind(final.content) if final else None
+    if final is None:
+        notes.append("No Finder proposal was completed; business_model_kind is unknown.")
+    match: bool | None = None
+    if not discovery.benchmark_objective_id:
+        notes.append("Not a benchmark discovery; benchmark_focus_match is not applicable.")
+    else:
+        objective = next(
+            (
+                item
+                for item in load_benchmark().objectives
+                if item.id == discovery.benchmark_objective_id
+            ),
+            None,
+        )
+        if objective is None:
+            notes.append(
+                f"Benchmark objective {discovery.benchmark_objective_id} is not in the current "
+                "benchmark set; benchmark_focus_match is unknown."
+            )
+        elif kind is None:
+            notes.append("No final proposal; benchmark_focus_match is unknown.")
+        else:
+            match = kind in objective.business_model_focus
+    return {"business_model_kind": kind, "benchmark_focus_match": match}
 
 
 def _search_ops(discovery: Discovery, role: str) -> list[ResearchOperation]:
@@ -247,6 +335,7 @@ def compute_quality(discovery: Discovery) -> QualityMetrics:
         else None
     )
     config = discovery.config_snapshot
+    policy = evidence_settings(config)
     judge_required = bool(config.get("judge_enabled", False))
     first_accept = discovery.validations.filter(verdict="accept").order_by("turn__number").first()
     if first_accept is None:
@@ -264,6 +353,9 @@ def compute_quality(discovery: Discovery) -> QualityMetrics:
         discovery_id=str(discovery.pk),
         **_evidence_metrics(discovery, final, notes),
         **_independence_metrics(discovery, notes),
+        **_kind_metrics(discovery, final, notes),
+        evidence_policy=policy.evidence_policy,
+        min_validator_query_novelty=policy.min_validator_query_novelty,
         turns_completed=discovery.turns_completed,
         proposal_count=len(proposals),
         pivot_count=sum(

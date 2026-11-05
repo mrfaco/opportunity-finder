@@ -263,6 +263,37 @@ def evidenced_discovery(**fields: Any) -> tuple[Discovery, dict[str, Evidence]]:
     return row, {"e1": e1, "e2": e2, "e3": e3, "e4": e4, "e5": e5}
 
 
+def typed_discovery(policy: str = "typed", **fields: Any) -> tuple[Discovery, dict[str, Evidence]]:
+    """A services proposal citing typed, dated evidence under a 1.3 config.
+
+    Demand: forum (dated 900 days) and vendor; competitors: vendor and news
+    (dated 30 days); vendor is cited twice. Hand-computed metrics are asserted
+    in tests/test_discovery_quality.py.
+    """
+    config = {**CONFIG, "schema_version": "1.3", "evidence_policy": policy}
+    if policy == "typed":
+        config["min_validator_query_novelty"] = 0.4
+    row = discovery(turns_completed=2, config_snapshot=config, **fields)
+    finder = turn(row, 1, "finder")
+    sources = {
+        "forum": evidence(finder, "reddit.com", source_type="forum", age_days=900),
+        "vendor": evidence(
+            finder, "acme.com", url="https://acme.com/pricing", source_type="vendor"
+        ),
+        "news": evidence(finder, "reuters.com", source_type="news", age_days=30),
+    }
+    final = proposal(
+        finder,
+        {
+            "business_model_kind": "services",
+            "demand_evidence_ids": [str(sources["forum"].pk), str(sources["vendor"].pk)],
+            "competitor_evidence_ids": [str(sources["vendor"].pk), str(sources["news"].pk)],
+        },
+    )
+    validation(turn(row, 2, "validator"), final, "accept")
+    return row, sources
+
+
 def pdf_bytes(pages: list[str], info: dict[str, str] | None = None) -> bytes:
     """A minimal text PDF; ``info`` entries become the document Info dictionary."""
     objects = [

@@ -40,7 +40,7 @@ def test_scores_terminal_discoveries_and_names_skipped_ones():
     output, _ = _score("--tag", "t1")
     run = DiscoveryQualityRun.objects.get()
     assert run.tag == "t1" and run.schema_version == "1.0"
-    assert run.metrics_schema_version == "1.0"
+    assert run.metrics_schema_version == "1.1"
     assert set(run.discovery_ids) == {str(evidenced.pk), str(bare.pk)}
     assert len(run.per_discovery) == 2
     assert run.config_snapshots_distinct == 1
@@ -92,7 +92,7 @@ def test_compare_flags_metrics_schema_and_config_differences():
     DiscoveryQualityRun.objects.filter(pk=first.pk).update(metrics_schema_version="0.9")
     fx.discovery(benchmark_tag="t3", config_snapshot={**fx.CONFIG, "max_turns": 20})
     output, _ = _score("--tag", "t3", "--compare-to", str(first.pk))
-    assert "WARNING: metrics schema changed (0.9 → 1.0)" in output
+    assert "WARNING: metrics schema changed (0.9 → 1.1)" in output
     assert "WARNING: discovery configurations differ" in output
 
 
@@ -122,3 +122,29 @@ def test_selection_errors_write_nothing():
     with pytest.raises(CommandError, match="No terminal discoveries"):
         _score("--tag", "t1", "--since", "2999-01-01")
     assert not DiscoveryQualityRun.objects.exists()
+
+
+def test_compare_lists_one_point_one_metrics_and_flags_mixed_policies():
+    fx.typed_discovery("origins", benchmark_tag="p0")
+    _score("--tag", "p0")
+    earlier = DiscoveryQualityRun.objects.get()
+    # A stored 1.0 run lacks the 1.1 metrics entirely.
+    aggregate = {
+        name: value
+        for name, value in earlier.aggregate.items()
+        if name not in {"demand_independent_source_share", "stale_cited_share"}
+    }
+    DiscoveryQualityRun.objects.filter(pk=earlier.pk).update(
+        metrics_schema_version="1.0", aggregate=aggregate
+    )
+    fx.typed_discovery("typed", benchmark_tag="p1")
+    fx.typed_discovery("origins", benchmark_tag="p1")
+    output, _ = _score("--tag", "p1", "--compare-to", str(earlier.pk))
+    assert "WARNING: metrics schema changed (1.0 → 1.1)" in output
+    assert (
+        "Metrics without an earlier counterpart: demand_independent_source_share, "
+        "stale_cited_share." in output
+    )
+    assert "WARNING: scored discoveries ran under different evidence policies." in output
+    assert "- evidence_policy: origins: 1, typed: 1; none: 0" in output
+    assert "| demand_independent_source_share | — | 0.5 | — |" in output

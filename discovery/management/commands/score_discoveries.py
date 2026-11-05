@@ -127,6 +127,9 @@ class Command(BaseCommand):
             stats = run.aggregate[name]
             counts = ", ".join(f"{key}: {value}" for key, value in stats["distribution"].items())
             write(f"- {name}: {counts or '—'}; none: {stats['none_count']}")
+        if len(run.aggregate["evidence_policy"]["distribution"]) > 1:
+            write("")
+            write("WARNING: scored discoveries ran under different evidence policies.")
         if skipped_lines:
             write("")
             for line in skipped_lines:
@@ -141,6 +144,9 @@ class Command(BaseCommand):
                 f"WARNING: metrics schema changed ({earlier.metrics_schema_version} → "
                 f"{run.metrics_schema_version}); changed metrics are not comparable."
             )
+            added = [name for name in QUANTITATIVE_METRICS if name not in earlier.aggregate]
+            if added:
+                write(f"Metrics without an earlier counterpart: {', '.join(added)}.")
         if earlier.prompt_hashes != run.prompt_hashes:
             write(
                 "WARNING: prompt hashes differ between the runs; deltas compare different prompts."

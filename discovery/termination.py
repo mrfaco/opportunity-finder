@@ -14,7 +14,7 @@ from discovery.models import (
     ProposalRevision,
     ValidationRevision,
 )
-from discovery.schemas import DiscoveryConfig, Judgment, Validation
+from discovery.schemas import Judgment, Validation, evidence_settings
 from discovery.source_types import INDEPENDENT_DEMAND_TYPES, OFFER_TYPES, SourceType
 
 # Kinds whose competition is an actual supplier, offer or price, not commentary.
@@ -243,7 +243,7 @@ def _search_novelties(task: DiscoveryTask) -> list[float]:
 
 
 def _novelty_threshold(discovery: Discovery) -> float:
-    return DiscoveryConfig.model_validate(discovery.config_snapshot).min_validator_query_novelty
+    return evidence_settings(discovery.config_snapshot).min_validator_query_novelty
 
 
 def independence_shortfall(task: DiscoveryTask) -> str:
@@ -338,7 +338,7 @@ def _gap_details(
     evidence = list(discovery.evidence.filter(pk__in=demand | competitors))
     typed = (
         _typed_gaps(content, evidence)
-        if DiscoveryConfig.model_validate(discovery.config_snapshot).evidence_policy == "typed"
+        if evidence_settings(discovery.config_snapshot).evidence_policy == "typed"
         else []
     )
     usable = [e for e in evidence if e.kind != "search_snippet"]

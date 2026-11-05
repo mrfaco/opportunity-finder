@@ -15,7 +15,7 @@ from discovery.quality import (
     compute_quality,
     evidence_age_months,
 )
-from discovery.schemas import DiscoveryConfig, QualityMetrics, Report
+from discovery.schemas import QualityMetrics, Report, evidence_settings
 from discovery.termination import evidence_gaps, proposal_kind, unresolved_objections
 
 OUTCOME_LABELS = {
@@ -79,6 +79,9 @@ def _evidence_quality(quality: QualityMetrics, verdict: DiscoveryVerdict | None)
     connectors = ", ".join(
         f"{name} {count}" for name, count in (quality.cited_connector_counts or {}).items()
     )
+    source_types = ", ".join(
+        f"{name} {count}" for name, count in (quality.cited_source_type_counts or {}).items()
+    )
     age = (
         f"; median age when known: {quality.median_evidence_age_days:.0f} days"
         if quality.median_evidence_age_days is not None
@@ -98,7 +101,14 @@ def _evidence_quality(quality: QualityMetrics, verdict: DiscoveryVerdict | None)
         f"{_measure(quality.fact_claims_with_quote_rate, percent=True)}; claims citing any "
         f"evidence: {_measure(quality.claims_with_evidence_rate, percent=True)}.",
         f"- Cited sources with a known publication date: "
-        f"{_measure(quality.published_at_known_share, percent=True)}{age}.",
+        f"{_measure(quality.published_at_known_share, percent=True)}{age}; older than "
+        f"{STALE_EVIDENCE_MONTHS} months at retrieval: "
+        f"{_measure(quality.stale_cited_share, percent=True)} of dated sources.",
+        f"- Cited source types: {source_types or 'unknown'}.",
+        f"- Demand citations from an independent source type: "
+        f"{_measure(quality.demand_independent_source_share, percent=True)}; competitor "
+        f"citations at offer level: {_measure(quality.competitor_offer_source_share, percent=True)}"
+        f" (evidence policy {quality.evidence_policy}).",
         f"- Validator query novelty against earlier Finder queries (1 = no shared terms): "
         f"lowest {_measure(quality.validator_query_novelty_min)}, accepting turn "
         f"{_measure(quality.accepting_turn_query_novelty)}.",
@@ -175,7 +185,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         "Research covers the enabled connectors and retrieved sources, not the entire market.",
     ]
     config = discovery.config_snapshot
-    run_config = DiscoveryConfig.model_validate(config)
+    run_config = evidence_settings(config)
     if judge_required and not judge_approved:
         limitations.append(
             "The latest candidate has not received Judge approval. "

@@ -8,7 +8,7 @@ import pytest
 
 from discovery.independence import novelty as _novelty
 from discovery.independence import query_tokens as _query_tokens
-from discovery.models import Discovery
+from discovery.models import Discovery, Evidence
 from discovery.quality import compute_quality
 from discovery.schemas import QualityMetrics
 from discovery.verdicts import record_verdict
@@ -32,7 +32,7 @@ def test_every_metric_on_an_evidenced_discovery():
     row, _ = fx.evidenced_discovery()
     record_verdict(row, "weak", "Thin demand", user=None, via="api")
     metrics = compute_quality(row)
-    assert metrics.schema_version == "1.0"
+    assert metrics.schema_version == "1.1"
     assert metrics.discovery_id == str(row.pk)
     assert metrics.cited_evidence_count == 4
     # d.example is an exact content copy of a.example and is not a second origin.
@@ -68,7 +68,15 @@ def test_every_metric_on_an_evidenced_discovery():
         "judge": "judge-hash",
         "validator": "validator-hash",
     }
-    assert metrics.notes == []
+    # 1.1: the fixture predates source typing and the proposal kind.
+    assert metrics.cited_source_type_counts == {"unclassified": 4}
+    assert metrics.demand_independent_source_share == 0.0
+    assert metrics.competitor_offer_source_share == 0.0
+    assert metrics.stale_cited_share == 0.0
+    assert metrics.business_model_kind == "unspecified"
+    assert metrics.benchmark_focus_match is None
+    assert (metrics.evidence_policy, metrics.min_validator_query_novelty) == ("origins", 0.0)
+    assert metrics.notes == ["Not a benchmark discovery; benchmark_focus_match is not applicable."]
     dumped = metrics.model_dump(mode="json")
     assert QualityMetrics.model_validate(dumped) == metrics
 
@@ -136,3 +144,50 @@ def test_unmatched_legacy_citations_are_noted_not_counted():
     assert metrics.snippet_citation_share is None
     assert metrics.claims_with_evidence_rate == 0.0
     assert any("do not match captured evidence" in note for note in metrics.notes)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("policy", ["typed", "origins"])
+def test_one_point_one_metrics_on_typed_evidence(policy):
+    row, _ = fx.typed_discovery(policy, benchmark_objective_id="ar-agro-inputs")
+    metrics = compute_quality(row)
+    assert metrics.cited_source_type_counts == {"forum": 1, "news": 1, "vendor": 1}
+    assert metrics.demand_independent_source_share == 0.5
+    assert metrics.competitor_offer_source_share == 0.5
+    # Forum is 900 days (29.6 months) old; news 30 days; vendor undated.
+    assert metrics.stale_cited_share == 0.5
+    assert metrics.business_model_kind == "services"
+    assert metrics.benchmark_focus_match is True
+    assert metrics.evidence_policy == policy
+    assert metrics.min_validator_query_novelty == (0.4 if policy == "typed" else 0.0)
+
+
+@pytest.mark.django_db
+def test_one_point_one_unknowns_carry_notes():
+    software, _ = fx.typed_discovery(benchmark_objective_id="ar-agro-inputs")
+    proposal = software.proposals.get()
+    proposal.content = {**proposal.content, "business_model_kind": "software"}
+    proposal.content.pop("competitor_evidence_ids")
+    proposal.save()
+    metrics = compute_quality(software)
+    assert metrics.benchmark_focus_match is False
+    assert metrics.competitor_offer_source_share is None
+    assert any("competitor_offer_source_share is unknown" in note for note in metrics.notes)
+
+    retired, _ = fx.typed_discovery(benchmark_objective_id="retired-id")
+    metrics = compute_quality(retired)
+    assert metrics.benchmark_focus_match is None
+    assert any("not in the current benchmark set" in note for note in metrics.notes)
+
+    empty = fx.discovery(config_snapshot={**fx.CONFIG, "schema_version": "1.3"})
+    metrics = compute_quality(empty)
+    assert metrics.business_model_kind is None
+    assert metrics.cited_source_type_counts is None
+    assert metrics.stale_cited_share is None
+    assert any("business_model_kind is unknown" in note for note in metrics.notes)
+
+    row, sources = fx.typed_discovery()
+    Evidence.objects.filter(pk__in=[item.pk for item in sources.values()]).update(published_at=None)
+    metrics = compute_quality(row)
+    assert metrics.stale_cited_share is None
+    assert any("stale_cited_share are unknown" in note for note in metrics.notes)

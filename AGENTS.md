@@ -88,6 +88,9 @@ verdicts (`DiscoveryVerdict`) and scoring passes (`DiscoveryQualityRun`) are
 append-only. Only `discovery/verdicts.py` writes verdicts and only the
 `score_discoveries` command writes quality runs. The prototype-era test
 deferral does not apply to this work. See `docs/discovery-eval.md`.
+Evidence source typing (`discovery/source_types.py`, rules in git) is
+deterministic and runs in the research service at write time, never in a
+connector or a model; only `classify_evidence` rewrites it for history.
 
 ## 2. Test discipline — every change has a test
 

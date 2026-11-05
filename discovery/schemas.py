@@ -117,6 +117,25 @@ class DiscoveryConfig(BaseModel):
         return value
 
 
+class EvidenceSettings(BaseModel):
+    """The two frozen evidence settings, read from a config snapshot."""
+
+    model_config = ConfigDict(extra="ignore")
+    evidence_policy: Literal["origins", "typed"] = "origins"
+    min_validator_query_novelty: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+def evidence_settings(snapshot: dict[str, Any]) -> EvidenceSettings:
+    """Evidence settings of a run; explicit 1.0–1.2 snapshots read as origins and 0.0.
+
+    Reads only these fields, so reports and metrics of historical runs do not
+    depend on every other setting still passing today's validation.
+    """
+    if snapshot.get("schema_version") in {"1.0", "1.1", "1.2"}:
+        return EvidenceSettings()
+    return EvidenceSettings.model_validate(snapshot)
+
+
 class EvidenceReference(Contract):
     evidence_id: str = Field(min_length=1)
     locator: str = ""
@@ -260,11 +279,15 @@ class VerdictInput(Contract):
 
 
 class QualityMetrics(Contract):
-    """Deterministic evidence, independence, process and outcome measures (schema 1.0).
+    """Deterministic evidence, independence, process and outcome measures (schema 1.1).
 
-    A metric that cannot be computed is ``None`` with the reason in ``notes``.
+    1.1 adds source-type, staleness, business-model-kind and evidence-policy
+    measures. Stored 1.0 quality runs are never rewritten. A metric that
+    cannot be computed is ``None`` with the reason in ``notes``.
     """
 
+    # Narrows the shared 1.0 literal; only this contract moved to 1.1.
+    schema_version: Literal["1.1"] = "1.1"  # type: ignore[assignment]
     discovery_id: str
     cited_evidence_count: int | None
     cited_origin_count: int | None
@@ -274,6 +297,14 @@ class QualityMetrics(Contract):
     claims_with_evidence_rate: float | None
     published_at_known_share: float | None
     median_evidence_age_days: float | None
+    cited_source_type_counts: dict[str, int] | None
+    demand_independent_source_share: float | None
+    competitor_offer_source_share: float | None
+    stale_cited_share: float | None
+    business_model_kind: str | None
+    benchmark_focus_match: bool | None
+    evidence_policy: str
+    min_validator_query_novelty: float
     validator_query_novelty_min: float | None
     accepting_turn_query_novelty: float | None
     validator_new_origin_share: float | None

@@ -11,7 +11,7 @@ from discovery.admin import DiscoveryStartForm
 from discovery.agent_tools import AgentTools
 from discovery.orchestrator import resolve_config
 from discovery.reporting import render_report
-from discovery.schemas import DiscoveryConfig, Validation
+from discovery.schemas import DiscoveryConfig, Validation, evidence_settings
 from discovery.termination import SubmissionError, evidence_gaps, require_agreement
 from tests import discovery_fixtures as fx
 
@@ -220,3 +220,15 @@ def test_report_configuration_block_shows_the_frozen_policy():
         "Evidence policy: typed; minimum Validator query novelty: 0.40."
         in (render_report(typed)[0])
     )
+
+
+def test_evidence_settings_read_only_the_two_fields():
+    # Other settings that today's validation rejects do not block reading a run's policy.
+    stale_config = {"schema_version": "1.3", "finder_provider": "anthropic", "finder_model": "a/b"}
+    assert evidence_settings({**stale_config, "evidence_policy": "typed"}).evidence_policy == (
+        "typed"
+    )
+    assert evidence_settings({"schema_version": "1.2"}).evidence_policy == "origins"
+    assert evidence_settings({}).min_validator_query_novelty == 0.0
+    with pytest.raises(ValidationError):
+        evidence_settings({"schema_version": "1.3", "min_validator_query_novelty": 2})

@@ -25,7 +25,7 @@ def test_regenerated_report_is_1_2_with_metrics_and_null_verdict():
     report = regenerate_report(row.pk).report_json
     assert report["schema_version"] == "1.2"
     assert report["human_verdict"] is None
-    assert report["quality"]["schema_version"] == "1.0"
+    assert report["quality"]["schema_version"] == "1.1"
     assert report["quality"]["cited_origin_count"] == 3
     assert report["quality"]["validator_query_novelty_min"] == pytest.approx(2 / 11)
     text = Discovery.objects.get(pk=row.pk).report_markdown
@@ -101,3 +101,15 @@ def test_admin_review_shows_metrics_table_for_terminal_discoveries(client, admin
     Discovery.objects.filter(pk=row.pk).update(status="running")
     page = client.get(f"/admin/discovery/discovery/{row.pk}/review/").content.decode()
     assert 'id="evidence-quality"' not in page
+
+
+def test_report_prints_source_types_shares_and_staleness():
+    row, _ = fx.typed_discovery()
+    text = regenerate_report(row.pk).report_markdown
+    quality = _section(text, "### Evidence quality", "Discovery ID:")
+    assert "older than 24 months at retrieval: 50% of dated sources." in quality
+    assert "Cited source types: forum 1, news 1, vendor 1." in quality
+    assert (
+        "Demand citations from an independent source type: 50%; competitor citations at "
+        "offer level: 50% (evidence policy typed)." in quality
+    )
