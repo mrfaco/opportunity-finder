@@ -5,18 +5,17 @@ No network, model calls or writes. Metrics observe; acceptance gates enforce.
 
 from __future__ import annotations
 
-import re
 import statistics
 from decimal import Decimal
 from typing import Any
 
 from django.db.models import Q
 
+from discovery.independence import novelty as query_novelty
 from discovery.models import Discovery, Evidence, ProposalRevision, ResearchOperation
 from discovery.schemas import QualityMetrics
 from discovery.termination import business_fingerprint
 
-_TOKEN_SPLIT = re.compile(r"[\W_]+")
 METRICS_SCHEMA_VERSION = "1.0"
 # Evidence older than this at retrieval is reported as stale; it never blocks.
 STALE_EVIDENCE_MONTHS = 24
@@ -48,24 +47,6 @@ QUANTITATIVE_METRICS = (
     "same_model_family",
 )
 CATEGORICAL_METRICS = ("outcome", "stop_reason", "human_verdict")
-
-
-def _query_tokens(query: str) -> frozenset[str]:
-    """Casefolded tokens split on whitespace and punctuation; no stop words in 1.0."""
-    return frozenset(token for token in _TOKEN_SPLIT.split(query.casefold()) if token)
-
-
-def _jaccard(left: frozenset[str], right: frozenset[str]) -> float:
-    union = left | right
-    return len(left & right) / len(union) if union else 0.0
-
-
-def _novelty(query: str, finder_queries: list[str]) -> float:
-    """``1 − max Jaccard`` against earlier Finder queries; 1.0 when there are none."""
-    tokens = _query_tokens(query)
-    return 1.0 - max(
-        (_jaccard(tokens, _query_tokens(other)) for other in finder_queries), default=0.0
-    )
 
 
 def evidence_age_months(evidence: Evidence) -> float | None:
@@ -212,7 +193,7 @@ def _independence_metrics(discovery: Discovery, notes: list[str]) -> dict[str, A
             for row in finder
             if row.task.turn_number < op.task.turn_number
         ]
-        return _novelty(str(op.request["query"]), earlier)
+        return query_novelty(str(op.request["query"]), earlier)
 
     metrics: dict[str, Any] = {
         "validator_query_novelty_min": None,

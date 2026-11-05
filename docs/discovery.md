@@ -156,6 +156,24 @@ rules file, bump `rules_version` and run `manage.py classify_evidence` (dry run)
 then `manage.py classify_evidence --apply` to reclassify history; the command
 only touches rows classified under a different rules version and is idempotent.
 
+Discovery config schema 1.3 adds two frozen settings, shown in the start form
+and the report. `evidence_policy` is `origins` (default: demand and competitor
+evidence from two distinct non-snippet origins) or `typed`, which also requires
+at Validator acceptance one demand source of an independent type (forum,
+review, job post, tender, regulator, statistics, news or marketplace listing)
+and, when the proposal's `business_model_kind` is services, manufacturing,
+goods or marketplace, one offer-level competitor source (vendor page,
+marketplace listing, job post, tender or review). Proposals stored under
+contract 1.0 are checked for independent demand only. A failed check is
+flagged `finder_must_revise` and the Validator tool result carries a recovery
+hint naming the missing types and the enabled connectors likely to supply
+them. `min_validator_query_novelty` (default 0.0) is the minimum
+`1 − max Jaccard` word overlap between an accepting Validator search and every
+earlier Finder search, computed by `discovery/independence.py`, the same helper
+as the quality metric; 0.0 keeps the earlier rule that any non-identical query
+counts, and the refusal reports the best novelty achieved. Explicit 1.0–1.2
+configs read as `origins` and 0.0 and cannot set other values.
+
 ## Admin
 
 - `/admin/discovery/discovery/`: list and filter discoveries.

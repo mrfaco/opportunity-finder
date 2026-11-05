@@ -116,6 +116,25 @@ class DiscoveryStartForm(forms.Form):
         "The default is Ollama Kimi K3; its usage consumes the same run budget.",
     )
     connectors = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple)
+    evidence_policy = forms.ChoiceField(
+        choices=[
+            ("origins", "Origins — demand and competitor evidence from two distinct origins"),
+            (
+                "typed",
+                "Typed — also an independent demand source and, for services, manufacturing, "
+                "goods and marketplaces, offer-level competitor evidence",
+            ),
+        ],
+        initial="origins",
+        help_text="Checked when Validator accepts; frozen for the run.",
+    )
+    min_validator_query_novelty = forms.FloatField(
+        initial=0.0,
+        min_value=0.0,
+        max_value=1.0,
+        help_text="Minimum 1 − max word overlap between a Validator search and earlier Finder "
+        "searches for it to count as independent. 0 accepts any non-identical query.",
+    )
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
 
     def __init__(self, *args, **kwargs):
@@ -153,9 +172,11 @@ class DiscoveryStartForm(forms.Form):
             "judge_provider",
             "judge_model",
             "connectors",
+            "evidence_policy",
+            "min_validator_query_novelty",
         )
         return {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "runtime": "claude_code",
             **{key: self.cleaned_data[key] for key in keys},
         }

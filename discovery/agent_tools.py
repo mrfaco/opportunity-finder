@@ -18,6 +18,8 @@ from discovery.models import DiscoveryTask
 from discovery.orchestrator import check_lease, commit_turn, content_hash
 from discovery.research import check_limits, lease_token, perform_research, research_calls_used
 from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
+from discovery.source_types import likely_connectors
+from discovery.termination import SubmissionError
 
 
 class AgentTools:
@@ -120,16 +122,8 @@ class AgentTools:
             except (ValueError, ValidationError) as exc:  # allow: suppress-exception
                 # Versioned tool validation errors are visible self-correction input.
                 result = {"schema_version": "1.0", "status": "validation_failed", "error": str(exc)}
-                if params.get("name") == "submit_validation" and str(exc) in {
-                    "Two distinct source origins are required",
-                    "Cited demand and competitor evidence are both required",
-                    "Search snippets alone cannot establish demand or competition",
-                }:
-                    result["recovery_hint"] = (
-                        "Finder's proposal is immutable. Your review cannot repair its cited "
-                        "evidence by repeating accept. Submit a challenge explaining this gap "
-                        "so Finder can submit a corrected proposal with adequate sources."
-                    )
+                if isinstance(exc, SubmissionError) and exc.finder_must_revise:
+                    result["recovery_hint"] = self.recovery_hint(exc)
             except DiscoveryStop as exc:  # allow: suppress-exception
                 # Research exhaustion is a visible tool quota, not an aborted
                 # dialogue. Leave the agent able to submit its current findings.
@@ -150,6 +144,23 @@ class AgentTools:
             "content": [{"type": "text", "text": self.model_result(result)}],
             "isError": result.get("status") == "validation_failed",
         }
+
+    def recovery_hint(self, exc: SubmissionError) -> str:
+        hint = (
+            "Finder's proposal is immutable. Your review cannot repair its cited "
+            "evidence by repeating accept. Submit a challenge explaining this gap "
+            "so Finder can submit a corrected proposal with adequate sources."
+        )
+        if not exc.missing_source_types:
+            return hint
+        types = sorted(exc.missing_source_types)
+        enabled = DiscoveryConfig.model_validate(self.task.discovery.config_snapshot).connectors
+        connectors = likely_connectors(exc.missing_source_types, enabled)
+        return f"{hint} Missing source type: one of {', '.join(types)}. " + (
+            f"Enabled connectors most likely to supply it: {', '.join(connectors)}."
+            if connectors
+            else "No enabled connector is likely to supply it; say so in the challenge."
+        )
 
     @staticmethod
     def model_result(result: dict[str, Any]) -> str:

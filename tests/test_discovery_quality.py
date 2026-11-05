@@ -6,8 +6,10 @@ from decimal import Decimal
 
 import pytest
 
+from discovery.independence import novelty as _novelty
+from discovery.independence import query_tokens as _query_tokens
 from discovery.models import Discovery
-from discovery.quality import _novelty, _query_tokens, compute_quality
+from discovery.quality import compute_quality
 from discovery.schemas import QualityMetrics
 from discovery.verdicts import record_verdict
 from tests import discovery_fixtures as fx

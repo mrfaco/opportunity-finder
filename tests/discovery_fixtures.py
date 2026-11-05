@@ -100,7 +100,9 @@ def search(
     status: str = "success",
     action: str = "search",
     performed: bool = True,
+    found: int = 0,
 ) -> ResearchOperation:
+    """A completed research operation; ``found`` documents make it count as a result."""
     return ResearchOperation.objects.create(
         discovery=step.discovery,
         task=step.task,
@@ -109,7 +111,11 @@ def search(
         connector="duckduckgo",
         state="completed",
         request={"connector": "duckduckgo", "action": action, "query": query},
-        response={"status": status, "request_performed": performed, "documents": []},
+        response={
+            "status": status,
+            "request_performed": performed,
+            "documents": [{"url": f"https://result{i}.example/"} for i in range(found)],
+        },
         completed_at=RETRIEVED,
     )
 

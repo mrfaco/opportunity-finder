@@ -20,7 +20,7 @@ class Contract(BaseModel):
 
 class DiscoveryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.3"
     runtime: Literal["claude_code", "openrouter_batch"] = "claude_code"
     finder_provider: Provider = "openrouter"
     validator_provider: Provider = "openrouter"
@@ -36,6 +36,28 @@ class DiscoveryConfig(BaseModel):
     validator_model: str = DEFAULT_MODEL
     judge_model: str = "kimi-k3:cloud"
     connectors: list[str] = Field(default_factory=lambda: ["search_auto", "web_fetch"])
+    # 1.3: "origins" is the original two-origin rule; "typed" also requires an
+    # independent demand source and offer-level competitor evidence.
+    evidence_policy: Literal["origins", "typed"] = "origins"
+    # Minimum 1 − max Jaccard between a Validator search and every earlier
+    # Finder search; 0.0 accepts any non-identical query, as before 1.3.
+    min_validator_query_novelty: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def pre_policy_config(cls, value: Any) -> Any:
+        """Explicit 1.0–1.2 snapshots read as ``origins`` and novelty 0.0.
+
+        A dumped older config carries those defaults; any other value needs 1.3.
+        """
+        if isinstance(value, dict) and value.get("schema_version") in {"1.0", "1.1", "1.2"}:
+            if value.get("evidence_policy", "origins") != "origins" or float(
+                value.get("min_validator_query_novelty", 0.0)
+            ):
+                raise ValueError(
+                    "evidence_policy and min_validator_query_novelty require config schema 1.3"
+                )
+        return value
 
     @model_validator(mode="before")
     @classmethod

@@ -31,6 +31,7 @@ from discovery.termination import (
     SubmissionError,
     evidence_gaps,
     has_independent_research,
+    independence_shortfall,
     require_agreement,
     require_judge_approval,
     require_judge_feedback,
@@ -340,7 +341,9 @@ def commit_turn(
                 raise SubmissionError(
                     "Validator needs independent research this turn: a new successful search, "
                     "or for a challenge a fetched source not used by Finder. "
-                    "Acceptance always requires a new successful search."
+                    "Acceptance always requires a new successful search; "
+                    + independence_shortfall(task)
+                    + "."
                 )
             require_agreement(discovery, task, latest_proposal, validation)
         else:

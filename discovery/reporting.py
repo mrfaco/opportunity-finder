@@ -15,7 +15,7 @@ from discovery.quality import (
     compute_quality,
     evidence_age_months,
 )
-from discovery.schemas import QualityMetrics, Report
+from discovery.schemas import DiscoveryConfig, QualityMetrics, Report
 from discovery.termination import evidence_gaps, proposal_kind, unresolved_objections
 
 OUTCOME_LABELS = {
@@ -175,6 +175,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         "Research covers the enabled connectors and retrieved sources, not the entire market.",
     ]
     config = discovery.config_snapshot
+    run_config = DiscoveryConfig.model_validate(config)
     if judge_required and not judge_approved:
         limitations.append(
             "The latest candidate has not received Judge approval. "
@@ -485,6 +486,9 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
     lines.extend(
         [
             f"Discovery ID: `{discovery.pk}`",
+            "",
+            f"Evidence policy: {run_config.evidence_policy}; minimum Validator query novelty: "
+            f"{run_config.min_validator_query_novelty:.2f}.",
             "",
             "Configuration:",
             "",

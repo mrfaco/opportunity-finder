@@ -5,18 +5,39 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from discovery.independence import novelty
 from discovery.models import (
     Discovery,
     DiscoveryTask,
+    Evidence,
     JudgmentRevision,
     ProposalRevision,
     ValidationRevision,
 )
-from discovery.schemas import Judgment, Validation
+from discovery.schemas import DiscoveryConfig, Judgment, Validation
+from discovery.source_types import INDEPENDENT_DEMAND_TYPES, OFFER_TYPES, SourceType
+
+# Kinds whose competition is an actual supplier, offer or price, not commentary.
+OFFER_LEVEL_KINDS = frozenset({"services", "manufacturing", "goods", "marketplace"})
 
 
 class SubmissionError(ValueError):
-    """A submitted artifact violates dialogue or evidence requirements."""
+    """A submitted artifact violates dialogue or evidence requirements.
+
+    ``finder_must_revise`` marks a gap in Finder's immutable proposal that only a
+    new Finder revision can fix; ``missing_source_types`` names what would.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        finder_must_revise: bool = False,
+        missing_source_types: frozenset[SourceType] = frozenset(),
+    ) -> None:
+        super().__init__(message)
+        self.finder_must_revise = finder_must_revise
+        self.missing_source_types = missing_source_types
 
 
 def proposal_kind(content: dict[str, Any]) -> str:
@@ -198,24 +219,51 @@ def _normalized_query(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
-def has_independent_research(task: DiscoveryTask, *, require_search: bool = True) -> bool:
-    finder_queries = {
-        _normalized_query(op.request.get("query", ""))
+def _search_novelties(task: DiscoveryTask) -> list[float]:
+    """Novelty of each successful, non-identical Validator search with documents."""
+    finder_queries = [
+        str(op.request.get("query", ""))
         for op in task.discovery.operations.filter(
             kind="research",
             task__role="finder",
             task__turn_number__lt=task.turn_number,
         )
         if op.request.get("action") == "search"
-    }
-    successful_search = any(
-        op.request.get("action") == "search"
+    ]
+    finder_normalized = {_normalized_query(query) for query in finder_queries}
+    return [
+        novelty(str(op.request.get("query", "")), finder_queries)
+        for op in task.operations.filter(kind="research", state="completed")
+        if op.request.get("action") == "search"
         and _normalized_query(op.request.get("query", ""))
-        and _normalized_query(op.request.get("query", "")) not in finder_queries
+        and _normalized_query(op.request.get("query", "")) not in finder_normalized
         and op.response.get("status") == "success"
         and bool(op.response.get("documents"))
-        for op in task.operations.filter(kind="research", state="completed")
+    ]
+
+
+def _novelty_threshold(discovery: Discovery) -> float:
+    return DiscoveryConfig.model_validate(discovery.config_snapshot).min_validator_query_novelty
+
+
+def independence_shortfall(task: DiscoveryTask) -> str:
+    """Why no search counts as independent: best novelty achieved and the threshold."""
+    novelties = _search_novelties(task)
+    threshold = _novelty_threshold(task.discovery)
+    if not novelties:
+        return (
+            "no successful, non-identical search returned results this turn "
+            f"(query novelty threshold {threshold:.2f})"
+        )
+    return (
+        f"best query novelty against earlier Finder searches was {max(novelties):.2f}; "
+        f"the threshold is {threshold:.2f}, so rewording Finder's query is not enough"
     )
+
+
+def has_independent_research(task: DiscoveryTask, *, require_search: bool = True) -> bool:
+    threshold = _novelty_threshold(task.discovery)
+    successful_search = any(value >= threshold for value in _search_novelties(task))
     if successful_search or require_search:
         return successful_search
     # A challenge can independently inspect a new source while search is down.
@@ -238,17 +286,68 @@ def has_independent_research(task: DiscoveryTask, *, require_search: bool = True
     )
 
 
-def evidence_gaps(discovery: Discovery, proposal: ProposalRevision) -> list[str]:
+def _cited_types(ids: list[str], by_id: dict[str, Evidence]) -> str:
+    return ", ".join(
+        f"{ref}: {by_id[ref].source_type if ref in by_id else 'unknown'}"
+        for ref in dict.fromkeys(ids)
+    )
+
+
+def _typed_gaps(
+    content: dict[str, Any], evidence: list[Evidence]
+) -> list[tuple[str, frozenset[SourceType]]]:
+    by_id = {str(row.pk): row for row in evidence}
+    demand = list(content.get("demand_evidence_ids", []))
+    competitors = list(content.get("competitor_evidence_ids", []))
+    gaps: list[tuple[str, frozenset[SourceType]]] = []
+    if not any(
+        ref in by_id and by_id[ref].source_type in INDEPENDENT_DEMAND_TYPES for ref in demand
+    ):
+        gaps.append(
+            (
+                "Demand evidence needs one independent source (forum, review, job post, "
+                "tender, regulator, statistics, news or marketplace listing); cited demand "
+                f"sources are: {_cited_types(demand, by_id)}",
+                INDEPENDENT_DEMAND_TYPES,
+            )
+        )
+    kind = proposal_kind(content)
+    if kind in OFFER_LEVEL_KINDS and not any(
+        ref in by_id and by_id[ref].source_type in OFFER_TYPES for ref in competitors
+    ):
+        gaps.append(
+            (
+                f"Competitor evidence for a {kind} business needs one offer-level source "
+                "(vendor page, marketplace listing, job post, tender or review) about an "
+                "actual supplier, offer or price; cited competitor sources are: "
+                f"{_cited_types(competitors, by_id)}",
+                OFFER_TYPES,
+            )
+        )
+    return gaps
+
+
+def _gap_details(
+    discovery: Discovery, proposal: ProposalRevision
+) -> list[tuple[str, frozenset[SourceType]]]:
     content = proposal.content
     demand = set(content.get("demand_evidence_ids", []))
     competitors = set(content.get("competitor_evidence_ids", []))
     if not demand or not competitors:
-        return ["Cited demand and competitor evidence are both required"]
+        return [("Cited demand and competitor evidence are both required", frozenset())]
     evidence = list(discovery.evidence.filter(pk__in=demand | competitors))
+    typed = (
+        _typed_gaps(content, evidence)
+        if DiscoveryConfig.model_validate(discovery.config_snapshot).evidence_policy == "typed"
+        else []
+    )
     usable = [e for e in evidence if e.kind != "search_snippet"]
     usable_ids = {str(e.pk) for e in usable}
     if not demand & usable_ids or not competitors & usable_ids:
-        return ["Search snippets alone cannot establish demand or competition"]
+        return [
+            ("Search snippets alone cannot establish demand or competition", frozenset()),
+            *typed,
+        ]
     # Exact syndicated copies do not become independent evidence merely because
     # they were republished on another domain.
     origins: set[str] = set()
@@ -261,7 +360,14 @@ def evidence_gaps(discovery: Discovery, proposal: ProposalRevision) -> list[str]
             origins.add(
                 str(evidence_item.metadata.get("original_source_origin") or evidence_item.origin)
             )
-    return [] if len(origins) >= 2 else ["Two distinct source origins are required"]
+    if len(origins) < 2:
+        return [("Two distinct source origins are required", frozenset()), *typed]
+    return typed
+
+
+def evidence_gaps(discovery: Discovery, proposal: ProposalRevision) -> list[str]:
+    """Evidence requirements the proposal misses under the run's frozen evidence policy."""
+    return [message for message, _ in _gap_details(discovery, proposal)]
 
 
 def require_agreement(
@@ -302,11 +408,18 @@ def require_agreement(
             )
     if validation.verdict != "accept":
         return
-    gaps = evidence_gaps(discovery, proposal)
+    gaps = _gap_details(discovery, proposal)
     if gaps:
-        raise SubmissionError("; ".join(gaps))
+        # Only a new Finder revision can change the cited evidence.
+        raise SubmissionError(
+            "; ".join(message for message, _ in gaps),
+            finder_must_revise=True,
+            missing_source_types=frozenset().union(*(types for _, types in gaps)),
+        )
     if not has_independent_research(task):
-        raise SubmissionError("Validator must independently search before accepting")
+        raise SubmissionError(
+            "Validator must independently search before accepting: " + independence_shortfall(task)
+        )
     open_critical = {
         key: value
         for key, value in unresolved_objections(discovery).items()

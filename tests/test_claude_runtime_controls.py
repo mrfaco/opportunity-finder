@@ -102,7 +102,11 @@ def test_explicit_recovery_keeps_original_wake_logs(tmp_path):
 def test_invalid_immutable_proposal_routes_validator_back_to_finder():
     with AgentTools(SimpleNamespace(), []) as bridge:
         with patch.object(
-            bridge, "call", side_effect=SubmissionError("Two distinct source origins are required")
+            bridge,
+            "call",
+            side_effect=SubmissionError(
+                "Two distinct source origins are required", finder_must_revise=True
+            ),
         ):
             response = bridge.handle(
                 {"method": "tools/call", "params": {"name": "submit_validation"}}

@@ -46,6 +46,23 @@ CLASSIFICATION_ORDER: tuple[SourceType, ...] = (
     "vendor",
 )
 UNCLASSIFIED: SourceType = "unclassified"
+# Typed evidence policy: demand needs one source not written by a seller;
+# competition for physical or service businesses needs one actual offer.
+INDEPENDENT_DEMAND_TYPES: frozenset[SourceType] = frozenset(
+    {
+        "forum",
+        "review",
+        "job_post",
+        "tender",
+        "regulator",
+        "statistics",
+        "news",
+        "marketplace_listing",
+    }
+)
+OFFER_TYPES: frozenset[SourceType] = frozenset(
+    {"vendor", "marketplace_listing", "job_post", "tender", "review"}
+)
 
 
 class HostPath(BaseModel):
@@ -135,6 +152,18 @@ def _match(rules: SourceTypeList, connector: str, kind: str, host: str, path: st
         if segment in segments:
             return f"path_segment:{segment}"
     return None
+
+
+def likely_connectors(source_types: frozenset[SourceType], enabled: list[str]) -> list[str]:
+    """Enabled connectors whose output the rules can classify as one of these types."""
+    rules = load_rules()
+    found: set[str] = set()
+    for name in source_types:
+        entry = rules.types[name]
+        found.update(entry.connectors)
+        if entry.domains or entry.host_paths or entry.host_patterns or entry.path_segments:
+            found.add("web_fetch")
+    return [connector for connector in enabled if connector in found]
 
 
 def classify(connector: str, kind: str, url: str) -> SourceTypeResult:
