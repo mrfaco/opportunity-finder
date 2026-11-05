@@ -147,7 +147,9 @@ its original retrieval timestamp.
 - `/admin/discovery/discovery/start/`: start from an objective, constraints,
   selected connectors, role providers/models and budgets.
 - `/admin/discovery/discovery/<id>/review/`: inspect status, costs, threaded mail,
-  immutable submissions, evidence and provider-operation status.
+  immutable submissions, evidence and provider-operation status. Terminal
+  discoveries show an evidence-quality metrics table above the report; see
+  `docs/discovery-eval.md`.
 - The detail page provides cancellation and final Markdown report download.
 - Once a discovery is completed, failed or cancelled, a user with change
   permission can record a human verdict (`good`, `weak`, `wrong`, `untested`;
@@ -166,9 +168,14 @@ The API uses the existing `Authorization: Bearer <application-api-key>`
 authentication. This is an application key created through the API-key admin,
 not the OpenRouter provider key. All endpoints require authentication.
 
-The request envelope remains version 1.0, configuration is version 1.2, the
-discovery detail response is version 1.2 (adding `human_verdict`, the latest
-verdict or null, and `verdict_count`), and report responses are version 1.1. Responses include Judge execution
+The request envelope remains version 1.0, configuration is version 1.2, and
+discovery/report responses are version 1.2. Version 1.2 adds `human_verdict`
+(the latest verdict or null), `verdict_count`, `benchmark_tag` and
+`benchmark_objective_id`. The detail response (`GET /api/v1/discoveries/<id>/`)
+also carries `quality`, the `QualityMetrics` 1.0 object for terminal
+discoveries and null while running; list responses omit it. Stored 1.1
+`report_json` is not rewritten; `regenerate_report` produces the 1.2 shape,
+which adds `quality` and `human_verdict`. Responses include Judge execution
 settings, the latest verdict and judgment history. Judge approval is tied to
 the exact latest proposal and accepted validation; stale approval is not reused.
 

@@ -8,8 +8,9 @@ from typing import Any
 
 from django.db.models import Q
 
-from discovery.models import Discovery
-from discovery.schemas import Report
+from discovery.models import Discovery, DiscoveryVerdict
+from discovery.quality import compute_quality
+from discovery.schemas import QualityMetrics, Report
 from discovery.termination import evidence_gaps, unresolved_objections
 
 OUTCOME_LABELS = {
@@ -42,6 +43,56 @@ def _current_claims(content: dict[str, Any]) -> list[dict[str, Any]]:
             {json.dumps(ref, sort_keys=True): ref for ref in claim["evidence"]}.values()
         )
     return list(claims.values())
+
+
+def _measure(value: float | int | None, *, percent: bool = False, digits: int = 2) -> str:
+    if value is None:
+        return "unknown"
+    return f"{value:.0%}" if percent else f"{value:.{digits}f}"
+
+
+def _verdict_line(verdict: DiscoveryVerdict) -> str:
+    line = (
+        f"**Human verdict: {verdict.verdict}** "
+        f"({verdict.recorded_at.date().isoformat()}, via {verdict.recorded_via})"
+    )
+    return f"{line} — {verdict.notes}" if verdict.notes else line
+
+
+def _evidence_quality(quality: QualityMetrics, verdict: DiscoveryVerdict | None) -> list[str]:
+    connectors = ", ".join(
+        f"{name} {count}" for name, count in (quality.cited_connector_counts or {}).items()
+    )
+    age = (
+        f"; median age when known: {quality.median_evidence_age_days:.0f} days"
+        if quality.median_evidence_age_days is not None
+        else ""
+    )
+    lines = [
+        "### Evidence quality",
+        "",
+        "Measured from the stored records; these figures observe and do not gate the run.",
+        "",
+        f"- Cited sources: {_measure(quality.cited_evidence_count, digits=0)} from "
+        f"{_measure(quality.cited_origin_count, digits=0)} distinct origins"
+        + (f" ({connectors})." if connectors else "."),
+        f"- Search snippets among cited sources: "
+        f"{_measure(quality.snippet_citation_share, percent=True)}.",
+        f"- Fact claims quoting their source: "
+        f"{_measure(quality.fact_claims_with_quote_rate, percent=True)}; claims citing any "
+        f"evidence: {_measure(quality.claims_with_evidence_rate, percent=True)}.",
+        f"- Cited sources with a known publication date: "
+        f"{_measure(quality.published_at_known_share, percent=True)}{age}.",
+        f"- Validator query novelty against earlier Finder queries (1 = no shared terms): "
+        f"lowest {_measure(quality.validator_query_novelty_min)}, accepting turn "
+        f"{_measure(quality.accepting_turn_query_novelty)}.",
+        f"- Source origins first found by Validator: "
+        f"{_measure(quality.validator_new_origin_share, percent=True)}.",
+        f"- {_verdict_line(verdict)}" if verdict else "- No human verdict recorded.",
+    ]
+    if quality.notes:
+        lines.extend(["", "Unknown measures:", "", _bullets(quality.notes)])
+    return [*lines, ""]
 
 
 def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
@@ -187,6 +238,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         }
         for turn in turns
     ]
+    quality = compute_quality(discovery)
+    verdict = discovery.verdicts.select_related("recorded_by").last()
     report = Report(
         discovery_id=str(discovery.pk),
         objective=discovery.objective,
@@ -206,6 +259,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         latest_judgment=judgments[-1].content if judgments else None,
         judge_required=judge_required,
         judge_approved=judge_approved,
+        quality=quality,
+        human_verdict=verdict.as_dict() if verdict else None,
     ).model_dump(mode="json")
     duration = (
         (discovery.ended_at - (discovery.started_at or discovery.created_at)).total_seconds()
@@ -271,6 +326,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         lines.extend(["### Remaining risks", "", _bullets(content.get("risks", [])), ""])
     else:
         lines.extend(["No Finder proposal was completed before this run stopped.", ""])
+    if verdict:
+        lines.extend([_verdict_line(verdict), ""])
     lines.extend(["## Judge assessment", ""])
     if current_judgment:
         judgment = current_judgment.content
@@ -384,6 +441,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             "",
             _bullets(limitations),
             "",
+            *_evidence_quality(quality, verdict),
         ]
     )
     lines.extend(

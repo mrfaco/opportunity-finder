@@ -69,6 +69,19 @@
   {% if row.notes %}<p class="discovery-text">{{ row.notes }}</p>{% endif %}
   {% empty %}<p class="discovery-meta mt-2">No human verdict recorded yet.</p>{% endfor %}
 </div>
+{% if quality %}
+<h2 class="discovery-title">Evidence quality</h2>
+<div class="discovery-panel discovery-report" id="evidence-quality">
+  <p class="discovery-meta">Metrics schema {{ quality.schema_version }}. Measured from stored records; metrics observe and do not gate the run. Empty values could not be computed.</p>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+    {% for row in quality_rows %}<tr><td>{{ row.name }}</td><td>{% if row.value is None %}unknown{% else %}{{ row.value|floatformat:"-3" }}{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% if quality.notes %}<ul class="list-disc pl-6 mt-2">{% for note in quality.notes %}<li>{{ note }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
 {% if discovery.report_markdown %}
 <h2 class="discovery-title">Final report</h2>
 <div class="discovery-panel discovery-report">{{ report_html }}</div>

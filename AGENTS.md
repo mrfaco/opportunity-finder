@@ -79,6 +79,16 @@ find a new opportunity under the original objective and the same global limits.
 Historical schema-1.0/1.1 runs retain two-role execution. Judge reviews exact
 proposal and accepted-validation identities/hashes; judgment records are immutable.
 
+## Discovery quality measurement (roadmap Phase 0)
+
+Metrics observe; gates enforce. `discovery/quality.py` reads persisted rows
+only (no network, model calls or writes) and reports an uncomputable metric
+as `None` with a note, never a silent zero. It never blocks a run. Human
+verdicts (`DiscoveryVerdict`) and scoring passes (`DiscoveryQualityRun`) are
+append-only. Only `discovery/verdicts.py` writes verdicts and only the
+`score_discoveries` command writes quality runs. The prototype-era test
+deferral does not apply to this work. See `docs/discovery-eval.md`.
+
 ## 2. Test discipline — every change has a test
 
 - New behavior gets a test in the same commit.

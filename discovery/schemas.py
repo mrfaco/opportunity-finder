@@ -267,7 +267,8 @@ class QualityMetrics(Contract):
 
 class Report(BaseModel):
     model_config = Contract.model_config
-    schema_version: Literal["1.1"] = "1.1"
+    # Stored 1.1 reports are not rewritten; regenerate_report produces 1.2.
+    schema_version: Literal["1.1", "1.2"] = "1.2"
     discovery_id: str
     objective: str
     status: str
@@ -286,3 +287,5 @@ class Report(BaseModel):
     latest_judgment: dict[str, Any] | None = None
     judge_required: bool = False
     judge_approved: bool = False
+    quality: QualityMetrics | None = None
+    human_verdict: dict[str, Any] | None = None

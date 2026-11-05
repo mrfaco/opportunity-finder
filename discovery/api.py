@@ -13,7 +13,13 @@ from rest_framework.views import APIView
 from discovery.connectors.base import ConnectorConfigurationError
 from discovery.connectors.registry import describe_connectors
 from discovery.models import Discovery, DiscoveryMessage, Evidence
-from discovery.orchestrator import DiscoveryConflict, cancel_discovery, start_discovery
+from discovery.orchestrator import (
+    TERMINAL_STATUSES,
+    DiscoveryConflict,
+    cancel_discovery,
+    start_discovery,
+)
+from discovery.quality import compute_quality
 from discovery.schemas import VerdictInput
 from discovery.verdicts import VerdictNotAllowed, record_verdict
 
@@ -182,7 +188,14 @@ class DiscoveriesView(APIView):
 
 class DiscoveryDetailView(APIView):
     def get(self, request, discovery_id):
-        return Response(discovery_view(get_object_or_404(Discovery, pk=discovery_id)))
+        discovery = get_object_or_404(Discovery, pk=discovery_id)
+        # Computed on the detail view only; list pages would repeat it for every row.
+        quality = (
+            compute_quality(discovery).model_dump(mode="json")
+            if discovery.status in TERMINAL_STATUSES
+            else None
+        )
+        return Response({**discovery_view(discovery), "quality": quality})
 
 
 class DiscoveryMessagesView(APIView):

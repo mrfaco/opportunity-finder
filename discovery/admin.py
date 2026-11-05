@@ -31,6 +31,7 @@ from discovery.orchestrator import (
     cancel_discovery,
     start_discovery,
 )
+from discovery.quality import QUANTITATIVE_METRICS, compute_quality
 from discovery.schemas import DEFAULT_MODEL
 from discovery.verdicts import VerdictNotAllowed, record_verdict
 
@@ -301,6 +302,7 @@ class DiscoveryAdmin(ModelAdmin):
             if discovery.benchmark_objective_id
             else None
         )
+        quality = compute_quality(discovery) if discovery.status in TERMINAL_STATUSES else None
         turns = [
             {"turn": turn, "formatted_submission": json.dumps(turn.submission, indent=2)}
             for turn in discovery.turns.order_by("number")
@@ -379,6 +381,12 @@ class DiscoveryAdmin(ModelAdmin):
                 and self.has_change_permission(request, discovery),
                 "verdict_form": VerdictForm(),
                 "benchmark_objective": benchmark_objective,
+                "quality": quality,
+                "quality_rows": [
+                    {"name": name, "value": getattr(quality, name)} for name in QUANTITATIVE_METRICS
+                ]
+                if quality
+                else [],
                 "verdicts": discovery.verdicts.select_related("recorded_by").order_by(
                     "-recorded_at", "-id"
                 ),
