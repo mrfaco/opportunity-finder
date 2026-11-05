@@ -246,6 +246,14 @@ python manage.py run_discovery_benchmark --tag baseline-2026-11 \
   existing key. The command does not wait; workers run the discoveries.
 - The review page shows the objective's rubric beside the verdict form.
 
+`manage.py score_discoveries --tag <tag>` (or `--discovery <id>`, repeatable;
+optional `--since YYYY-MM-DD`) computes the quality metrics for every terminal
+discovery selected, lists skipped non-terminal ones and persists one
+append-only `DiscoveryQualityRun` with per-metric mean, median, min, max, sum,
+count and `None` count. `--compare-to <run id>` prints per-metric deltas and
+warns when prompt hashes, configurations or the metrics schema differ.
+`--format json` prints the persisted run.
+
 ## Recovery and billing
 
 Messages, assignments, completed turns and exact proposal references are

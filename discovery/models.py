@@ -271,6 +271,38 @@ class DiscoveryVerdict(models.Model):
         }
 
 
+class DiscoveryQualityRun(models.Model):
+    """Append-only scoring pass; written only by the ``score_discoveries`` command."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    schema_version = models.CharField(max_length=16, default="1.0")
+    tag = models.CharField(max_length=64, blank=True, db_index=True)
+    discovery_ids = models.JSONField(default=list)
+    metrics_schema_version = models.CharField(max_length=16)
+    aggregate = models.JSONField(default=dict)
+    per_discovery = models.JSONField(default=list)
+    prompt_hashes = models.JSONField(default=dict)
+    config_snapshots_distinct = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "id": str(self.pk),
+            "tag": self.tag,
+            "discovery_ids": self.discovery_ids,
+            "metrics_schema_version": self.metrics_schema_version,
+            "aggregate": self.aggregate,
+            "per_discovery": self.per_discovery,
+            "prompt_hashes": self.prompt_hashes,
+            "config_snapshots_distinct": self.config_snapshots_distinct,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
 class DiscoveryDispatch(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.OneToOneField(DiscoveryTask, on_delete=models.CASCADE, related_name="dispatch")

@@ -17,6 +17,34 @@ from discovery.schemas import QualityMetrics
 from discovery.termination import business_fingerprint
 
 _TOKEN_SPLIT = re.compile(r"[\W_]+")
+METRICS_SCHEMA_VERSION = "1.0"
+# Aggregated as mean/median/min/max/sum over non-None values; booleans as 0/1 shares.
+QUANTITATIVE_METRICS = (
+    "cited_evidence_count",
+    "cited_origin_count",
+    "snippet_citation_share",
+    "fact_claims_with_quote_rate",
+    "claims_with_evidence_rate",
+    "published_at_known_share",
+    "median_evidence_age_days",
+    "validator_query_novelty_min",
+    "accepting_turn_query_novelty",
+    "validator_new_origin_share",
+    "turns_completed",
+    "proposal_count",
+    "pivot_count",
+    "turns_to_first_accept",
+    "research_calls",
+    "research_failure_share",
+    "local_denials",
+    "known_cost_usd",
+    "estimated_cost_usd",
+    "unknown_operations",
+    "judge_required",
+    "judge_approved",
+    "same_model_family",
+)
+CATEGORICAL_METRICS = ("outcome", "stop_reason", "human_verdict")
 
 
 def _query_tokens(query: str) -> frozenset[str]:
@@ -285,3 +313,53 @@ def compute_quality(discovery: Discovery) -> QualityMetrics:
         },
         notes=notes,
     )
+
+
+def aggregate_metrics(rows: list[QualityMetrics]) -> dict[str, dict[str, Any]]:
+    """Per-metric statistics; ``None`` values are excluded and counted in ``none_count``."""
+    result: dict[str, dict[str, Any]] = {}
+    for name in QUANTITATIVE_METRICS:
+        values = [getattr(row, name) for row in rows]
+        present = [float(value) for value in values if value is not None]
+        result[name] = {
+            "count": len(present),
+            "none_count": len(values) - len(present),
+            "mean": statistics.fmean(present) if present else None,
+            "median": statistics.median(present) if present else None,
+            "min": min(present) if present else None,
+            "max": max(present) if present else None,
+            "sum": sum(present) if present else None,
+        }
+    for name in CATEGORICAL_METRICS:
+        distribution: dict[str, int] = {}
+        for row in rows:
+            value = getattr(row, name)
+            if value is not None:
+                distribution[value] = distribution.get(value, 0) + 1
+        result[name] = {
+            "count": sum(distribution.values()),
+            "none_count": len(rows) - sum(distribution.values()),
+            "distribution": dict(sorted(distribution.items())),
+        }
+    return result
+
+
+def distinct_prompt_hashes(rows: list[QualityMetrics]) -> dict[str, list[str]]:
+    hashes: dict[str, set[str]] = {}
+    for row in rows:
+        for role, value in row.prompt_hashes.items():
+            hashes.setdefault(role, set()).add(value)
+    return {role: sorted(values) for role, values in sorted(hashes.items())}
+
+
+def metric_deltas(
+    earlier: dict[str, dict[str, Any]], current: dict[str, dict[str, Any]]
+) -> list[tuple[str, float | None, float | None, float | None]]:
+    """``(metric, earlier mean, current mean, delta)``; delta is ``None`` when either is."""
+    rows = []
+    for name in QUANTITATIVE_METRICS:
+        before = earlier.get(name, {}).get("mean")
+        after = current.get(name, {}).get("mean")
+        delta = after - before if before is not None and after is not None else None
+        rows.append((name, before, after, delta))
+    return rows
