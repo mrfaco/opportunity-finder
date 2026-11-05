@@ -29,6 +29,9 @@ class Discovery(models.Model):
     report_json = models.JSONField(default=dict)
     idempotency_key = models.CharField(max_length=200, unique=True, null=True, blank=True)
     request_hash = models.CharField(max_length=64)
+    # Set only by run_discovery_benchmark; queried by tag without parsing keys.
+    benchmark_tag = models.CharField(max_length=64, blank=True, db_index=True)
+    benchmark_objective_id = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)

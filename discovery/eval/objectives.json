@@ -1,0 +1,221 @@
+{
+  "schema_version": "1.0",
+  "objectives": [
+    {
+      "id": "ar-cyber-smb",
+      "objective": "Look for opportunities in cybersecurity services for small businesses",
+      "constraints": "Argentina; services or intelligence businesses; no venture-scale assumptions",
+      "business_model_focus": ["services", "intelligence"],
+      "region": "AR",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "a domestic buyer or regulator source",
+          "a competitor price or offer"
+        ],
+        "red_flags": [
+          "overseas BPO staffed in Argentina presented as domestic demand",
+          "market size from a vendor report as the only demand evidence"
+        ]
+      }
+    },
+    {
+      "id": "ar-agro-inputs",
+      "objective": "Look for opportunities supplying inputs, spare parts or maintenance to small and mid-sized agricultural producers",
+      "constraints": "Argentina, Pampas and NOA regions; physical goods or field services; working capital under USD 50,000",
+      "business_model_focus": ["services", "goods"],
+      "region": "AR",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "a producer association, INTA or ministry source on the need",
+          "a current distributor price list or dealer offer"
+        ],
+        "red_flags": [
+          "large-estate agribusiness evidence presented as small-producer demand",
+          "import prices quoted without current exchange-rate or duty treatment"
+        ]
+      }
+    },
+    {
+      "id": "ar-accountant-software",
+      "objective": "Look for software opportunities for independent accountants who serve monotributo taxpayers",
+      "constraints": "Argentina; software sold to accounting practices; must work with ARCA (former AFIP) filing obligations",
+      "business_model_focus": ["software"],
+      "region": "AR",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "an ARCA/AFIP rule or calendar that creates the recurring work",
+          "an existing tool's published price or feature list"
+        ],
+        "red_flags": [
+          "demand inferred only from the number of registered taxpayers",
+          "a global accounting SaaS presented as unavailable when it already serves Argentina"
+        ]
+      }
+    },
+    {
+      "id": "mx-regional-food",
+      "objective": "Look for opportunities in small-batch packaged food manufacturing for regional supermarket chains",
+      "constraints": "Mexico, Bajío region; manufacturing or co-packing; must satisfy NOM-051 labelling",
+      "business_model_focus": ["manufacturing", "goods"],
+      "region": "MX",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "a retailer supplier requirement or category listing",
+          "a co-packer or competing product price"
+        ],
+        "red_flags": [
+          "national chain demand presented as regional chain demand",
+          "unit economics that ignore NOM-051 relabelling or shelf fees"
+        ]
+      }
+    },
+    {
+      "id": "mx-export-compliance",
+      "objective": "Look for opportunities helping small Mexican exporters meet United States import compliance requirements",
+      "constraints": "Mexico; services or intelligence for exporters under 100 employees; USMCA context",
+      "business_model_focus": ["intelligence", "services"],
+      "region": "MX",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "a US agency or USMCA rule that exporters must meet",
+          "a customs broker or consultant fee"
+        ],
+        "red_flags": [
+          "maquiladora or large-exporter evidence used for small exporters",
+          "a rule change cited without its effective date"
+        ]
+      }
+    },
+    {
+      "id": "br-clinic-backoffice",
+      "objective": "Look for opportunities providing outsourced back-office services to private dental and medical clinics",
+      "constraints": "Brazil, São Paulo and Minas Gerais; services; must respect LGPD health-data rules",
+      "business_model_focus": ["services"],
+      "region": "BR",
+      "language": "pt",
+      "rubric": {
+        "must_cite": [
+          "a clinic association, ANS or CFM/CFO source on the workload",
+          "a competing service provider's price or package"
+        ],
+        "red_flags": [
+          "hospital-scale revenue-cycle evidence presented as small-clinic demand",
+          "a plan that handles health data without addressing LGPD"
+        ]
+      }
+    },
+    {
+      "id": "br-solar-refurbish",
+      "objective": "Look for opportunities in maintaining rooftop solar systems and refurbishing their components",
+      "constraints": "Brazil, Northeast; field services or component refurbishment; no utility-scale projects",
+      "business_model_focus": ["services", "manufacturing"],
+      "region": "BR",
+      "language": "pt",
+      "rubric": {
+        "must_cite": [
+          "an ANEEL or ABSOLAR figure on installed distributed generation",
+          "a maintenance or inverter-repair price"
+        ],
+        "red_flags": [
+          "installation growth presented as maintenance demand without a failure or warranty basis",
+          "utility-scale O&M contracts used as price evidence"
+        ]
+      }
+    },
+    {
+      "id": "de-machining-capacity",
+      "objective": "Look for opportunities matching spare machining and fabrication capacity among small manufacturers",
+      "constraints": "Germany, Mittelstand suppliers under 250 employees; brokerage, intelligence or services; no marketplace that requires network effects to start",
+      "business_model_focus": ["intelligence", "services"],
+      "region": "DE",
+      "language": "de",
+      "rubric": {
+        "must_cite": [
+          "an industry association, IHK or Destatis source on utilisation",
+          "an existing capacity platform's fee or terms"
+        ],
+        "red_flags": [
+          "a two-sided marketplace with no plan for the first transactions",
+          "automotive-OEM evidence presented as Mittelstand demand"
+        ]
+      }
+    },
+    {
+      "id": "fr-bakery-equipment",
+      "objective": "Look for opportunities supplying, refurbishing or servicing equipment for independent bakeries",
+      "constraints": "France; physical goods or field services; independent artisan bakeries, not industrial chains",
+      "business_model_focus": ["goods", "services"],
+      "region": "FR",
+      "language": "fr",
+      "rubric": {
+        "must_cite": [
+          "a CNBPF, INSEE or chamber-of-trades source on independent bakeries",
+          "a new or refurbished equipment price or service contract"
+        ],
+        "red_flags": [
+          "industrial bakery chain evidence presented as artisan demand",
+          "refurbishment margins assumed without parts or labour cost evidence"
+        ]
+      }
+    },
+    {
+      "id": "es-rural-tourism-intel",
+      "objective": "Look for opportunities providing demand and pricing intelligence to rural tourism lodging operators",
+      "constraints": "Spain, interior provinces; intelligence or software; operators with fewer than 20 rooms",
+      "business_model_focus": ["intelligence", "software"],
+      "region": "ES",
+      "language": "es",
+      "rubric": {
+        "must_cite": [
+          "an INE or regional tourism statistic on rural lodging",
+          "a revenue-management or channel-manager price"
+        ],
+        "red_flags": [
+          "urban hotel revenue-management evidence presented as rural demand",
+          "OTA listing counts used as willingness to pay"
+        ]
+      }
+    },
+    {
+      "id": "us-home-care-software",
+      "objective": "Look for software opportunities for small home-care agencies",
+      "constraints": "United States; software for agencies with under 50 caregivers; must account for EVV mandates",
+      "business_model_focus": ["software"],
+      "region": "US",
+      "language": "en",
+      "rubric": {
+        "must_cite": [
+          "a CMS, state Medicaid or EVV rule that drives the workflow",
+          "an incumbent tool's published price"
+        ],
+        "red_flags": [
+          "enterprise home-health platform evidence presented as small-agency demand",
+          "ignoring that state EVV aggregators are free to agencies"
+        ]
+      }
+    },
+    {
+      "id": "in-textile-inspection",
+      "objective": "Look for opportunities providing quality inspection and compliance services to small textile exporters",
+      "constraints": "India, Tiruppur and Surat clusters; services or intelligence; buyers in the EU and US",
+      "business_model_focus": ["services", "intelligence"],
+      "region": "IN",
+      "language": "en",
+      "rubric": {
+        "must_cite": [
+          "a buyer, export council or regulation that requires the inspection or certification",
+          "a third-party inspection agency's fee"
+        ],
+        "red_flags": [
+          "large-exporter or brand-audit evidence presented as small-exporter demand",
+          "an EU rule cited without whether it applies to the exporter's product"
+        ]
+      }
+    }
+  ]
+}

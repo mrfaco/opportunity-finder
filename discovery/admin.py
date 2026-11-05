@@ -197,7 +197,7 @@ class DiscoveryAdmin(ModelAdmin):
         "cost_used_usd",
         "created_at",
     )
-    list_filter = ("status", "outcome", "stop_reason")
+    list_filter = ("status", "outcome", "stop_reason", "benchmark_tag", "benchmark_objective_id")
     search_fields = ("objective", "constraints", "id")
     ordering = ("-created_at",)
     actions = None

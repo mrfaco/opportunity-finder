@@ -78,6 +78,8 @@ def discovery_view(discovery: Discovery) -> dict:
         "status": discovery.status,
         "outcome": discovery.outcome,
         "stop_reason": discovery.stop_reason,
+        "benchmark_tag": discovery.benchmark_tag,
+        "benchmark_objective_id": discovery.benchmark_objective_id,
         "turns_completed": discovery.turns_completed,
         "cost_used_usd": str(discovery.cost_used_usd),
         "created_at": discovery.created_at,
