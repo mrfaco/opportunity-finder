@@ -22,6 +22,11 @@ scoped in the [evidence substance specification](docs/superpowers/specs/2026-11-
 and [plan](docs/superpowers/plans/2026-11-05-evidence-substance-plan.md):
 source typing, freshness, a structured business-model kind, an off-by-default
 typed evidence policy, measured query independence, and search filters.
+Phase 2 is scoped in the [transaction sources specification](docs/superpowers/specs/2026-11-05-transaction-sources-design.md)
+and [plan](docs/superpowers/plans/2026-11-05-transaction-sources-plan.md):
+keyless default connectors for Reddit, dated news (GDELT), CKAN open data
+and the web archive, opt-in Brave search and Adzuna job posts, CSV in
+`web_fetch`, and a benchmark comparison before any further defaults change.
 
 First get the full start → research → mail → challenge/pivot → report flow
 working with focused smoke checks. Extensive regression coverage, concurrency
