@@ -154,7 +154,9 @@ class AgentTools:
         if not exc.missing_source_types:
             return hint
         types = sorted(exc.missing_source_types)
-        enabled = DiscoveryConfig.model_validate(self.task.discovery.config_snapshot).connectors
+        # Read the frozen connector list directly; the snapshot was validated at
+        # start and re-validating it here would couple a hint to today's rules.
+        enabled = [str(name) for name in self.task.discovery.config_snapshot.get("connectors", [])]
         connectors = likely_connectors(exc.missing_source_types, enabled)
         return f"{hint} Missing source type: one of {', '.join(types)}. " + (
             f"Enabled connectors most likely to supply it: {', '.join(connectors)}."

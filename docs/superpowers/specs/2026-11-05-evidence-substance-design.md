@@ -59,8 +59,8 @@ or billed.
 | `job_post` | A company paying for this work | Domain and path list (indeed, linkedin.com/jobs, workana, upwork, computrabajo, bumeran, …) |
 | `tender` | Public procurement with prices and buyers | Domain list (comprar.gob.ar, ted.europa.eu, sam.gov, compranet, …) |
 | `marketplace_listing` | An offer with a price on a marketplace | Domain list (mercadolibre, amazon, ebay, alibaba, etsy, olx, …) |
-| `regulator` | Government or regulator material | TLD and domain rules (`.gov`, `.gob.*`, `.gouv.fr`, `.gc.ca`, `europa.eu`, `.gov.*`, `.mil` excluded) |
 | `statistics` | Official statistics or trade data | Domain list (indec.gob.ar, inegi.org.mx, ibge.gov.br, eurostat, census.gov, bls.gov, destatis.de, insee.fr, ine.es, data.worldbank.org, comtradeplus.un.org, oecd.org, …) |
+| `regulator` | Government or regulator material | TLD and domain rules (`.gov`, `.gob.*`, `.gouv.fr`, `.gc.ca`, `europa.eu`, `.gov.*`, `.mil` excluded) |
 | `news` | Editorial reporting | Domain list of major national and business outlets per benchmark region |
 | `vendor` | A seller's own commercial page | URL path rules (`/pricing`, `/plans`, `/precios`, `/planes`, `/solutions`, `/soluciones`, `/features`, `/product(s)`, `/producto(s)`, `/demo`, `/case-studies`, `/casos-de-exito`, `/customers`, `/clientes`) |
 | `unclassified` | None of the rules matched | Default |

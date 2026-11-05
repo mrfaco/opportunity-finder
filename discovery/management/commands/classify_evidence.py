@@ -28,23 +28,29 @@ class Command(BaseCommand):
         ).order_by("retrieved_at", "id")
         changes: Counter[tuple[str, str]] = Counter()
         examined = 0
-        with transaction.atomic():
-            for row in stale.select_for_update().iterator():
+        if options["apply"]:
+            with transaction.atomic():
+                for row in stale.select_for_update().iterator():
+                    examined += 1
+                    result = classify(row.connector, row.kind, row.url)
+                    if result.source_type != row.source_type:
+                        changes[(row.source_type, result.source_type)] += 1
+                    # Backfilled rows keep their schema_version; the metadata records
+                    # which rules classified them.
+                    row.source_type = result.source_type
+                    row.metadata = {
+                        **row.metadata,
+                        "source_type_rule": result.rule,
+                        "source_type_rules_version": result.rules_version,
+                    }
+                    row.save(update_fields=["source_type", "metadata"])
+        else:
+            # A dry run reads without row locks so it never blocks live research writes.
+            for row in stale.iterator():
                 examined += 1
                 result = classify(row.connector, row.kind, row.url)
                 if result.source_type != row.source_type:
                     changes[(row.source_type, result.source_type)] += 1
-                if not options["apply"]:
-                    continue
-                # Backfilled rows keep their schema_version; the metadata records
-                # which rules classified them.
-                row.source_type = result.source_type
-                row.metadata = {
-                    **row.metadata,
-                    "source_type_rule": result.rule,
-                    "source_type_rules_version": result.rules_version,
-                }
-                row.save(update_fields=["source_type", "metadata"])
         mode = "Applied" if options["apply"] else "Dry run (nothing written)"
         self.stdout.write(
             f"{mode}: rules {version}; {examined} row(s) classified under other rules; "
