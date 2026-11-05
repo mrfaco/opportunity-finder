@@ -139,6 +139,9 @@ def _initial_context(task: DiscoveryTask) -> dict[str, Any]:
                 "url": e.url,
                 "title": e.title,
                 "kind": e.kind,
+                "source_type": e.source_type,
+                "origin": e.origin,
+                "published_at": e.published_at.isoformat() if e.published_at else None,
                 "excerpt": e.content[:1500],
                 "content_hash": e.content_hash,
             }

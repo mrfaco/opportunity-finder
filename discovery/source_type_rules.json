@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0",
+  "rules_version": "1.0.0",
+  "types": {
+    "search_snippet": {
+      "purpose": "Search-result excerpts are leads, never a source in their own right; decided by document kind alone.",
+      "kinds": ["search_snippet"]
+    },
+    "forum": {
+      "purpose": "Discussion by users rather than sellers: community connectors and discussion sites.",
+      "connectors": ["github", "hacker_news", "local_corpus", "stack_exchange"],
+      "domains": [
+        "forocoches.com",
+        "gutefrage.net",
+        "indiehackers.com",
+        "news.ycombinator.com",
+        "quora.com",
+        "reddit.com",
+        "stackexchange.com",
+        "stackoverflow.com",
+        "taringa.net"
+      ]
+    },
+    "review": {
+      "purpose": "Buyer reviews of products or businesses: review sites, app stores and map listings.",
+      "domains": [
+        "apps.apple.com",
+        "capterra.com",
+        "g2.com",
+        "getapp.com",
+        "maps.google.com",
+        "mouthshut.com",
+        "play.google.com",
+        "reclameaqui.com.br",
+        "sitejabber.com",
+        "softwareadvice.com",
+        "tripadvisor.com",
+        "trustpilot.com",
+        "trustradius.com",
+        "yelp.com"
+      ],
+      "host_paths": [
+        {"domain": "google.com", "path_prefix": "/maps"}
+      ]
+    },
+    "job_post": {
+      "purpose": "A company paying for this work: job boards and freelance marketplaces for work requests.",
+      "domains": [
+        "bumeran.com.ar",
+        "bumeran.com.mx",
+        "catho.com.br",
+        "computrabajo.com",
+        "glassdoor.com",
+        "indeed.com",
+        "infojobs.net",
+        "naukri.com",
+        "occ.com.mx",
+        "stepstone.de",
+        "upwork.com",
+        "workana.com"
+      ],
+      "host_paths": [
+        {"domain": "linkedin.com", "path_prefix": "/jobs"}
+      ]
+    },
+    "tender": {
+      "purpose": "Public procurement notices with prices and named buyers.",
+      "domains": [
+        "boamp.fr",
+        "compranet.hacienda.gob.mx",
+        "comprar.gob.ar",
+        "comprasnet.gov.br",
+        "contrataciondelestado.es",
+        "eprocure.gov.in",
+        "evergabe-online.de",
+        "find-tender.service.gov.uk",
+        "gem.gov.in",
+        "sam.gov",
+        "ted.europa.eu"
+      ],
+      "host_paths": [
+        {"domain": "gov.br", "path_prefix": "/compras"}
+      ]
+    },
+    "marketplace_listing": {
+      "purpose": "An offer with a price on a marketplace.",
+      "domains": [
+        "alibaba.com",
+        "aliexpress.com",
+        "amazon.co.uk",
+        "amazon.com",
+        "amazon.com.br",
+        "amazon.com.mx",
+        "amazon.de",
+        "amazon.es",
+        "amazon.fr",
+        "amazon.in",
+        "ebay.com",
+        "ebay.de",
+        "ebay.es",
+        "ebay.fr",
+        "etsy.com",
+        "flipkart.com",
+        "indiamart.com",
+        "made-in-china.com",
+        "mercadolibre.com",
+        "mercadolibre.com.ar",
+        "mercadolibre.com.mx",
+        "mercadolivre.com.br",
+        "olx.com.br",
+        "olx.in"
+      ]
+    },
+    "statistics": {
+      "purpose": "Official statistics and trade data. Evaluated before regulator so a government statistics office is not a regulator.",
+      "domains": [
+        "bea.gov",
+        "bls.gov",
+        "census.gov",
+        "comtradeplus.un.org",
+        "data.imf.org",
+        "data.worldbank.org",
+        "destatis.de",
+        "ibge.gov.br",
+        "indec.gob.ar",
+        "ine.es",
+        "inegi.org.mx",
+        "insee.fr",
+        "mospi.gov.in",
+        "oecd.org",
+        "trademap.org",
+        "wits.worldbank.org"
+      ],
+      "host_paths": [
+        {"domain": "ec.europa.eu", "path_prefix": "/eurostat"}
+      ]
+    },
+    "regulator": {
+      "purpose": "Government or regulator material by government suffix (a trailing * matches any one label). Military .mil hosts are deliberately absent.",
+      "host_patterns": ["europa.eu", "gc.ca", "gob.*", "gouv.fr", "gov", "gov.*"]
+    },
+    "news": {
+      "purpose": "Editorial reporting: major national and business outlets for AR, MX, BR, DE, FR, ES, US and IN, plus international business press.",
+      "domains": [
+        "abc.es",
+        "aljazeera.com",
+        "ambito.com",
+        "apnews.com",
+        "bbc.co.uk",
+        "bbc.com",
+        "bfmtv.com",
+        "bloomberg.com",
+        "business-standard.com",
+        "businessinsider.com",
+        "clarin.com",
+        "cnbc.com",
+        "cronista.com",
+        "economist.com",
+        "eleconomista.com.mx",
+        "eleconomista.es",
+        "elfinanciero.com.mx",
+        "elmundo.es",
+        "elpais.com",
+        "eluniversal.com.mx",
+        "estadao.com.br",
+        "exame.com",
+        "expansion.com",
+        "expansion.mx",
+        "faz.net",
+        "folha.uol.com.br",
+        "forbes.com",
+        "fortune.com",
+        "ft.com",
+        "globo.com",
+        "handelsblatt.com",
+        "hindustantimes.com",
+        "indiatimes.com",
+        "infobae.com",
+        "infomoney.com.br",
+        "iprofesional.com",
+        "jornada.com.mx",
+        "lanacion.com.ar",
+        "latribune.fr",
+        "lavanguardia.com",
+        "lefigaro.fr",
+        "lemonde.fr",
+        "lesechos.fr",
+        "livemint.com",
+        "milenio.com",
+        "moneycontrol.com",
+        "ndtv.com",
+        "nikkei.com",
+        "nytimes.com",
+        "pagina12.com.ar",
+        "reuters.com",
+        "spiegel.de",
+        "sueddeutsche.de",
+        "tagesschau.de",
+        "theguardian.com",
+        "thehindu.com",
+        "thehindubusinessline.com",
+        "washingtonpost.com",
+        "welt.de",
+        "wsj.com",
+        "zeit.de"
+      ]
+    },
+    "vendor": {
+      "purpose": "A seller's own commercial page, by URL path segment only; home and about pages stay unclassified.",
+      "path_segments": [
+        "case-studies",
+        "casos-de-exito",
+        "clientes",
+        "customers",
+        "demo",
+        "features",
+        "planes",
+        "plans",
+        "precios",
+        "pricing",
+        "product",
+        "producto",
+        "productos",
+        "products",
+        "soluciones",
+        "solutions"
+      ]
+    }
+  }
+}

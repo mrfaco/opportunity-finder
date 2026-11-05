@@ -23,6 +23,7 @@ from discovery.errors import DiscoveryError, DiscoveryStop, OutcomeUnknown
 from discovery.models import Discovery, DiscoveryTask, Evidence, ResearchOperation
 from discovery.orchestrator import LostLease, check_lease
 from discovery.schemas import Contract, DiscoveryConfig
+from discovery.source_types import classify
 
 
 class ResearchInput(Contract):
@@ -296,8 +297,16 @@ def _perform_research(
         check_lease(task.pk, lease_token(task))
         documents = []
         for document in page.documents:
-            metadata = {**document.metadata, "author": document.author}
+            typed = classify(document.connector, document.kind, document.url)
+            metadata = {
+                **document.metadata,
+                "author": document.author,
+                "source_type_rule": typed.rule,
+                "source_type_rules_version": typed.rules_version,
+            }
+            origin = str(metadata.get("origin") or urlsplit(document.url).hostname or "")
             evidence = Evidence.objects.create(
+                schema_version="1.1",
                 discovery_id=task.discovery_id,
                 turn=task.turn,
                 operation=operation,
@@ -308,7 +317,8 @@ def _perform_research(
                 title=document.title,
                 content=document.text,
                 kind=document.kind,
-                origin=str(metadata.get("origin") or urlsplit(document.url).hostname or ""),
+                origin=origin,
+                source_type=typed.source_type,
                 content_hash=document.content_hash,
                 published_at=datetime.fromisoformat(document.published_at)
                 if document.published_at
@@ -320,6 +330,8 @@ def _perform_research(
                 {
                     **document.model_dump(mode="json"),
                     "evidence_id": str(evidence.pk),
+                    "source_type": typed.source_type,
+                    "origin": origin,
                     "text": document.text[:16000],
                     "context_truncated": len(document.text) > 16000,
                 }

@@ -284,8 +284,11 @@ class DiscoveryAdmin(ModelAdmin):
                 "public_url": _url(item.url),
                 "title": item.title,
                 "kind": item.kind,
+                "source_type": item.source_type,
+                "origin": item.origin,
                 "connector": item.connector,
                 "retrieved_at": item.retrieved_at,
+                "published_at": item.published_at,
                 "content": item.content,
             }
             for item in discovery.evidence.order_by("retrieved_at", "id")

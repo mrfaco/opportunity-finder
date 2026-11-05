@@ -168,6 +168,8 @@ class AgentTools:
                         "kind",
                         "connector",
                         "external_id",
+                        "source_type",
+                        "origin",
                         "retrieved_at",
                         "published_at",
                         "metadata",

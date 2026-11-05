@@ -141,6 +141,21 @@ material, and acceptance requires demand and competitor evidence from distinct
 source origins, with independent Validator research. Cached material retains
 its original retrieval timestamp.
 
+Every evidence row carries a deterministic `source_type` (`search_snippet`,
+`forum`, `review`, `job_post`, `tender`, `marketplace_listing`, `statistics`,
+`regulator`, `news`, `vendor` or `unclassified`). The research service decides
+it at write time from the connector, document kind, hostname and URL path using
+the versioned lists in `discovery/source_type_rules.json`; the first matching
+type wins in that order (statistics precedes regulator so a government
+statistics office is not a regulator). `vendor` is URL-path only (`/pricing`,
+`/precios`, `/products`, …); a seller's home page stays `unclassified`. The rule
+and rules version are in the row's metadata, and new rows carry evidence schema
+1.1. Tool results, role context, the admin evidence list and the report's Source
+register show `source_type`, `origin` and `published_at`. After editing the
+rules file, bump `rules_version` and run `manage.py classify_evidence` (dry run)
+then `manage.py classify_evidence --apply` to reclassify history; the command
+only touches rows classified under a different rules version and is idempotent.
+
 ## Admin
 
 - `/admin/discovery/discovery/`: list and filter discoveries.

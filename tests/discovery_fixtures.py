@@ -6,6 +6,7 @@ import hashlib
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from uuid import uuid4
 
 from django.utils import timezone
 
@@ -67,6 +68,31 @@ def turn(row: Discovery, number: int, role: str, submission: dict | None = None)
     )
 
 
+def research_task(
+    max_calls: int = 8, connectors: list[str] | None = None, **config: Any
+) -> DiscoveryTask:
+    """A leased Finder task ready for ``perform_research``."""
+    row = Discovery.objects.create(
+        objective="test sources",
+        request_hash=str(uuid4()),
+        config_snapshot={
+            "connectors": connectors or ["search_auto", "web_fetch"],
+            "max_research_calls_per_turn": max_calls,
+            **config,
+        },
+    )
+    task = DiscoveryTask.objects.create(
+        discovery=row,
+        role="finder",
+        turn_number=1,
+        state="working",
+        lease_token=uuid4(),
+        lease_expires_at=timezone.now() + timedelta(minutes=3),
+    )
+    DiscoveryTurn.objects.create(discovery=row, task=task, role="finder", number=1)
+    return task
+
+
 def search(
     step: DiscoveryTurn,
     query: str,
@@ -96,6 +122,8 @@ def evidence(
     connector: str = "web_fetch",
     text: str | None = None,
     age_days: int | None = None,
+    source_type: str = "unclassified",
+    url: str | None = None,
 ) -> Evidence:
     content = text or f"Source text from {origin}"
     return Evidence.objects.create(
@@ -103,11 +131,12 @@ def evidence(
         turn=step,
         connector=connector,
         external_id=origin,
-        url=f"https://{origin}/page",
+        url=url or f"https://{origin}/page",
         title=origin,
         content=content,
         kind=kind,
         origin=origin,
+        source_type=source_type,
         content_hash=hashlib.sha256(content.encode()).hexdigest(),
         published_at=RETRIEVED - timedelta(days=age_days) if age_days is not None else None,
         retrieved_at=RETRIEVED,

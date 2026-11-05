@@ -212,6 +212,9 @@ class Evidence(models.Model):
     content = models.TextField()
     kind = models.CharField(max_length=24)
     origin = models.CharField(max_length=255)
+    # Set by discovery.research via discovery.source_types; the rule and rules
+    # version that decided it live in metadata.
+    source_type = models.CharField(max_length=24, default="unclassified", db_index=True)
     content_hash = models.CharField(max_length=64)
     published_at = models.DateTimeField(null=True, blank=True)
     retrieved_at = models.DateTimeField()

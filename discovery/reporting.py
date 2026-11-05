@@ -219,6 +219,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             "id": str(e.pk),
             "connector": e.connector,
             "kind": e.kind,
+            "source_type": e.source_type,
             "title": e.title,
             "url": e.url,
             "origin": e.origin,
@@ -390,7 +391,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
     for e in evidence_rows:
         lines.append(
             f"- `{e['id']}` [{e['title'] or e['url']}]({e['url']}) — "
-            f"{e['connector']}, {e['kind']}; retrieved {e['retrieved_at']}; "
+            f"{e['connector']}, {e['kind']}, type {e['source_type']}; "
+            f"retrieved {e['retrieved_at']}; "
             f"published {e['published_at'] or 'unknown'}; origin {e['origin']}."
         )
     lines.extend(["", "## How the idea evolved", ""])
