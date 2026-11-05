@@ -116,13 +116,27 @@ class ObjectionResponse(Contract):
     evidence_ids: list[str] = Field(default_factory=list)
 
 
+BusinessModelKind = Literal[
+    "services", "manufacturing", "goods", "intelligence", "software", "marketplace", "other"
+]
+
+
 class Proposal(Contract):
+    """Finder's brief (schema 1.1 adds the required ``business_model_kind``).
+
+    Stored 1.0 proposals are never rewritten; ``termination.proposal_kind``
+    reads them as ``unspecified``.
+    """
+
+    # Narrows the shared 1.0 literal; only this contract moved to 1.1.
+    schema_version: Literal["1.1"] = "1.1"  # type: ignore[assignment]
     title: str = Field(min_length=1)
     target_customer: str = Field(min_length=1)
     buyer: str = Field(min_length=1)
     problem: str = Field(min_length=1)
     offering: str = Field(min_length=1)
     business_model: str = Field(min_length=1)
+    business_model_kind: BusinessModelKind
     customer_relationship: Literal["B2B", "B2C", "mixed", "other"]
     revenue_hypothesis: str = Field(min_length=1)
     delivery_model: str = Field(min_length=1)

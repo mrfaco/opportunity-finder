@@ -19,6 +19,15 @@ class SubmissionError(ValueError):
     """A submitted artifact violates dialogue or evidence requirements."""
 
 
+def proposal_kind(content: dict[str, Any]) -> str:
+    """The proposal's business-model kind; ``unspecified`` for contract-1.0 content.
+
+    The only reader of ``business_model_kind``, so stored 1.0 proposals are
+    handled in one place and never rewritten.
+    """
+    return str(content.get("business_model_kind") or "unspecified")
+
+
 def evidence_references(content: dict[str, Any]) -> set[str]:
     refs = set(content.get("demand_evidence_ids", []))
     refs.update(content.get("competitor_evidence_ids", []))

@@ -16,7 +16,7 @@ from discovery.quality import (
     evidence_age_months,
 )
 from discovery.schemas import QualityMetrics, Report
-from discovery.termination import evidence_gaps, unresolved_objections
+from discovery.termination import evidence_gaps, proposal_kind, unresolved_objections
 
 OUTCOME_LABELS = {
     "converged": "Agents reached agreement",
@@ -351,6 +351,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         }
         for key, label in labels.items():
             lines.extend([f"**{label}:** {content.get(key, 'Not recorded.')}", ""])
+            if key == "business_model":
+                lines.extend([f"**Business model kind:** {proposal_kind(content)}", ""])
         lines.extend(
             [
                 "### Operating assumptions",

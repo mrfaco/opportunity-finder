@@ -98,6 +98,7 @@ def _response(body, operation_id):
                 problem="Luggage damage disrupts onward travel",
                 offering="Same-day luggage repair",
                 business_model="Repair service",
+                business_model_kind="services",
                 customer_relationship="B2C",
                 revenue_hypothesis="One-time repair fee",
                 delivery_model="Mobile repair technician",

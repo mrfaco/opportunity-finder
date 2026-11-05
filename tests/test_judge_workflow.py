@@ -59,6 +59,7 @@ def _proposal(task):
         "problem": "Observed recurring workflow cost",
         "offering": "Deliver the missing workflow",
         "business_model": "Fee per job",
+        "business_model_kind": "services",
         "customer_relationship": "B2B",
         "revenue_hypothesis": "Meaningful contribution if observed volumes hold",
         "delivery_model": "An operator and tools",
