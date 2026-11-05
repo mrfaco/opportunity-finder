@@ -18,6 +18,9 @@ from discovery.termination import business_fingerprint
 
 _TOKEN_SPLIT = re.compile(r"[\W_]+")
 METRICS_SCHEMA_VERSION = "1.0"
+# Evidence older than this at retrieval is reported as stale; it never blocks.
+STALE_EVIDENCE_MONTHS = 24
+_DAYS_PER_MONTH = 365.25 / 12
 # Aggregated as mean/median/min/max/sum over non-None values; booleans as 0/1 shares.
 QUANTITATIVE_METRICS = (
     "cited_evidence_count",
@@ -65,6 +68,15 @@ def _novelty(query: str, finder_queries: list[str]) -> float:
     )
 
 
+def evidence_age_months(evidence: Evidence) -> float | None:
+    """Age at retrieval in average-length months; ``None`` when undated."""
+    if evidence.published_at is None:
+        return None
+    return (
+        (evidence.retrieved_at - evidence.published_at).total_seconds() / 86400 / (_DAYS_PER_MONTH)
+    )
+
+
 def _share(part: int, whole: int) -> float | None:
     return part / whole if whole else None
 
@@ -89,7 +101,7 @@ def cost_breakdown(discovery: Discovery) -> tuple[Decimal, Decimal, int]:
     return discovery.cost_used_usd - estimated, estimated, unknown
 
 
-def _cited_ids(content: dict[str, Any]) -> set[str]:
+def cited_ids(content: dict[str, Any]) -> set[str]:
     refs = set(content.get("demand_evidence_ids", []))
     refs.update(content.get("competitor_evidence_ids", []))
     for claim in content.get("claims", []):
@@ -114,7 +126,7 @@ def _evidence_metrics(
         notes.append("No Finder proposal was completed; evidence metrics are not computable.")
         return empty
     content = final.content
-    refs = _cited_ids(content)
+    refs = cited_ids(content)
     by_id = {str(row.pk): row for row in discovery.evidence.all()}
     unmatched = refs - by_id.keys()
     if unmatched:

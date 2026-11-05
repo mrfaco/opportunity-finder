@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import ipaddress
+import json
 import re
 import socket
 import ssl
@@ -23,6 +24,7 @@ from discovery.connectors.base import (
     ConnectorError,
     ResearchDocument,
     ResearchPage,
+    parse_stated_date,
 )
 from discovery.connectors.pdf import PDF_MAX_BYTES, extract_pdf
 
@@ -50,6 +52,95 @@ class _PdfLinks(HTMLParser):
             and target not in self.links
         ):
             self.links.append(target)
+
+
+_META_DATE_NAMES = ("date", "dc.date", "pubdate")
+_JSON_LD_TYPES = {"NewsArticle", "Article", "WebPage"}
+
+
+class _DateMarkup(HTMLParser):
+    """Collect the page's own publication-date statements, in document order."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.article_published: list[str] = []
+        self.meta_date: list[str] = []
+        self.json_ld: list[str] = []
+        self.time_published: list[str] = []
+        self._in_json_ld = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr = {key.lower(): value or "" for key, value in attrs}
+        if tag == "meta":
+            content = attr.get("content", "")
+            if attr.get("property", "").lower() == "article:published_time":
+                self.article_published.append(content)
+            elif attr.get("name", "").lower() in _META_DATE_NAMES:
+                self.meta_date.append(content)
+        elif tag == "script" and attr.get("type", "").lower() == "application/ld+json":
+            self._in_json_ld = True
+            self.json_ld.append("")
+        elif (
+            tag == "time"
+            and attr.get("datetime")
+            and ("pubdate" in attr or attr.get("itemprop", "").lower() == "datepublished")
+        ):
+            self.time_published.append(attr["datetime"])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "script":
+            self._in_json_ld = False
+
+    def handle_data(self, data: str) -> None:
+        if self._in_json_ld:
+            self.json_ld[-1] += data
+
+
+def _json_ld_dates(blocks: list[str]) -> list[str]:
+    """``datePublished`` of the first NewsArticle/Article/WebPage object."""
+    for block in blocks:
+        try:
+            data = json.loads(block)
+        except ValueError:  # allow: suppress-exception — malformed page JSON-LD
+            # Untrusted page markup; other date sources are still tried.
+            continue
+        stack = list(data) if isinstance(data, list) else [data]
+        while stack:
+            item = stack.pop(0)
+            if not isinstance(item, dict):
+                continue
+            graph = item.get("@graph")
+            if isinstance(graph, list):
+                stack = graph + stack
+            kinds = item.get("@type")
+            names = set(kinds) if isinstance(kinds, list) else {kinds}
+            if names & _JSON_LD_TYPES:
+                value = item.get("datePublished")
+                return [value] if isinstance(value, str) else []
+    return []
+
+
+def _published_at(html: str, headers: dict[str, str]) -> tuple[str, str] | None:
+    """The page's stated publication date and where it came from, strongest first.
+
+    ``http_last_modified`` is the weakest signal: a server modification time.
+    """
+    markup = _DateMarkup()
+    if html:
+        markup.feed(html)
+    candidates = [
+        ("meta_article_published", markup.article_published),
+        ("meta_date", markup.meta_date),
+        ("json_ld_date_published", _json_ld_dates(markup.json_ld)),
+        ("time_date_published", markup.time_published),
+        ("http_last_modified", [headers.get("Last-Modified", "")]),
+    ]
+    for source, values in candidates:
+        for value in values:
+            stated = parse_stated_date(value)
+            if stated:
+                return stated, source
+    return None
 
 
 def _status_page(status_code: int, retry_after: str | None = None) -> ResearchPage | None:
@@ -167,6 +258,10 @@ def fetch_public_url(url: str) -> ResearchPage:
             links = _PdfLinks(current)
             if "html" in content_type:
                 links.feed(text)
+            stated = _published_at(
+                text if "html" in content_type else "",
+                {"Last-Modified": response.getheader("Last-Modified") or ""},
+            )
             return ResearchPage(
                 documents=[
                     ResearchDocument(
@@ -177,10 +272,12 @@ def fetch_public_url(url: str) -> ResearchPage:
                         title=title_text,
                         text=body,
                         kind="fetched_page",
+                        published_at=stated[0] if stated else None,
                         metadata={
                             "truncated": truncated,
                             "content_type": content_type,
                             "pdf_links": links.links,
+                            **({"published_at_source": stated[1]} if stated else {}),
                         },
                     )
                 ],

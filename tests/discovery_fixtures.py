@@ -255,3 +255,45 @@ def evidenced_discovery(**fields: Any) -> tuple[Discovery, dict[str, Evidence]]:
         discovery=row, task=t5.task, operation_key="model-unknown", kind="model", state="unknown"
     )
     return row, {"e1": e1, "e2": e2, "e3": e3, "e4": e4, "e5": e5}
+
+
+def pdf_bytes(pages: list[str], info: dict[str, str] | None = None) -> bytes:
+    """A minimal text PDF; ``info`` entries become the document Info dictionary."""
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    children = []
+    for text in pages:
+        number = len(objects) + 1
+        children.append(f"{number} 0 R")
+        objects.append(
+            (
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] "
+                "/Resources << /Font << /F1 3 0 R >> >> "
+                f"/Contents {number + 1} 0 R >>"
+            ).encode()
+        )
+        stream = f"BT /F1 12 Tf 50 700 Td ({text}) Tj ET".encode()
+        objects.append(f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream")
+    objects[1] = f"<< /Type /Pages /Kids [{' '.join(children)}] /Count {len(pages)} >>".encode()
+    info_ref = ""
+    if info:
+        objects.append(
+            ("<< " + " ".join(f"/{key} ({value})" for key, value in info.items()) + " >>").encode()
+        )
+        info_ref = f" /Info {len(objects)} 0 R"
+    raw = b"%PDF-1.4\n"
+    offsets = [0]
+    for i, value in enumerate(objects, 1):
+        offsets.append(len(raw))
+        raw += f"{i} 0 obj\n".encode() + value + b"\nendobj\n"
+    xref = len(raw)
+    raw += f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode()
+    raw += b"".join(f"{offset:010d} 00000 n \n".encode() for offset in offsets[1:])
+    return (
+        raw
+        + f"trailer\n<< /Size {len(offsets)} /Root 1 0 R{info_ref} >>\n".encode()
+        + f"startxref\n{xref}\n%%EOF".encode()
+    )

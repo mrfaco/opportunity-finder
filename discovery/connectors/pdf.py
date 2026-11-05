@@ -9,11 +9,26 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
-from discovery.connectors.base import ConnectorError, ResearchDocument, ResearchPage
+from discovery.connectors.base import (
+    ConnectorError,
+    ResearchDocument,
+    ResearchPage,
+    parse_stated_date,
+)
 
 PDF_MAX_BYTES = 20_000_000
 _MAX_PAGES = 10
 _MAX_TEXT = 120_000
+
+
+def _pdf_date(info: bytes) -> tuple[str, str] | None:
+    """``CreationDate``, else ``ModDate``, from ``pdfinfo -isodates`` output."""
+    for field, source in ((b"CreationDate", "pdf_creation"), (b"ModDate", "pdf_modified")):
+        match = re.search(rb"^" + field + rb":\s+(\S+)\s*$", info, re.MULTILINE)
+        stated = parse_stated_date(match[1].decode("ascii", "replace")) if match else None
+        if stated:
+            return stated, source
+    return None
 
 
 def extract_pdf(raw: bytes, url: str, content_type: str) -> ResearchPage:
@@ -30,7 +45,7 @@ def extract_pdf(raw: bytes, url: str, content_type: str) -> ResearchPage:
         output = Path(directory) / "text.txt"
         source.write_bytes(raw)
         info = subprocess.run(
-            ["pdfinfo", str(source)], capture_output=True, timeout=15, check=False
+            ["pdfinfo", "-isodates", str(source)], capture_output=True, timeout=15, check=False
         )
         if info.returncode:
             raise ConnectorError("PDF is corrupt, encrypted, or unsupported by Poppler")
@@ -41,6 +56,7 @@ def extract_pdf(raw: bytes, url: str, content_type: str) -> ResearchPage:
         if first > count:
             raise ConnectorError(f"PDF has only {count} pages")
         last = min(last, count)
+        stated = _pdf_date(info.stdout)
         result = subprocess.run(
             [
                 "pdftotext",
@@ -81,6 +97,7 @@ def extract_pdf(raw: bytes, url: str, content_type: str) -> ResearchPage:
                 title=f"{base} — page {number}",
                 text=f"[PDF page {number} of {count}]\n{body.strip()}",
                 kind="fetched_page",
+                published_at=stated[0] if stated else None,
                 metadata={
                     "format": "pdf",
                     "content_type": content_type,
@@ -93,6 +110,7 @@ def extract_pdf(raw: bytes, url: str, content_type: str) -> ResearchPage:
                     "next_page_url": f"{base}#page={next_page}-{min(next_page + 9, count)}"
                     if next_page <= count
                     else None,
+                    **({"published_at_source": stated[1]} if stated else {}),
                 },
             )
         )

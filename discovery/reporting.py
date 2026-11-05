@@ -9,7 +9,12 @@ from typing import Any
 from django.db.models import Q
 
 from discovery.models import Discovery, DiscoveryVerdict
-from discovery.quality import compute_quality
+from discovery.quality import (
+    STALE_EVIDENCE_MONTHS,
+    cited_ids,
+    compute_quality,
+    evidence_age_months,
+)
 from discovery.schemas import QualityMetrics, Report
 from discovery.termination import evidence_gaps, unresolved_objections
 
@@ -49,6 +54,17 @@ def _measure(value: float | int | None, *, percent: bool = False, digits: int = 
     if value is None:
         return "unknown"
     return f"{value:.0%}" if percent else f"{value:.{digits}f}"
+
+
+def _published(row: dict[str, Any]) -> str:
+    if not row["published_at"]:
+        return "published unknown"
+    source = row["published_at_source"] or "source not recorded"
+    if source == "http_last_modified":
+        source += ", weak: server modification time"
+    age = row["age_months"]
+    age_text = f"; age {age:.0f} months at retrieval" if age is not None else ""
+    return f"published {row['published_at'][:10]} ({source}){age_text}"
 
 
 def _verdict_line(verdict: DiscoveryVerdict) -> str:
@@ -212,6 +228,23 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         )
     if final:
         limitations.extend(evidence_gaps(discovery, final))
+        cited = cited_ids(final.content)
+        stale = [
+            (row, age)
+            for row in evidence
+            if str(row.pk) in cited
+            and (age := evidence_age_months(row)) is not None
+            and age > STALE_EVIDENCE_MONTHS
+        ]
+        if stale:
+            limitations.append(
+                f"Cited evidence older than {STALE_EVIDENCE_MONTHS} months at retrieval "
+                "(an observation; it did not block acceptance): "
+                + "; ".join(
+                    f"`{row.pk}` {row.title or row.url} ({age:.0f} months)" for row, age in stale
+                )
+                + "."
+            )
     if discovery.error_summary:
         limitations.append(f"Run error: {discovery.error_summary}")
     evidence_rows = [
@@ -225,6 +258,8 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             "origin": e.origin,
             "retrieved_at": e.retrieved_at.isoformat(),
             "published_at": e.published_at.isoformat() if e.published_at else None,
+            "published_at_source": e.metadata.get("published_at_source"),
+            "age_months": evidence_age_months(e),
             "content_hash": e.content_hash,
         }
         for e in evidence
@@ -392,8 +427,7 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
         lines.append(
             f"- `{e['id']}` [{e['title'] or e['url']}]({e['url']}) — "
             f"{e['connector']}, {e['kind']}, type {e['source_type']}; "
-            f"retrieved {e['retrieved_at']}; "
-            f"published {e['published_at'] or 'unknown'}; origin {e['origin']}."
+            f"retrieved {e['retrieved_at']}; {_published(e)}; origin {e['origin']}."
         )
     lines.extend(["", "## How the idea evolved", ""])
     for turn in turns:

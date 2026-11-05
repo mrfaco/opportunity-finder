@@ -289,6 +289,7 @@ class DiscoveryAdmin(ModelAdmin):
                 "connector": item.connector,
                 "retrieved_at": item.retrieved_at,
                 "published_at": item.published_at,
+                "published_at_source": item.metadata.get("published_at_source", ""),
                 "content": item.content,
             }
             for item in discovery.evidence.order_by("retrieved_at", "id")

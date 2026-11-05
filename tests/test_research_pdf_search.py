@@ -17,39 +17,7 @@ from discovery.connectors.pdf import extract_pdf
 from discovery.connectors.web import WebFetchConnector, _PdfLinks, _status_page
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn
 from discovery.research import perform_research, research_calls_used
-
-
-def _pdf(pages):
-    objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"",
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    ]
-    children = []
-    for text in pages:
-        number = len(objects) + 1
-        children.append(f"{number} 0 R")
-        objects.append(
-            (
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] "
-                "/Resources << /Font << /F1 3 0 R >> >> "
-                f"/Contents {number + 1} 0 R >>"
-            ).encode()
-        )
-        stream = f"BT /F1 12 Tf 50 700 Td ({text}) Tj ET".encode()
-        objects.append(f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream")
-    objects[1] = f"<< /Type /Pages /Kids [{' '.join(children)}] /Count {len(pages)} >>".encode()
-    raw = b"%PDF-1.4\n"
-    offsets = [0]
-    for i, value in enumerate(objects, 1):
-        offsets.append(len(raw))
-        raw += f"{i} 0 obj\n".encode() + value + b"\nendobj\n"
-    xref = len(raw)
-    raw += f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode()
-    raw += b"".join(f"{offset:010d} 00000 n \n".encode() for offset in offsets[1:])
-    return (
-        raw + f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode()
-    )
+from tests.discovery_fixtures import pdf_bytes as _pdf
 
 
 @pytest.fixture

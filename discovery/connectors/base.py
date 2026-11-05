@@ -4,11 +4,37 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+def parse_stated_date(value: str, *, now: datetime | None = None) -> str | None:
+    """A source-stated date as a UTC ISO timestamp, or None when it cannot be trusted.
+
+    Accepts ISO-8601 or RFC-2822 only. Dates more than one day in the future
+    are rejected: a wrong date is worse than none. A date without a zone is
+    read as UTC.
+    """
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:  # allow: suppress-exception — not ISO-8601; try RFC-2822 next
+        try:
+            parsed = parsedate_to_datetime(text)
+        except (TypeError, ValueError):  # allow: suppress-exception — unparseable source date
+            # Untrusted page metadata; the caller records no date rather than a guess.
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    if parsed > (now or datetime.now(UTC)) + timedelta(days=1):
+        return None
+    return parsed.astimezone(UTC).isoformat()
 
 
 class ConnectorError(RuntimeError):

@@ -108,7 +108,7 @@
 {% for item in evidence %}
 <details class="discovery-panel" id="evidence-{{ item.id }}">
   <summary class="font-semibold cursor-pointer">{{ item.title|default:item.url }} · {{ item.kind }} · {{ item.source_type }}</summary>
-  <p class="discovery-meta mt-2">{{ item.id }} · {{ item.connector }} · origin {{ item.origin|default:"unknown" }} · retrieved {{ item.retrieved_at|date:"Y-m-d H:i:s T" }} · published {% if item.published_at %}{{ item.published_at|date:"Y-m-d" }}{% else %}unknown{% endif %}</p>
+  <p class="discovery-meta mt-2">{{ item.id }} · {{ item.connector }} · origin {{ item.origin|default:"unknown" }} · retrieved {{ item.retrieved_at|date:"Y-m-d H:i:s T" }} · published {% if item.published_at %}{{ item.published_at|date:"Y-m-d" }}{% if item.published_at_source == "http_last_modified" %} (http_last_modified, weak: server modification time){% elif item.published_at_source %} ({{ item.published_at_source }}){% endif %}{% else %}unknown{% endif %}</p>
   {% if item.public_url %}<a class="underline" href="{{ item.public_url }}" target="_blank" rel="noopener noreferrer">Open source</a>{% endif %}
   <pre class="discovery-text mt-2">{{ item.content }}</pre>
 </details>
