@@ -212,6 +212,17 @@ class Judgment(Contract):
         return self
 
 
+class VerdictInput(Contract):
+    verdict: Literal["good", "weak", "wrong", "untested"]
+    notes: str = ""
+
+    @model_validator(mode="after")
+    def wrong_needs_notes(self) -> "VerdictInput":
+        if self.verdict == "wrong" and not self.notes:
+            raise ValueError("A 'wrong' verdict must say what is not viable or factually wrong")
+        return self
+
+
 class Report(BaseModel):
     model_config = Contract.model_config
     schema_version: Literal["1.1"] = "1.1"

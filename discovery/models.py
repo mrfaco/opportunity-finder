@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
@@ -214,6 +216,56 @@ class Evidence(models.Model):
 
     class Meta:
         ordering = ["retrieved_at"]
+
+
+class DiscoveryVerdict(models.Model):
+    """Append-only human assessment; written only by ``discovery.verdicts``."""
+
+    VERDICTS = ("good", "weak", "wrong", "untested")
+    VIA = ("admin", "api")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    schema_version = models.CharField(max_length=16, default="1.0")
+    discovery = models.ForeignKey(Discovery, on_delete=models.CASCADE, related_name="verdicts")
+    proposal = models.ForeignKey(
+        ProposalRevision, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    judgment = models.ForeignKey(
+        JudgmentRevision, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    verdict = models.CharField(max_length=16, choices=[(v, v) for v in VERDICTS])
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    recorded_via = models.CharField(max_length=8, choices=[(v, v) for v in VIA])
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["recorded_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(verdict__in=["good", "weak", "wrong", "untested"]),
+                name="discovery_verdict_value",
+            ),
+            models.CheckConstraint(
+                condition=Q(recorded_via__in=["admin", "api"]), name="discovery_verdict_via"
+            ),
+        ]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "id": str(self.pk),
+            "discovery_id": str(self.discovery_id),
+            "proposal_id": str(self.proposal_id) if self.proposal_id else None,
+            "judgment_id": str(self.judgment_id) if self.judgment_id else None,
+            "verdict": self.verdict,
+            "notes": self.notes,
+            "recorded_by": self.recorded_by.get_username() if self.recorded_by else None,
+            "recorded_via": self.recorded_via,
+            "recorded_at": self.recorded_at.isoformat(),
+        }
 
 
 class DiscoveryDispatch(models.Model):

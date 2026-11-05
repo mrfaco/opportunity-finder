@@ -14,6 +14,8 @@ from discovery.connectors.base import ConnectorConfigurationError
 from discovery.connectors.registry import describe_connectors
 from discovery.models import Discovery, DiscoveryMessage, Evidence
 from discovery.orchestrator import DiscoveryConflict, cancel_discovery, start_discovery
+from discovery.schemas import VerdictInput
+from discovery.verdicts import VerdictNotAllowed, record_verdict
 
 
 class DiscoveryStartSerializer(serializers.Serializer):
@@ -57,6 +59,7 @@ def discovery_view(discovery: Discovery) -> dict:
         for row in discovery.judgments.select_related("turn").order_by("turn__number")
     ]
     latest_judgment = judgments[-1] if judgments else None
+    human_verdict = discovery.verdicts.select_related("recorded_by").last()
     judge_approved = bool(
         latest_proposal
         and latest_validation
@@ -68,7 +71,7 @@ def discovery_view(discovery: Discovery) -> dict:
         and latest_judgment["content"].get("worth_pursuing")
     )
     return {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "id": str(discovery.id),
         "objective": discovery.objective,
         "constraints": discovery.constraints,
@@ -103,6 +106,8 @@ def discovery_view(discovery: Discovery) -> dict:
         "judge_approved": judge_approved,
         "latest_judgment": latest_judgment,
         "judgments": judgments,
+        "human_verdict": human_verdict.as_dict() if human_verdict else None,
+        "verdict_count": discovery.verdicts.count(),
         "error_summary": discovery.error_summary,
         "report_ready": bool(discovery.report_markdown),
         "report_url": f"/api/v1/discoveries/{discovery.id}/report/",
@@ -214,6 +219,21 @@ class DiscoveryCancelView(APIView):
     def post(self, request, discovery_id):
         discovery = get_object_or_404(Discovery, pk=discovery_id)
         return Response(discovery_view(cancel_discovery(discovery.id)))
+
+
+class DiscoveryVerdictView(APIView):
+    def post(self, request, discovery_id):
+        discovery = get_object_or_404(Discovery, pk=discovery_id)
+        try:
+            data = VerdictInput.model_validate(request.data)
+        except SchemaValidationError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        try:
+            row = record_verdict(discovery, data.verdict, data.notes, user=None, via="api")
+        except VerdictNotAllowed as exc:  # allow: suppress-exception
+            # A non-terminal discovery is an expected transport-level 409.
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(row.as_dict(), status=status.HTTP_201_CREATED)
 
 
 class ConnectorsView(APIView):

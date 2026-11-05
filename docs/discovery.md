@@ -149,6 +149,12 @@ its original retrieval timestamp.
 - `/admin/discovery/discovery/<id>/review/`: inspect status, costs, threaded mail,
   immutable submissions, evidence and provider-operation status.
 - The detail page provides cancellation and final Markdown report download.
+- Once a discovery is completed, failed or cancelled, a user with change
+  permission can record a human verdict (`good`, `weak`, `wrong`, `untested`;
+  `wrong` requires notes) at the top of the review page. Verdicts are
+  append-only: the newest is current and earlier ones remain listed. Each
+  verdict records the final proposal and Judge verdict current at the time,
+  and recording one regenerates the stored report.
 
 Source/model text is escaped in the interface. Reading the operator page does
 not mark an agent's assigned task complete. Refresh the detail page to inspect
@@ -160,8 +166,9 @@ The API uses the existing `Authorization: Bearer <application-api-key>`
 authentication. This is an application key created through the API-key admin,
 not the OpenRouter provider key. All endpoints require authentication.
 
-The request envelope remains version 1.0, configuration is version 1.2, and
-discovery/report responses are version 1.1. Responses include Judge execution
+The request envelope remains version 1.0, configuration is version 1.2, the
+discovery detail response is version 1.2 (adding `human_verdict`, the latest
+verdict or null, and `verdict_count`), and report responses are version 1.1. Responses include Judge execution
 settings, the latest verdict and judgment history. Judge approval is tied to
 the exact latest proposal and accepted validation; stale approval is not reused.
 
@@ -207,6 +214,7 @@ Other endpoints:
 | `GET /api/v1/discoveries/<id>/evidence/` | Paginated captured evidence |
 | `GET /api/v1/discoveries/<id>/report/` | Markdown attachment; 409 until ready |
 | `POST /api/v1/discoveries/<id>/cancel/` | Idempotent cancellation |
+| `POST /api/v1/discoveries/<id>/verdict/` | Record a human verdict `{"schema_version": "1.0", "verdict": "good", "notes": "..."}`; 201 with the record, 409 unless terminal, 400 on contract errors. `recorded_by` is null for API-key callers |
 | `GET /api/v1/connectors/` | Capability and safe configuration status |
 
 Paginated responses contain `count`, `limit`, `offset`, `next_offset` and

@@ -41,6 +41,20 @@
   {% if active %}<p class="mt-2">{% if runtime_name == "openrouter_batch" %}This historical batch run may remain queued while its provider processes the request.{% else %}Claude Code is researching or preparing the next mail handoff.{% endif %} Refresh to see persisted mail, evidence and execution status.</p>{% endif %}
   {% if discovery.constraints %}<p class="discovery-text mt-2">Constraints: {{ discovery.constraints }}</p>{% endif %}
 </div>
+<h2 class="discovery-title">Human verdict</h2>
+<div class="discovery-panel" id="human-verdict">
+  {% if can_record_verdict %}
+  <form method="post" action="{% url 'admin:discovery-verdict' discovery.id %}">
+    {% csrf_token %}
+    {{ verdict_form.as_p }}
+    <button type="submit" class="rounded bg-blue-600 text-white px-3 py-2 mt-2">Record verdict</button>
+  </form>
+  {% elif active %}<p>A verdict can be recorded once the discovery is completed, failed or cancelled.</p>{% endif %}
+  {% for row in verdicts %}
+  <p class="mt-2"><strong>{{ row.verdict|title }}</strong>{% if forloop.first %} (current){% endif %} · {{ row.recorded_at|date:"Y-m-d H:i:s T" }} · via {{ row.recorded_via }}{% if row.recorded_by %} · {{ row.recorded_by.get_username }}{% endif %}</p>
+  {% if row.notes %}<p class="discovery-text">{{ row.notes }}</p>{% endif %}
+  {% empty %}<p class="discovery-meta mt-2">No human verdict recorded yet.</p>{% endfor %}
+</div>
 {% if discovery.report_markdown %}
 <h2 class="discovery-title">Final report</h2>
 <div class="discovery-panel discovery-report">{{ report_html }}</div>

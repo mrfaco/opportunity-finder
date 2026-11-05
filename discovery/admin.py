@@ -24,8 +24,14 @@ from discovery.api import report_response
 from discovery.connectors.base import ConnectorConfigurationError
 from discovery.connectors.registry import describe_connectors
 from discovery.models import Discovery
-from discovery.orchestrator import DiscoveryConflict, cancel_discovery, start_discovery
+from discovery.orchestrator import (
+    TERMINAL_STATUSES,
+    DiscoveryConflict,
+    cancel_discovery,
+    start_discovery,
+)
 from discovery.schemas import DEFAULT_MODEL
+from discovery.verdicts import VerdictNotAllowed, record_verdict
 
 _FORM_ERRORS = (ValueError, DiscoveryConflict, ConnectorConfigurationError)
 
@@ -153,6 +159,30 @@ class DiscoveryStartForm(forms.Form):
         }
 
 
+class VerdictForm(forms.Form):
+    verdict = forms.ChoiceField(
+        choices=[
+            ("good", "Good — worth testing next; I would act on it"),
+            ("weak", "Weak — plausible, but evidence or economics do not justify acting"),
+            ("wrong", "Wrong — not viable or a material factual error (say which)"),
+            ("untested", "Untested — cannot judge without information outside the report"),
+        ],
+        widget=forms.RadioSelect,
+    )
+    notes = forms.CharField(
+        required=False,
+        max_length=12000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Required for 'wrong'. Judge the opportunity, not the report's formatting.",
+    )
+
+    def clean(self):
+        super().clean()
+        if self.cleaned_data.get("verdict") == "wrong" and not self.cleaned_data.get("notes"):
+            raise forms.ValidationError("A 'wrong' verdict must say what is wrong.")
+        return self.cleaned_data
+
+
 def _url(value: str) -> str:
     return value if urlsplit(value).scheme in {"http", "https"} else ""
 
@@ -184,6 +214,11 @@ class DiscoveryAdmin(ModelAdmin):
                 "<uuid:discovery_id>/report/",
                 self.admin_site.admin_view(self.report_view),
                 name="discovery-report",
+            ),
+            path(
+                "<uuid:discovery_id>/verdict/",
+                self.admin_site.admin_view(self.verdict_view),
+                name="discovery-verdict",
             ),
             path(
                 "<uuid:discovery_id>/cancel/",
@@ -327,6 +362,12 @@ class DiscoveryAdmin(ModelAdmin):
                 "runtime_name": discovery.config_snapshot.get("runtime", "openrouter_batch"),
                 "active": discovery.status in {"queued", "running"},
                 "can_cancel": self.has_change_permission(request, discovery),
+                "can_record_verdict": discovery.status in TERMINAL_STATUSES
+                and self.has_change_permission(request, discovery),
+                "verdict_form": VerdictForm(),
+                "verdicts": discovery.verdicts.select_related("recorded_by").order_by(
+                    "-recorded_at", "-id"
+                ),
             },
         )
 
@@ -340,6 +381,33 @@ class DiscoveryAdmin(ModelAdmin):
             messages.warning(request, "The report is not ready yet.")
             return HttpResponseRedirect(reverse("admin:discovery-review", args=[discovery.id]))
         return report_response(discovery)
+
+    def verdict_view(self, request, discovery_id):
+        discovery = get_object_or_404(Discovery, pk=discovery_id)
+        if not self.has_change_permission(request, discovery):
+            raise PermissionDenied
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        review = HttpResponseRedirect(reverse("admin:discovery-review", args=[discovery.id]))
+        form = VerdictForm(request.POST)
+        if not form.is_valid():
+            for error in form.errors.values():
+                messages.error(request, " ".join(str(message) for message in error))
+            return review
+        try:
+            record_verdict(
+                discovery,
+                form.cleaned_data["verdict"],
+                form.cleaned_data["notes"],
+                user=request.user,
+                via="admin",
+            )
+        except VerdictNotAllowed as exc:  # allow: suppress-exception
+            # Shown to the operator; nothing was written.
+            messages.error(request, str(exc))
+            return review
+        messages.success(request, "Verdict recorded and report regenerated.")
+        return review
 
     def cancel_view(self, request, discovery_id):
         discovery = get_object_or_404(Discovery, pk=discovery_id)

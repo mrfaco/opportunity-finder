@@ -27,5 +27,10 @@ urlpatterns = [
         api.DiscoveryCancelView.as_view(),
         name="api-discovery-cancel",
     ),
+    path(
+        "discoveries/<uuid:discovery_id>/verdict/",
+        api.DiscoveryVerdictView.as_view(),
+        name="api-discovery-verdict",
+    ),
     path("connectors/", api.ConnectorsView.as_view(), name="api-connectors"),
 ]
