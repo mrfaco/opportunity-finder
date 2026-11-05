@@ -223,6 +223,48 @@ class VerdictInput(Contract):
         return self
 
 
+class QualityMetrics(Contract):
+    """Deterministic evidence, independence, process and outcome measures (schema 1.0).
+
+    A metric that cannot be computed is ``None`` with the reason in ``notes``.
+    """
+
+    discovery_id: str
+    cited_evidence_count: int | None
+    cited_origin_count: int | None
+    cited_connector_counts: dict[str, int] | None
+    snippet_citation_share: float | None
+    fact_claims_with_quote_rate: float | None
+    claims_with_evidence_rate: float | None
+    published_at_known_share: float | None
+    median_evidence_age_days: float | None
+    validator_query_novelty_min: float | None
+    accepting_turn_query_novelty: float | None
+    validator_new_origin_share: float | None
+    turns_completed: int
+    proposal_count: int
+    pivot_count: int
+    turns_to_first_accept: int | None
+    judge_verdict_counts: dict[str, int]
+    research_calls: int
+    research_failure_share: float | None
+    local_denials: int
+    known_cost_usd: Decimal
+    estimated_cost_usd: Decimal
+    unknown_operations: int
+    outcome: str
+    stop_reason: str
+    judge_required: bool
+    judge_approved: bool
+    human_verdict: str | None
+    finder_model: str | None
+    validator_model: str | None
+    judge_model: str | None
+    same_model_family: bool
+    prompt_hashes: dict[str, str]
+    notes: list[str] = Field(default_factory=list)
+
+
 class Report(BaseModel):
     model_config = Contract.model_config
     schema_version: Literal["1.1"] = "1.1"
