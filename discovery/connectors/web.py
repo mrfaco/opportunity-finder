@@ -422,6 +422,46 @@ class _DuckDuckGoParser(HTMLParser):
             self.active[self.capture] += data
 
 
+# DuckDuckGo's region parameter kl is <country>-<language>; a country alone
+# takes its main language from this table. Sorted by country code.
+_DDG_DEFAULT_LANGUAGE = {
+    "ar": "es",
+    "br": "pt",
+    "ca": "en",
+    "cl": "es",
+    "co": "es",
+    "de": "de",
+    "es": "es",
+    "fr": "fr",
+    "in": "en",
+    "it": "it",
+    "mx": "es",
+    "pe": "es",
+    "pt": "pt",
+    "uk": "en",
+    "us": "en",
+    "uy": "es",
+}
+_DDG_RECENCY = {"day": "d", "week": "w", "month": "m", "year": "y"}
+
+
+def duckduckgo_params(query: str, filters: dict[str, Any]) -> dict[str, str]:
+    """Validated DuckDuckGo query parameters for the market and period filters."""
+    params = {"q": query}
+    country = filters.get("country")
+    language = filters.get("language")
+    if language and not country:
+        raise ValueError("duckduckgo: the language filter needs a country (kl=<country>-<lang>)")
+    if country:
+        language = language or _DDG_DEFAULT_LANGUAGE.get(country)
+        if not language:
+            raise ValueError(f"duckduckgo: give a language filter for country {country}")
+        params["kl"] = f"{country}-{language}"
+    if filters.get("recency"):
+        params["df"] = _DDG_RECENCY[filters["recency"]]
+    return params
+
+
 class DuckDuckGoConnector(Connector):
     id = "duckduckgo"
 
@@ -430,6 +470,7 @@ class DuckDuckGoConnector(Connector):
             id=self.id,
             name="General web search (DuckDuckGo HTML)",
             capabilities=["search"],
+            supported_filters=["country", "language", "recency"],
             access_limitations=(
                 "Public HTML endpoint; best effort availability; challenges return rate limits; "
                 "no pagination; search_auto can try Bing on failure"
@@ -444,12 +485,12 @@ class DuckDuckGoConnector(Connector):
         cursor: str | None = None,
         limit: int = 5,
     ) -> ResearchPage:
-        self.validate_search(query, filters, cursor, limit)
+        params = duckduckgo_params(query, self.validate_search(query, filters, cursor, limit))
         # The fixed search endpoint is trusted; result URLs remain untrusted.
         try:
             response = httpx.get(
                 "https://html.duckduckgo.com/html/",
-                params={"q": query},
+                params=params,
                 headers={"User-Agent": _USER_AGENT},
                 timeout=_TIMEOUT_SECONDS,
                 follow_redirects=False,

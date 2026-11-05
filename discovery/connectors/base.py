@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -35,6 +36,25 @@ def parse_stated_date(value: str, *, now: datetime | None = None) -> str | None:
     if parsed > (now or datetime.now(UTC)) + timedelta(days=1):
         return None
     return parsed.astimezone(UTC).isoformat()
+
+
+# Market and period filters understood by the free search connectors.
+RECENCY_VALUES = ("day", "week", "month", "year")
+_ISO_CODE = re.compile(r"^[a-z]{2}$")
+
+
+def validate_market_filters(connector_id: str, supplied: dict[str, Any]) -> None:
+    """Reject country/language/recency values outside their allowed forms."""
+    if "country" in supplied and not (
+        isinstance(supplied["country"], str) and _ISO_CODE.match(supplied["country"])
+    ):
+        raise ValueError(f"{connector_id}: country must be a lower-case ISO 3166-1 alpha-2 code")
+    if "language" in supplied and not (
+        isinstance(supplied["language"], str) and _ISO_CODE.match(supplied["language"])
+    ):
+        raise ValueError(f"{connector_id}: language must be a lower-case ISO 639-1 code")
+    if "recency" in supplied and supplied["recency"] not in RECENCY_VALUES:
+        raise ValueError(f"{connector_id}: recency must be one of {', '.join(RECENCY_VALUES)}")
 
 
 class ConnectorError(RuntimeError):
@@ -143,6 +163,7 @@ class Connector(ABC):
         unknown = set(supplied) - set(self.describe().supported_filters)
         if unknown:
             raise UnsupportedCapabilityError(f"{self.id}: unsupported filters {sorted(unknown)}")
+        validate_market_filters(self.id, supplied)
         if cursor is not None and not pagination:
             raise UnsupportedCapabilityError(f"{self.id}: pagination is not supported")
         return supplied

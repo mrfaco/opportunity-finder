@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
@@ -31,7 +32,15 @@ class ResearchInput(Contract):
     action: Literal["search", "fetch"]
     query: str = ""
     target: str = ""
-    filters: dict[str, Any] = Field(default_factory=dict)
+    filters: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Connector filters (see each connector's supported_filters). Search: "
+            "country (ISO 3166-1 alpha-2, lower case, e.g. ar), language (ISO 639-1, "
+            "e.g. es) and recency (day, week, month or year) on duckduckgo, bing "
+            "(no recency) and search_auto; include_domains/exclude_domains on web_search."
+        ),
+    )
     cursor: str | None = None
     limit: int = Field(default=5, ge=1, le=20)
 
@@ -42,19 +51,33 @@ def lease_token(task: DiscoveryTask) -> UUID:
     return task.lease_token
 
 
-def research_calls_used(task: DiscoveryTask) -> int:
+_BACKEND_SUFFIX = re.compile(r":backend:[^:]+$")
+
+
+def research_slot(operation_key: str) -> str:
+    """The quota slot of an operation: search_auto backends share their parent's."""
+    return _BACKEND_SUFFIX.sub("", operation_key)
+
+
+def _research_slots(task: DiscoveryTask) -> set[str]:
     # Local cooldown denials never reached a source. Retain their audit rows,
     # but do not let repeated denied calls exhaust the actual research budget.
-    return (
-        task.operations.filter(kind="research")
+    return {
+        research_slot(key)
+        for key in task.operations.filter(kind="research")
         .exclude(response__contains={"request_performed": False})
         .exclude(
             response__contains={
                 "error_reason": "Shared connector rate limit; retry on a later call"
             }
         )
-        .count()
-    )
+        .values_list("operation_key", flat=True)
+    }
+
+
+def research_calls_used(task: DiscoveryTask) -> int:
+    """Research slots used this turn; a search_auto fallback pair is one slot."""
+    return len(_research_slots(task))
 
 
 def check_limits(task: DiscoveryTask) -> None:
@@ -93,12 +116,13 @@ def begin_operation(
             if kind == "model"
             else config.max_research_calls_per_turn
         )
-        used_calls = (
-            research_calls_used(task)
-            if kind == "research"
-            else task.operations.filter(kind=kind).count()
-        )
-        if kind in {"model", "research"} and used_calls >= max_calls:
+        if kind == "research":
+            slots = _research_slots(task)
+            # A fallback backend joins its parent's slot rather than taking a new one.
+            exhausted = research_slot(key) not in slots and len(slots) >= max_calls
+        else:
+            exhausted = kind == "model" and task.operations.filter(kind=kind).count() >= max_calls
+        if exhausted:
             raise DiscoveryStop("turn_call_limit", f"Maximum {kind} calls reached")
         held = discovery.operations.exclude(state__in=["completed", "failed"]).aggregate(
             value=Sum("reserved_usd")
@@ -171,24 +195,29 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
     get_connector("search_auto").validate_search(inp.query, inp.filters, inp.cursor, inp.limit)
     attempts: list[dict[str, Any]] = []
     result: dict[str, Any] = {}
+    applied: list[str] = []
+    dropped: list[str] = []
     for backend in ("duckduckgo", "bing"):
         backend_key = f"{key}:backend:{backend}"
-        if (
-            attempts
-            and research_calls_used(task) >= config.max_research_calls_per_turn
-            and not task.operations.filter(operation_key=backend_key).exists()
-        ):
-            result = {**result, "fallback_not_attempted": "Research quota exhausted"}
-            break
+        supported = set(get_connector(backend).describe().supported_filters)
+        applied = sorted(name for name in inp.filters if name in supported)
+        # Recency is the only filter Bing cannot honour; never drop it silently.
+        dropped = sorted(name for name in inp.filters if name not in supported)
         result = _perform_research(
             task,
             backend_key,
-            {**arguments, "connector": backend},
+            {
+                **arguments,
+                "connector": backend,
+                "filters": {name: inp.filters[name] for name in applied},
+            },
             routed_backend=True,
         )
         attempts.append(
             {
                 "connector": backend,
+                "filters_applied": applied,
+                "filters_dropped": dropped,
                 "status": result["status"],
                 "error_reason": result.get("error_reason"),
                 "request_performed": result.get(
@@ -205,6 +234,8 @@ def perform_research(task: DiscoveryTask, key: str, arguments: dict[str, Any]) -
         "schema_version": "1.1",
         "search_attempts": attempts,
         "requested_connector": "search_auto",
+        "filters_applied": applied,
+        "filters_dropped": dropped,
     }
 
 

@@ -112,11 +112,21 @@ General search is explicitly configured:
 New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
 Tavily remains available with `web_search,web_fetch` and `TAVILY_API_KEY`.
 `search_auto` makes at most one attempt at each backend; every attempt has its own
-operation key, quota accounting, evidence provenance and cooldown. The tool response
+operation key, evidence provenance and cooldown, and the DuckDuckGo → Bing pair uses
+one research slot (operations keyed `<parent>:backend:<id>` count once under their
+parent, also when older turns are recounted). The tool response
 uses schema 1.1 with `requested_connector` and `search_attempts`; existing schema-1.0
 single-backend responses remain supported. Empty successful results do not trigger
-fallback. Exhausting the quota prevents the next backend call. Local cooldown denials
-remain audited without spending a source-call slot. No challenge is bypassed.
+fallback. Local cooldown denials remain audited without spending a source-call slot.
+No challenge is bypassed.
+
+Search filters: `country` (ISO 3166-1 alpha-2, lower case) and `language` (ISO 639-1)
+map to DuckDuckGo `kl=<country>-<language>` (a country alone takes its main language
+from a small table; a language needs a country) and Bing `cc`/`setlang`; `recency`
+(`day`, `week`, `month`, `year`) maps to DuckDuckGo `df`. Bing cannot honour recency:
+on fallback it runs without it, and the attempt record and the response's top level
+show `filters_applied` and `filters_dropped: ["recency"]`. Invalid values are a
+`validation_failed` tool result before any request.
 Connector availability and settings appear at `/api/v1/connectors/` and the start form.
 Existing stored connector selections and run histories are unchanged.
 

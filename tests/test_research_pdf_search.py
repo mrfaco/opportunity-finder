@@ -15,6 +15,7 @@ from discovery.agent_tools import AgentTools
 from discovery.connectors.base import ConnectorError, ResearchDocument, ResearchPage
 from discovery.connectors.pdf import extract_pdf
 from discovery.connectors.web import WebFetchConnector, _PdfLinks, _status_page
+from discovery.errors import DiscoveryStop
 from discovery.models import Discovery, DiscoveryTask, DiscoveryTurn
 from discovery.research import perform_research, research_calls_used
 from tests.discovery_fixtures import pdf_bytes as _pdf
@@ -98,7 +99,8 @@ def test_ddg_challenge_falls_back_to_bing_with_separate_ledger_and_idempotency()
     assert [x["status"] for x in result["search_attempts"]] == ["rate_limited", "success"]
     assert result["documents"][0]["connector"] == "bing"
     assert result == replay
-    assert task.operations.count() == 2 and research_calls_used(task) == 2
+    # Both backend attempts are audited; the fallback pair uses one research slot.
+    assert task.operations.count() == 2 and research_calls_used(task) == 1
     assert task.discovery.evidence.count() == 1
 
 
@@ -117,8 +119,16 @@ def test_fallback_cannot_exceed_research_quota():
         result = perform_research(
             task, "one-slot", {"connector": "search_auto", "action": "search", "query": "x"}
         )
-    assert request.call_count == 1
-    assert result["fallback_not_attempted"] == "Research quota exhausted"
+        # The fallback shares its parent's slot; a second search needs a new one.
+        with pytest.raises(DiscoveryStop, match="Maximum research calls"):
+            perform_research(
+                task, "two-slot", {"connector": "search_auto", "action": "search", "query": "y"}
+            )
+    assert request.call_count == 2
+    assert [attempt["connector"] for attempt in result["search_attempts"]] == [
+        "duckduckgo",
+        "bing",
+    ]
     assert research_calls_used(task) == 1
 
 

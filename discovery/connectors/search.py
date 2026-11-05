@@ -15,7 +15,12 @@ from discovery.connectors.base import (
     ResearchDocument,
     ResearchPage,
 )
-from discovery.connectors.web import _TIMEOUT_SECONDS, _USER_AGENT, _status_page
+from discovery.connectors.web import (
+    _TIMEOUT_SECONDS,
+    _USER_AGENT,
+    _status_page,
+    duckduckgo_params,
+)
 
 
 class BingConnector(Connector):
@@ -26,6 +31,7 @@ class BingConnector(Connector):
             id=self.id,
             name="General web search (Bing RSS)",
             capabilities=["search"],
+            supported_filters=["country", "language"],
             minimum_interval_seconds=2,
             access_limitations="Public RSS endpoint; best effort, no pagination; up to 10 results",
         )
@@ -37,11 +43,16 @@ class BingConnector(Connector):
         cursor: str | None = None,
         limit: int = 5,
     ) -> ResearchPage:
-        self.validate_search(query, filters, cursor, limit)
+        supplied = self.validate_search(query, filters, cursor, limit)
+        params = {"q": query, "format": "rss"}
+        if supplied.get("country"):
+            params["cc"] = supplied["country"].upper()
+        if supplied.get("language"):
+            params["setlang"] = supplied["language"]
         try:
             response = httpx.get(
                 "https://www.bing.com/search",
-                params={"q": query, "format": "rss"},
+                params=params,
                 headers={"User-Agent": _USER_AGENT},
                 timeout=_TIMEOUT_SECONDS,
                 follow_redirects=False,
@@ -92,10 +103,27 @@ class AutoSearchConnector(Connector):
             version=self.version,
             name="General web search (DuckDuckGo → Bing on failure)",
             capabilities=["search"],
+            supported_filters=["country", "language", "recency"],
             minimum_interval_seconds=0,
             access_limitations=(
                 "Explicit fallback: DuckDuckGo then Bing on rate limit, timeout, access denial "
-                "or source error. Each backend attempt is audited and counts against quota; "
-                "local cooldown denials do not. No retry loop or challenge bypass."
+                "or source error. Each backend attempt is audited; the pair uses one research "
+                "slot and local cooldown denials use none. Bing cannot honour recency: it is "
+                "dropped and reported in filters_dropped. No retry loop or challenge bypass."
             ),
         )
+
+    def validate_search(
+        self,
+        query: str,
+        filters: dict[str, Any] | None,
+        cursor: str | None,
+        limit: int,
+        *,
+        pagination: bool = False,
+    ) -> dict[str, Any]:
+        supplied = super().validate_search(query, filters, cursor, limit, pagination=pagination)
+        # DuckDuckGo runs first; its stricter country/language rule is checked
+        # before any request.
+        duckduckgo_params(query, supplied)
+        return supplied

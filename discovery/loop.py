@@ -50,7 +50,10 @@ def tools_for_role(role: str) -> list[dict[str, Any]]:
                 "name": "research",
                 "description": (
                     "Search/fetch an enabled connector. Cite returned evidence_id values. "
-                    "Search snippets are leads; fetch decisive pages."
+                    "Search snippets are leads; fetch decisive pages. Search filters: "
+                    "country (ISO alpha-2, lower case), language (ISO 639-1) and recency "
+                    "(day, week, month, year) on duckduckgo, bing and search_auto; Bing "
+                    "ignores recency and the result lists it under filters_dropped."
                 ),
                 "parameters": ResearchInput.model_json_schema(),
             },
