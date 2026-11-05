@@ -17,7 +17,11 @@ Next: measure result quality before changing it. See the
 and [implementation plan](docs/superpowers/plans/2026-11-05-discovery-quality-measurement-plan.md):
 human verdicts, deterministic quality metrics, a benchmark objective set and a
 recorded baseline. Later phases (evidence substance, transaction-showing
-sources, reasoning quality) are judged against that baseline.
+sources, reasoning quality) are judged against that baseline. Phase 1 is
+scoped in the [evidence substance specification](docs/superpowers/specs/2026-11-05-evidence-substance-design.md)
+and [plan](docs/superpowers/plans/2026-11-05-evidence-substance-plan.md):
+source typing, freshness, a structured business-model kind, an off-by-default
+typed evidence policy, measured query independence, and search filters.
 
 First get the full start → research → mail → challenge/pivot → report flow
 working with focused smoke checks. Extensive regression coverage, concurrency
