@@ -23,6 +23,7 @@ from unfold.admin import ModelAdmin
 from discovery.api import report_response
 from discovery.connectors.base import ConnectorConfigurationError
 from discovery.connectors.registry import describe_connectors
+from discovery.eval.benchmark import load_benchmark
 from discovery.models import Discovery
 from discovery.orchestrator import (
     TERMINAL_STATUSES,
@@ -288,6 +289,18 @@ class DiscoveryAdmin(ModelAdmin):
             }
             for item in discovery.evidence.order_by("retrieved_at", "id")
         ]
+        benchmark_objective = (
+            next(
+                (
+                    item
+                    for item in load_benchmark().objectives
+                    if item.id == discovery.benchmark_objective_id
+                ),
+                None,
+            )
+            if discovery.benchmark_objective_id
+            else None
+        )
         turns = [
             {"turn": turn, "formatted_submission": json.dumps(turn.submission, indent=2)}
             for turn in discovery.turns.order_by("number")
@@ -365,6 +378,7 @@ class DiscoveryAdmin(ModelAdmin):
                 "can_record_verdict": discovery.status in TERMINAL_STATUSES
                 and self.has_change_permission(request, discovery),
                 "verdict_form": VerdictForm(),
+                "benchmark_objective": benchmark_objective,
                 "verdicts": discovery.verdicts.select_related("recorded_by").order_by(
                     "-recorded_at", "-id"
                 ),

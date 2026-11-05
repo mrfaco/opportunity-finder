@@ -57,19 +57,8 @@ def content_hash(value: dict[str, Any]) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
-def start_discovery(
-    objective: str,
-    config: dict[str, Any] | DiscoveryConfig | None = None,
-    constraints: str = "",
-    idempotency_key: str | None = None,
-    enqueue: bool = True,
-) -> Discovery:
-    if not isinstance(objective, str) or not objective.strip():
-        raise DiscoveryError("A nonempty objective is required")
-    if len(objective) > 20000 or len(constraints) > 20000:
-        raise DiscoveryError("Objective and constraints must each be at most 20,000 characters")
-    if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
-        raise DiscoveryError("Idempotency key must be 1–200 characters")
+def resolve_config(config: dict[str, Any] | DiscoveryConfig | None = None) -> DiscoveryConfig:
+    """Merge a request over deployment defaults and validate it as ``DiscoveryConfig``."""
     defaults = {
         "runtime": getattr(settings, "DISCOVERY_RUNTIME", "claude_code"),
         "finder_provider": getattr(settings, "DISCOVERY_FINDER_PROVIDER", "openrouter"),
@@ -88,9 +77,28 @@ def start_discovery(
     if "judge_enabled" not in values and values.get("schema_version") not in {"1.0", "1.1"}:
         values["judge_enabled"] = getattr(settings, "DISCOVERY_JUDGE_ENABLED", True)
     try:
-        cfg = DiscoveryConfig.model_validate(values)
+        return DiscoveryConfig.model_validate(values)
     except ValidationError as exc:
         raise DiscoveryError(str(exc)) from exc
+
+
+def start_discovery(
+    objective: str,
+    config: dict[str, Any] | DiscoveryConfig | None = None,
+    constraints: str = "",
+    idempotency_key: str | None = None,
+    enqueue: bool = True,
+    *,
+    benchmark_tag: str = "",
+    benchmark_objective_id: str = "",
+) -> Discovery:
+    if not isinstance(objective, str) or not objective.strip():
+        raise DiscoveryError("A nonempty objective is required")
+    if len(objective) > 20000 or len(constraints) > 20000:
+        raise DiscoveryError("Objective and constraints must each be at most 20,000 characters")
+    if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
+        raise DiscoveryError("Idempotency key must be 1–200 characters")
+    cfg = resolve_config(config)
     payload = {
         "objective": objective.strip(),
         "constraints": constraints,
@@ -135,6 +143,8 @@ def start_discovery(
                     "connector_snapshot": connector_snapshot,
                     "runtime_snapshot": runtime_snapshot,
                     "request_hash": request_hash,
+                    "benchmark_tag": benchmark_tag,
+                    "benchmark_objective_id": benchmark_objective_id,
                 },
             )
             if idempotency_key
@@ -147,6 +157,8 @@ def start_discovery(
                     connector_snapshot=connector_snapshot,
                     runtime_snapshot=runtime_snapshot,
                     request_hash=request_hash,
+                    benchmark_tag=benchmark_tag,
+                    benchmark_objective_id=benchmark_objective_id,
                 ),
                 True,
             )

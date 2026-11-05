@@ -222,6 +222,30 @@ Paginated responses contain `count`, `limit`, `offset`, `next_offset` and
 are Markdown text rather than executable HTML. Cancellation prevents new calls;
 work already submitted may still incur a charge.
 
+## Benchmark runs
+
+`discovery/eval/objectives.json` is the versioned benchmark set (twelve
+objectives with a reviewer rubric each). `manage.py run_discovery_benchmark`
+starts one discovery per objective through the normal idempotent start
+service with key `benchmark:<tag>:<objective_id>`, and records
+`benchmark_tag` and `benchmark_objective_id` on each discovery.
+
+```sh
+python manage.py run_discovery_benchmark --tag baseline-2026-11            # dry run: prints plan
+python manage.py run_discovery_benchmark --tag baseline-2026-11 \
+    --authorize-spend --max-total-usd 120                                   # starts discoveries
+```
+
+- Without `--authorize-spend` nothing starts; the command prints the frozen
+  config, role prompt hashes, the ceiling sum and each idempotency key.
+- `--max-total-usd` is required to start and the command refuses when
+  `max_cost_usd × objectives` exceeds it.
+- `--objective <id>` (repeatable) runs a subset; `--config-json '{...}'` is
+  merged over deployment defaults and validated before anything starts.
+- Re-running with the same tag never starts a second discovery for an
+  existing key. The command does not wait; workers run the discoveries.
+- The review page shows the objective's rubric beside the verdict form.
+
 ## Recovery and billing
 
 Messages, assignments, completed turns and exact proposal references are

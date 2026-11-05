@@ -43,6 +43,20 @@
 </div>
 <h2 class="discovery-title">Human verdict</h2>
 <div class="discovery-panel" id="human-verdict">
+  {% if discovery.benchmark_objective_id %}
+  <div id="benchmark-rubric" class="mb-3">
+    <p><strong>Benchmark {{ discovery.benchmark_tag }} · {{ discovery.benchmark_objective_id }}</strong></p>
+    {% if benchmark_objective %}
+    <p class="discovery-meta">Reviewer rubric (not scored automatically)</p>
+    <p>The report should cite:</p>
+    <ul class="list-disc pl-6">{% for item in benchmark_objective.rubric.must_cite %}<li>{{ item }}</li>{% endfor %}</ul>
+    <p>Red flags:</p>
+    <ul class="list-disc pl-6">{% for item in benchmark_objective.rubric.red_flags %}<li>{{ item }}</li>{% endfor %}</ul>
+    {% else %}
+    <p>This objective is no longer in the benchmark set; see docs/discovery-eval.md for why it was retired.</p>
+    {% endif %}
+  </div>
+  {% endif %}
   {% if can_record_verdict %}
   <form method="post" action="{% url 'admin:discovery-verdict' discovery.id %}">
     {% csrf_token %}
