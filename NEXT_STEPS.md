@@ -12,6 +12,13 @@ See the [current specification](docs/superpowers/specs/2026-11-03-finder-validat
 and [operator guide](docs/discovery.md). Default role model:
 `deepseek/deepseek-v4.1-flash:batch` via OpenRouter asynchronous batch inference.
 
+Next: measure result quality before changing it. See the
+[Phase 0 specification](docs/superpowers/specs/2026-11-05-discovery-quality-measurement-design.md)
+and [implementation plan](docs/superpowers/plans/2026-11-05-discovery-quality-measurement-plan.md):
+human verdicts, deterministic quality metrics, a benchmark objective set and a
+recorded baseline. Later phases (evidence substance, transaction-showing
+sources, reasoning quality) are judged against that baseline.
+
 First get the full start → research → mail → challenge/pivot → report flow
 working with focused smoke checks. Extensive regression coverage, concurrency
 failure injection and coverage verification belong to the final hardening phase.
