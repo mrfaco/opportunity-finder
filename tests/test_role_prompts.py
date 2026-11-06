@@ -286,3 +286,23 @@ def test_validator_procedure_keeps_every_checklist_item_and_kind():
             "minor",
         },
     )
+
+
+def test_judge_procedure_maps_the_observed_transaction_for_every_kind():
+    body = _procedure("judge")
+    rows = _assert_symmetric_table(body, columns=2)
+    for kind, (observed, _) in rows.items():
+        assert set(re.findall(r"`([^`]+)`", observed)) & SOURCE_TYPES, f"{kind}: {observed}"
+    for kind in KINDS:
+        assert f"({kind})" in body, f"economics capacity unit missing for {kind}"
+    _assert_known_names(
+        body,
+        {
+            "evidence_profile",
+            "evidence_profile.cited_origin_count",
+            "evidence_profile.validator_query_novelty_min",
+            "business_model_kind",
+            "assessment.economics",
+            "next_tests",
+        },
+    )
