@@ -142,24 +142,7 @@ class _Halt(Exception):
 @pytest.mark.django_db
 @pytest.mark.parametrize("stored", ["current", "1.0"])
 def test_batch_turn_sends_the_snapshot_prompt_and_records_its_hash(stored):
-    model = "deepseek/deepseek-v4.1-flash:batch"
-    runtime_snapshot = {
-        "schema_version": "1.0",
-        "provider": "fixture",
-        "models": {
-            model: {"prompt_rate": "0", "completion_rate": "0", "context_length": 1_000_000}
-        },
-    }
-    config = {
-        "schema_version": "1.0",
-        "runtime": "openrouter_batch",
-        "judge_enabled": False,
-        "finder_model": model,
-        "validator_model": model,
-        "connectors": ["duckduckgo", "web_fetch"],
-    }
-    with patch("discovery.runtime.check_configuration", return_value=runtime_snapshot):
-        row = start_discovery("Find a services business", config, enqueue=False)
+    row = fx.batch_discovery()
     if stored == "1.0":
         row.prompt_snapshot = fx.PROMPTS
         row.save(update_fields=["prompt_snapshot"])

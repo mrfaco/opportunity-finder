@@ -22,6 +22,7 @@ from discovery.orchestrator import (
     release_task,
     renew_task,
 )
+from discovery.quality import evidence_profile
 from discovery.research import (
     ResearchInput,
     begin_operation,
@@ -29,6 +30,7 @@ from discovery.research import (
     complete_operation,
     lease_token,
     perform_research,
+    research_budget,
 )
 from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 from discovery.termination import SubmissionError, unresolved_objections
@@ -84,7 +86,7 @@ def _initial_context(task: DiscoveryTask) -> dict[str, Any]:
     # Summaries keep prior turns bounded. Current artifacts and all unresolved
     # objections are preserved intact, with evidence available by source URL.
     return {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "role": task.role,
         "objective": discovery.objective,
         "constraints": discovery.constraints,
@@ -132,6 +134,10 @@ def _initial_context(task: DiscoveryTask) -> dict[str, Any]:
             if judgment.verdict == "reject"
         ],
         "unresolved_objections": unresolved_objections(discovery),
+        "evidence_profile": evidence_profile(discovery, latest_proposal)
+        if latest_proposal
+        else None,
+        "research_budget": research_budget(task),
         "history": [
             {"turn": turn.number, "role": turn.role, "summary": turn.submission.get("summary", "")}
             for turn in discovery.turns.filter(completed_at__isnull=False)

@@ -80,6 +80,29 @@ def research_calls_used(task: DiscoveryTask) -> int:
     return len(_research_slots(task))
 
 
+def model_calls_allowed(task: DiscoveryTask, config: DiscoveryConfig) -> int:
+    """This launch's model-call cap; a Claude recovery wake after a submission gets two."""
+    if (
+        task.context.get("claude_recovery_id")
+        and task.context.get("claude_recovery_mode") != "launch_failure"
+    ):
+        return min(config.max_model_calls_per_turn, 2)
+    return config.max_model_calls_per_turn
+
+
+def research_budget(task: DiscoveryTask) -> dict[str, int]:
+    """Research and model calls left in this turn, as shown in role context."""
+    config = DiscoveryConfig.model_validate(task.discovery.config_snapshot)
+    used = research_calls_used(task)
+    model_used = task.operations.filter(kind="model").count()
+    return {
+        "max_research_calls_per_turn": config.max_research_calls_per_turn,
+        "used": used,
+        "remaining": max(config.max_research_calls_per_turn - used, 0),
+        "model_calls_remaining": max(model_calls_allowed(task, config) - model_used, 0),
+    }
+
+
 def check_limits(task: DiscoveryTask) -> None:
     check_lease(task.pk, lease_token(task))
     discovery = Discovery.objects.get(pk=task.discovery_id)

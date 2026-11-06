@@ -32,6 +32,7 @@ from discovery.research import (
     check_limits,
     complete_operation,
     lease_token,
+    model_calls_allowed,
 )
 from discovery.schemas import DiscoveryConfig
 
@@ -287,12 +288,7 @@ def build_launch(
         "--disable-slash-commands",
         "--no-chrome",
         "--max-turns",
-        str(
-            min(config.max_model_calls_per_turn, 2)
-            if task.context.get("claude_recovery_id")
-            and task.context.get("claude_recovery_mode") != "launch_failure"
-            else config.max_model_calls_per_turn
-        ),
+        str(model_calls_allowed(task, config)),
         "--output-format",
         "stream-json",
         "--verbose",

@@ -297,6 +297,27 @@ as the quality metric; 0.0 keeps the earlier rule that any non-identical query
 counts, and the refusal reports the best novelty achieved. Explicit 1.0–1.2
 configs read as `origins` and 0.0 and cannot set other values.
 
+## Role context
+
+Each turn's role context (schema 1.2) adds two deterministic fields to the
+objective, proposal, reviews, objections, evidence and mail:
+
+- `evidence_profile`: the evidence and independence subset of the quality
+  metrics for the current proposal, computed live by
+  `discovery.quality.evidence_profile` — cited evidence and origin counts,
+  source-type counts, snippet, dated and stale shares, independent-demand and
+  offer-level shares, Validator query novelty so far, Finder's earlier search
+  queries and the notes explaining any `null`. It is record data, not a
+  judgment, so all three roles receive it; it is `null` before the first
+  proposal.
+- `research_budget`: `max_research_calls_per_turn`, `used` and `remaining`
+  for this turn, and `model_calls_remaining` (a Claude recovery wake after a
+  submission is capped at two model calls).
+
+The benchmark rubric is never in any role's context. Stored task contexts
+and turn input snapshots at 1.0 or 1.1 are neither rewritten nor
+re-validated; a historical batch turn continues from its stored history.
+
 ## Admin
 
 - `/admin/discovery/discovery/`: list and filter discoveries.

@@ -28,6 +28,7 @@ from discovery.models import (
     ResearchOperation,
     ValidationRevision,
 )
+from discovery.orchestrator import start_discovery
 
 RETRIEVED = timezone.now().replace(microsecond=0)
 PROMPTS = {
@@ -86,6 +87,28 @@ def discovery(**fields: Any) -> Discovery:
     }
     values.update(fields)
     return Discovery.objects.create(**values)
+
+
+def batch_discovery() -> Discovery:
+    """A started historical-batch discovery with an open Finder task; no provider calls."""
+    model = "deepseek/deepseek-v4.1-flash:batch"
+    runtime_snapshot = {
+        "schema_version": "1.0",
+        "provider": "fixture",
+        "models": {
+            model: {"prompt_rate": "0", "completion_rate": "0", "context_length": 1_000_000}
+        },
+    }
+    config = {
+        "schema_version": "1.0",
+        "runtime": "openrouter_batch",
+        "judge_enabled": False,
+        "finder_model": model,
+        "validator_model": model,
+        "connectors": ["duckduckgo", "web_fetch"],
+    }
+    with patch("discovery.runtime.check_configuration", return_value=runtime_snapshot):
+        return start_discovery("Find a services business", config, enqueue=False)
 
 
 def turn(row: Discovery, number: int, role: str, submission: dict | None = None) -> DiscoveryTurn:

@@ -333,6 +333,39 @@ def _independence_metrics(discovery: Discovery, notes: list[str]) -> dict[str, A
     return metrics
 
 
+# The evidence and independence subset of QualityMetrics given to every role.
+EVIDENCE_PROFILE_METRICS = (
+    "cited_evidence_count",
+    "cited_origin_count",
+    "cited_source_type_counts",
+    "snippet_citation_share",
+    "published_at_known_share",
+    "stale_cited_share",
+    "demand_independent_source_share",
+    "competitor_offer_source_share",
+)
+
+
+def evidence_profile(discovery: Discovery, proposal: ProposalRevision) -> dict[str, Any]:
+    """Deterministic shape of a proposal's citations, computed live for role context.
+
+    Record data, not a judgment, so all three roles receive it. The benchmark
+    rubric is never part of it.
+    """
+    notes: list[str] = []
+    evidence = _evidence_metrics(discovery, proposal, notes)
+    novelty = _independence_metrics(discovery, notes)["validator_query_novelty_min"]
+    return {
+        "proposal_id": str(proposal.pk),
+        **{name: evidence[name] for name in EVIDENCE_PROFILE_METRICS},
+        "validator_query_novelty_min": novelty,
+        "finder_queries": list(
+            dict.fromkeys(str(op.request["query"]) for op in _search_ops(discovery, "finder"))
+        ),
+        "notes": notes,
+    }
+
+
 def compute_quality(discovery: Discovery) -> QualityMetrics:
     notes: list[str] = []
     proposals = list(discovery.proposals.select_related("turn").order_by("turn__number"))
