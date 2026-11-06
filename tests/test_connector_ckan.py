@@ -18,18 +18,18 @@ TWO = ["https://datos.gob.ar", "https://www.govdata.de/ckan"]
 ONE = ["https://datos.gob.ar"]
 
 
-def test_default_allowlist_parses_into_six_national_portals():
+def test_default_allowlist_parses_into_four_ckan_portals():
+    # Brazil and Spain are absent on purpose: their national portals do not
+    # expose CKAN's /api/3/action. Mexico's CKAN is mounted under /busca.
     portals, error = configured_portals()
     assert error is None
     assert portals == {
         "datos.gob.ar": "https://datos.gob.ar",
-        "datos.gob.mx": "https://datos.gob.mx",
-        "dados.gov.br": "https://dados.gov.br",
-        "datos.gob.es": "https://datos.gob.es",
+        "datos.gob.mx": "https://datos.gob.mx/busca",
         "govdata.de": "https://www.govdata.de/ckan",
         "catalog.data.gov": "https://catalog.data.gov",
     }
-    assert len(settings.DISCOVERY_CKAN_PORTALS) == 6
+    assert len(settings.DISCOVERY_CKAN_PORTALS) == 4
     description = CkanConnector().describe()
     assert description.configured and "datos.gob.ar" in description.name
 

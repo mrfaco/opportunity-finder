@@ -199,8 +199,9 @@ the evidence record is typed by the publisher domain. No key; GDELT lags about 1
 minutes and covers small non-English outlets thinly.
 
 `open_data_ckan` searches one CKAN portal from `DISCOVERY_CKAN_PORTALS` (API base URLs;
-default `datos.gob.ar`, `datos.gob.mx`, `dados.gov.br`, `datos.gob.es`,
-`www.govdata.de/ckan`, `catalog.data.gov`) through `/api/3/action/package_search`
+default `datos.gob.ar`, `datos.gob.mx/busca`, `www.govdata.de/ckan`,
+`catalog.data.gov`; Brazil's and Spain's national portals run their own APIs, not
+CKAN, and are not listed) through `/api/3/action/package_search`
 (`q`, `rows` = limit, `start` = cursor, `fq=res_format:<FORMAT>` for `format` `CSV`,
 `JSON`, `XLSX` or `PDF`). The `portal` filter is the portal host without `www.` and is
 required when more than one portal is configured, so a search never fans out across

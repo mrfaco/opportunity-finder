@@ -30,7 +30,7 @@ def test_market_and_period_filters_build_the_outgoing_query():
     stub = ProviderStub(*(json_reply({}) for _ in range(3)))
     _search(stub, "honorarios contador", {"country": "ar", "language": "es", "recency": "month"})
     _search(stub, "steuerberater", {"country": "de", "language": "de"}, limit=3)
-    _search(stub, "gestoria", {"country": "es"})
+    _search(stub, "gestoria", {"country": "es", "recency": "year"})
     first, second, third = (request["params"] for request in stub.requests)
     assert stub.requests[0]["url"] == "https://api.gdeltproject.org/api/v2/doc/doc"
     assert first == {
@@ -43,6 +43,8 @@ def test_market_and_period_filters_build_the_outgoing_query():
     assert second["query"] == "steuerberater sourcecountry:GM sourcelang:deu"
     assert second["timespan"] == "3m" and second["maxrecords"] == 3
     assert third["query"] == "gestoria sourcecountry:SP"
+    # The DOC API has no year unit; a year is twelve months.
+    assert third["timespan"] == "12m"
 
 
 @pytest.mark.parametrize(

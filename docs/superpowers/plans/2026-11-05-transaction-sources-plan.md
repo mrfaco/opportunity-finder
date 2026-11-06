@@ -241,7 +241,8 @@ and the client-credentials path.
 - `search_auto` stays DuckDuckGo → Bing; Brave is explicit-only. Confirm, or
   allow Brave as a configured third fallback (it would make a key-gated
   backend reachable by fallback, which the current design avoids).
-- CKAN portal allowlist defaults to six national portals. Confirm the list
+- CKAN portal allowlist defaults to the four national portals that expose
+  CKAN's API (AR, MX, DE, US). Confirm the list
   and whether regional portals (e.g. Buenos Aires city) belong in it.
 - Tier 2b is gated on step 9. Confirm, or commit to all four now.
 - Review sites stay out of scope because they would require scraping behind

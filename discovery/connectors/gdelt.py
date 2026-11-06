@@ -52,7 +52,8 @@ _ISO639_3 = {
     "pl": "pol",
     "pt": "por",
 }
-_TIMESPAN = {"day": "1d", "week": "1w", "month": "1m", "year": "1y"}
+# The DOC API's timespan units are min, h, d, w and m (months); there is no year unit.
+_TIMESPAN = {"day": "1d", "week": "1w", "month": "1m", "year": "12m"}
 _DEFAULT_TIMESPAN = "3m"
 _SEENDATE = re.compile(r"^\d{8}T\d{6}Z$")
 

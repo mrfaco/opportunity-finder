@@ -367,15 +367,15 @@ BRAVE_SEARCH_API_KEY = env("BRAVE_SEARCH_API_KEY", default="")
 DISCOVERY_BRAVE_SEARCH_COST_USD = env("DISCOVERY_BRAVE_SEARCH_COST_USD", default="0")
 ADZUNA_APP_ID = env("ADZUNA_APP_ID", default="")
 ADZUNA_APP_KEY = env("ADZUNA_APP_KEY", default="")
-# CKAN open-data portals (API base URLs) open_data_ckan may query; the national
-# portals of the benchmark regions that run CKAN.
+# CKAN open-data portals (API base URLs) open_data_ckan may query: the national
+# portals of the benchmark regions whose API is CKAN's /api/3/action. Brazil
+# (dados.gov.br) and Spain (datos.gob.es) run their own APIs and are not listed;
+# Mexico's CKAN is mounted under /busca.
 DISCOVERY_CKAN_PORTALS = env.list(
     "DISCOVERY_CKAN_PORTALS",
     default=[
         "https://datos.gob.ar",
-        "https://datos.gob.mx",
-        "https://dados.gov.br",
-        "https://datos.gob.es",
+        "https://datos.gob.mx/busca",
         "https://www.govdata.de/ckan",
         "https://catalog.data.gov",
     ],

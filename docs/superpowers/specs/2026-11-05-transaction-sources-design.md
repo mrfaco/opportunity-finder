@@ -133,7 +133,7 @@ unsupported-type error. Connector version `1.1 → 1.2`.
   user query plus `sourcecountry:<CC>` and `sourcelang:<iso3>` when
   `country`/`language` are given (ISO 639-1 → 639-3 table for the benchmark
   languages, extendable), and `timespan` from `recency` (`1d`, `1w`, `1m`,
-  `1y`; default `3m`).
+  `12m`, since the DOC API has no year unit; default `3m`).
 - Each article is a `search_snippet` with the publisher URL as `url`,
   `published_at` from `seendate`, `metadata` with `domain`, `sourcecountry`,
   `language`, `socialimage` omitted. The role fetches the article with
@@ -147,9 +147,10 @@ unsupported-type error. Connector version `1.1 → 1.2`.
 
 - One connector for every CKAN portal in `DISCOVERY_CKAN_PORTALS`, a settings
   allowlist of base URLs defaulting to the benchmark regions' national
-  portals that run CKAN: `datos.gob.ar`, `datos.gob.mx`, `dados.gov.br`,
-  `datos.gob.es`, `govdata.de`, `catalog.data.gov`. (`data.gouv.fr` and
-  `data.gov.in` are not CKAN; a later `udata` connector can add them.)
+  portals whose API is CKAN's `/api/3/action`: `datos.gob.ar`,
+  `datos.gob.mx/busca`, `www.govdata.de/ckan`, `catalog.data.gov`.
+  (`dados.gov.br` and `datos.gob.es` run their own APIs; `data.gouv.fr` is
+  `udata`; `data.gov.in` is custom. A later connector can add them.)
 - Search: `/api/3/action/package_search` with `q`, `rows` ≤ 20, `start`
   (cursor), optional `fq=res_format:<FORMAT>`. Filter `portal` selects one
   host from the allowlist and is required when more than one is configured
