@@ -18,6 +18,7 @@ from discovery.connectors.sources import (
     LocalCorpusConnector,
     StackExchangeConnector,
 )
+from discovery.connectors.wayback import WaybackConnector
 from discovery.connectors.web import DuckDuckGoConnector, TavilyConnector, WebFetchConnector
 
 _BUILTINS: tuple[type[Connector], ...] = (
@@ -33,6 +34,7 @@ _BUILTINS: tuple[type[Connector], ...] = (
     RedditConnector,
     GdeltNewsConnector,
     CkanConnector,
+    WaybackConnector,
 )
 
 

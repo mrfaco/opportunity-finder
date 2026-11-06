@@ -111,6 +111,7 @@ General search is explicitly configured:
 | `news_gdelt` | GDELT DOC 2.0 dated news (no key); filters `country`, `language`, `recency`; publisher URLs to fetch with `web_fetch` |
 | `open_data_ckan` | Government datasets from the `DISCOVERY_CKAN_PORTALS` allowlist (no key); filters `portal`, `format`; cursor |
 | `reddit` | Reddit posts and threads (public JSON; optional `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` OAuth); filters `subreddit`, `recency`, `sort`; cursor |
+| `wayback` | Internet Archive captures of a URL or host (no key); filters `from_year`, `to_year`, `match`; snapshots typed as the archived site |
 
 New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
 Tavily remains available with `web_search,web_fetch` and `TAVILY_API_KEY`.
@@ -197,6 +198,22 @@ can `web_fetch` a CSV or PDF directly. Fetch takes `<portal>:<dataset id>` or a
 configured portal's `/dataset/<id>` URL and returns all resources via `package_show`.
 A malformed allowlist entry makes the connector unconfigured (a preflight failure);
 portal outages are typed errors naming the portal.
+
+`wayback` looks up a URL or host (not keywords) in the Wayback CDX index
+(`output=json`, `filter=statuscode:200`, `collapse=timestamp:6` for at most one capture
+a month, `limit`, optional `from`/`to` years and `matchType` `exact` or `prefix`). Each
+capture is a `source_record` whose URL is the raw snapshot
+(`https://web.archive.org/web/<timestamp>id_/<original>`), `published_at` is the capture
+time and metadata carries `original_url`, `canonical_url`, `original_source_origin`,
+`mimetype` and `statuscode`. No captures is a success with no documents and a note that
+absence from the archive is not absence from the web. Fetch takes a snapshot URL,
+retrieves its `id_` form through `fetch_public_url` and relabels the capture with
+`canonical_url` and `original_source_origin` set to the archived original (and the
+capture actually served, when the archive redirects to the nearest one), so the
+evidence row has the original's `origin` and `source_type` and counts as one origin with
+the live page. A capture without a stated page date takes the capture time as
+`published_at` (`published_at_source: wayback_capture`). Interval 2 s; the archive's own
+rate limiting is a `rate_limited` outcome.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct

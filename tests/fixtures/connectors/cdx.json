@@ -1,0 +1,10 @@
+{
+  "_comment": "Hand-written from the Wayback CDX server's documented output=json response: a header row then one row per capture (here collapsed to one per month). No network access to capture a live response. The last row has an impossible month, which must yield an undated capture rather than an exception.",
+  "response": [
+    ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"],
+    ["com,contaexpress)/precios", "20190314082211", "https://www.contaexpress.com/precios", "text/html", "200", "Q4YULN754FHV2U6Q5JUT6Q2P57WEWNNY", "10412"],
+    ["com,contaexpress)/precios", "20210602174530", "https://www.contaexpress.com/precios", "text/html", "200", "3I42H3S6NNFQ2MSVX7XZKYAYSCX5QBYJ", "11873"],
+    ["com,contaexpress)/precios", "20231119000102", "https://www.contaexpress.com/precios", "text/html", "200", "LLQ5ZVQH5Z2PEW3X4N3IVS6SLYJ4SSO6", "9054"],
+    ["com,contaexpress)/precios", "20241399000000", "https://www.contaexpress.com/precios", "text/html", "200", "AAAAZVQH5Z2PEW3X4N3IVS6SLYJ4SSO6", "9001"]
+  ]
+}
