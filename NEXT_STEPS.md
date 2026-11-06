@@ -27,6 +27,11 @@ and [plan](docs/superpowers/plans/2026-11-05-transaction-sources-plan.md):
 keyless default connectors for Reddit, dated news (GDELT), CKAN open data
 and the web archive, opt-in Brave search and Adzuna job posts, CSV in
 `web_fetch`, and a benchmark comparison before any further defaults change.
+Phase 3 is scoped in the [reasoning quality specification](docs/superpowers/specs/2026-11-06-reasoning-quality-design.md)
+and [plan](docs/superpowers/plans/2026-11-06-reasoning-quality-plan.md):
+procedural prompts per role assembled into one effective prompt and hash, an
+evidence profile and research budget in each role's context, a model-family
+rule with a different Validator default, and a comparison per change.
 
 First get the full start → research → mail → challenge/pivot → report flow
 working with focused smoke checks. Extensive regression coverage, concurrency
