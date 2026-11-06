@@ -247,3 +247,42 @@ def test_finder_procedure_covers_every_kind_with_real_sources():
             "submit_proposal",
         },
     )
+
+
+VALIDATOR_CHECKLIST = (
+    "Vendor-only demand",
+    "Survivorship",
+    "Absence as evidence",
+    "Stale evidence",
+    "Shared origin",
+    "Objective mismatch",
+    "Economics",
+    "Untestable distribution",
+    "Disguised counterproposal",
+)
+
+
+def test_validator_procedure_keeps_every_checklist_item_and_kind():
+    body = _procedure("validator")
+    for item in VALIDATOR_CHECKLIST:
+        assert f"**{item}**" in body, f"checklist item removed: {item}"
+    _assert_symmetric_table(body, columns=2)
+    _assert_known_names(
+        body,
+        {
+            "evidence_profile",
+            "evidence_profile.finder_queries",
+            "evidence_profile.validator_query_novelty_min",
+            "evidence_profile.cited_source_type_counts",
+            "demand_independent_source_share",
+            "snippet_citation_share",
+            "stale_cited_share",
+            "published_at_known_share",
+            "cited_origin_count",
+            "falsification_checks",
+            "business_model_kind",
+            "critical",
+            "major",
+            "minor",
+        },
+    )
