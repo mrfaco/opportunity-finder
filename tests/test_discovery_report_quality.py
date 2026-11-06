@@ -25,7 +25,7 @@ def test_regenerated_report_is_1_2_with_metrics_and_null_verdict():
     report = regenerate_report(row.pk).report_json
     assert report["schema_version"] == "1.2"
     assert report["human_verdict"] is None
-    assert report["quality"]["schema_version"] == "1.1"
+    assert report["quality"]["schema_version"] == "1.2"
     assert report["quality"]["cited_origin_count"] == 3
     assert report["quality"]["validator_query_novelty_min"] == pytest.approx(2 / 11)
     text = Discovery.objects.get(pk=row.pk).report_markdown
@@ -113,3 +113,19 @@ def test_report_prints_source_types_shares_and_staleness():
         "Demand citations from an independent source type: 50%; competitor citations at "
         "offer level: 50% (evidence policy typed)." in quality
     )
+
+
+def test_report_prints_transaction_signal_and_specialist_share():
+    row, _ = fx.typed_discovery()
+    quality = _section(
+        regenerate_report(row.pk).report_markdown, "### Evidence quality", "Discovery ID:"
+    )
+    assert (
+        "Transaction signal cited (job post, tender or marketplace listing): no; cited "
+        "sources from specialist connectors: 0%." in quality
+    )
+    failed = Discovery.objects.create(objective="Failed early", request_hash="y", status="failed")
+    quality = _section(
+        regenerate_report(failed.pk).report_markdown, "### Evidence quality", "Discovery ID:"
+    )
+    assert "listing): unknown; cited sources from specialist connectors: unknown." in quality

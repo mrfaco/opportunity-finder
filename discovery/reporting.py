@@ -75,6 +75,10 @@ def _verdict_line(verdict: DiscoveryVerdict) -> str:
     return f"{line} — {verdict.notes}" if verdict.notes else line
 
 
+def _yes_no(value: bool | None) -> str:
+    return "unknown" if value is None else ("yes" if value else "no")
+
+
 def _evidence_quality(quality: QualityMetrics, verdict: DiscoveryVerdict | None) -> list[str]:
     connectors = ", ".join(
         f"{name} {count}" for name, count in (quality.cited_connector_counts or {}).items()
@@ -105,6 +109,9 @@ def _evidence_quality(quality: QualityMetrics, verdict: DiscoveryVerdict | None)
         f"{STALE_EVIDENCE_MONTHS} months at retrieval: "
         f"{_measure(quality.stale_cited_share, percent=True)} of dated sources.",
         f"- Cited source types: {source_types or 'unknown'}.",
+        f"- Transaction signal cited (job post, tender or marketplace listing): "
+        f"{_yes_no(quality.transaction_signal_cited)}; cited sources from specialist "
+        f"connectors: {_measure(quality.specialist_connector_share, percent=True)}.",
         f"- Demand citations from an independent source type: "
         f"{_measure(quality.demand_independent_source_share, percent=True)}; competitor "
         f"citations at offer level: {_measure(quality.competitor_offer_source_share, percent=True)}"

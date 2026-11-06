@@ -115,8 +115,19 @@ General search is explicitly configured:
 | `reddit` | Reddit posts and threads (public JSON; optional `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` OAuth); filters `subreddit`, `recency`, `sort`; cursor |
 | `wayback` | Internet Archive captures of a URL or host (no key); filters `from_year`, `to_year`, `match`; snapshots typed as the archived site |
 
-New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
-Tavily remains available with `web_search,web_fetch` and `TAVILY_API_KEY`.
+New runs default to
+`DISCOVERY_CONNECTORS=search_auto,web_fetch,reddit,news_gdelt,open_data_ckan,wayback`:
+general search plus the keyless sources that show buying behaviour (roadmap Phase 2).
+Only keyless connectors are defaults, because `start_discovery` preflights every selected
+connector and a missing key fails the start visibly. Keyed connectors (`web_search` with
+`TAVILY_API_KEY`, `brave` with `BRAVE_SEARCH_API_KEY`, `jobs_adzuna` with
+`ADZUNA_APP_ID`/`ADZUNA_APP_KEY`, `github` with `GITHUB_TOKEN`) are explicit selections.
+Existing discoveries keep the connector list frozen in their snapshot. Keys are read from
+settings inside each connector; they are never accepted from tool input, and connector
+descriptions report only whether a key is configured. Each connector's
+`access_limitations` states in one sentence what the source proves and what it does not;
+it is the only text the roles see about a source. Connectors use documented provider
+APIs and endpoints only: no HTML scraping of job boards, review sites or marketplaces.
 `search_auto` makes at most one attempt at each backend; every attempt has its own
 operation key, evidence provenance and cooldown, and the DuckDuckGo → Bing pair uses
 one research slot (operations keyed `<parent>:backend:<id>` count once under their

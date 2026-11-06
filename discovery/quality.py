@@ -18,7 +18,13 @@ from discovery.schemas import QualityMetrics, evidence_settings
 from discovery.source_types import INDEPENDENT_DEMAND_TYPES, OFFER_TYPES
 from discovery.termination import business_fingerprint, proposal_kind
 
-METRICS_SCHEMA_VERSION = "1.1"
+METRICS_SCHEMA_VERSION = "1.2"
+# Source types that show someone actually paying or offering a price.
+TRANSACTION_TYPES = frozenset({"job_post", "tender", "marketplace_listing"})
+# General search and page retrieval; every other connector is a specialist source.
+GENERAL_CONNECTORS = frozenset(
+    {"web_fetch", "web_search", "search_auto", "duckduckgo", "bing", "brave"}
+)
 # Evidence older than this at retrieval is reported as stale; it never blocks.
 STALE_EVIDENCE_MONTHS = 24
 _DAYS_PER_MONTH = 365.25 / 12
@@ -34,6 +40,8 @@ QUANTITATIVE_METRICS = (
     "demand_independent_source_share",
     "competitor_offer_source_share",
     "stale_cited_share",
+    "transaction_signal_cited",
+    "specialist_connector_share",
     "benchmark_focus_match",
     "min_validator_query_novelty",
     "validator_query_novelty_min",
@@ -119,6 +127,8 @@ def _evidence_metrics(
         "demand_independent_source_share": None,
         "competitor_offer_source_share": None,
         "stale_cited_share": None,
+        "transaction_signal_cited": None,
+        "specialist_connector_share": None,
     }
     if final is None:
         notes.append("No Finder proposal was completed; evidence metrics are not computable.")
@@ -133,7 +143,11 @@ def _evidence_metrics(
             "excluded from evidence metrics."
         )
     cited = [by_id[ref] for ref in sorted(refs & by_id.keys())]
-    metrics = dict(empty, cited_evidence_count=len(cited))
+    metrics = dict(
+        empty,
+        cited_evidence_count=len(cited),
+        transaction_signal_cited=any(row.source_type in TRANSACTION_TYPES for row in cited),
+    )
     metrics.update(_typed_shares(content, by_id, notes))
     claims = content.get("claims", [])
     facts = [claim for claim in claims if claim.get("kind") == "fact"]
@@ -184,6 +198,9 @@ def _evidence_metrics(
             sum(1 for row in cited if row.kind == "search_snippet"), len(cited)
         ),
         published_at_known_share=_share(len(dated), len(cited)),
+        specialist_connector_share=_share(
+            sum(1 for row in cited if row.connector not in GENERAL_CONNECTORS), len(cited)
+        ),
     )
     if dated:
         metrics["median_evidence_age_days"] = statistics.median(

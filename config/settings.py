@@ -350,7 +350,12 @@ DISCOVERY_JUDGE_MODEL = env("DISCOVERY_JUDGE_MODEL", default="kimi-k3:cloud")
 DISCOVERY_BATCH_PROVIDER = env("DISCOVERY_BATCH_PROVIDER", default="sail-research")
 DISCOVERY_BATCH_POLL_SECONDS = env.int("DISCOVERY_BATCH_POLL_SECONDS", default=60)
 DISCOVERY_LEASE_SECONDS = env.int("DISCOVERY_LEASE_SECONDS", default=180)
-DISCOVERY_CONNECTORS = env.list("DISCOVERY_CONNECTORS", default=["search_auto", "web_fetch"])
+# Keyless connectors only: start_discovery preflights every selected connector,
+# so a keyed default would fail every start on a deployment without that key.
+DISCOVERY_CONNECTORS = env.list(
+    "DISCOVERY_CONNECTORS",
+    default=["search_auto", "web_fetch", "reddit", "news_gdelt", "open_data_ckan", "wayback"],
+)
 DISCOVERY_CONNECTOR_CLASSES = env.list("DISCOVERY_CONNECTOR_CLASSES", default=[])
 DISCOVERY_TAVILY_SEARCH_COST_USD = env("DISCOVERY_TAVILY_SEARCH_COST_USD", default="0.01")
 # Phase 2 research sources. Keys are read by their connector only, never from

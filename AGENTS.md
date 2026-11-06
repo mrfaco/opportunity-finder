@@ -91,6 +91,8 @@ deferral does not apply to this work. See `docs/discovery-eval.md`.
 Evidence source typing (`discovery/source_types.py`, rules in git) is
 deterministic and runs in the research service at write time, never in a
 connector or a model; only `classify_evidence` rewrites it for history.
+Connectors call documented provider APIs or endpoints only; no scraping behind
+anti-bot walls or of job boards, review sites or marketplaces.
 
 ## 2. Test discipline — every change has a test
 

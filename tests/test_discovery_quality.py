@@ -32,7 +32,7 @@ def test_every_metric_on_an_evidenced_discovery():
     row, _ = fx.evidenced_discovery()
     record_verdict(row, "weak", "Thin demand", user=None, via="api")
     metrics = compute_quality(row)
-    assert metrics.schema_version == "1.1"
+    assert metrics.schema_version == "1.2"
     assert metrics.discovery_id == str(row.pk)
     assert metrics.cited_evidence_count == 4
     # d.example is an exact content copy of a.example and is not a second origin.
@@ -191,3 +191,50 @@ def test_one_point_one_unknowns_carry_notes():
     metrics = compute_quality(row)
     assert metrics.stale_cited_share is None
     assert any("stale_cited_share are unknown" in note for note in metrics.notes)
+
+
+@pytest.mark.django_db
+def test_transaction_signal_and_specialist_share_1_2():
+    row = fx.discovery()
+    step = fx.turn(row, 1, "finder")
+    advert = fx.evidence(
+        step,
+        "www.adzuna.com.mx",
+        kind="source_record",
+        connector="jobs_adzuna",
+        source_type="job_post",
+        url="https://www.adzuna.com.mx/land/ad/1",
+    )
+    page = fx.evidence(step, "acme.com", url="https://acme.com/pricing", source_type="vendor")
+    fx.proposal(
+        step,
+        {"demand_evidence_ids": [str(advert.pk)], "competitor_evidence_ids": [str(page.pk)]},
+    )
+    metrics = compute_quality(row)
+    assert metrics.transaction_signal_cited is True
+    assert metrics.specialist_connector_share == 0.5
+
+    web_only, _ = fx.typed_discovery()
+    metrics = compute_quality(web_only)
+    assert metrics.transaction_signal_cited is False
+    assert metrics.specialist_connector_share == 0.0
+
+    # General search snippets are not specialist sources either.
+    evidenced, _ = fx.evidenced_discovery()
+    assert compute_quality(evidenced).specialist_connector_share == 0.0
+
+    bare = Discovery.objects.create(objective="No proposal", request_hash="t", status="failed")
+    metrics = compute_quality(bare)
+    assert metrics.transaction_signal_cited is None
+    assert metrics.specialist_connector_share is None
+
+
+@pytest.mark.django_db
+def test_stored_1_1_metrics_still_validate_with_unknown_1_2_fields():
+    row, _ = fx.evidenced_discovery()
+    stored = compute_quality(row).model_dump(mode="json")
+    stored["schema_version"] = "1.1"
+    del stored["transaction_signal_cited"], stored["specialist_connector_share"]
+    restored = QualityMetrics.model_validate(stored)
+    assert restored.schema_version == "1.1"
+    assert restored.transaction_signal_cited is None and restored.specialist_connector_share is None

@@ -18,6 +18,17 @@ class Contract(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
 
 
+# Keyless only; existing snapshots keep the list they were started with.
+DEFAULT_CONNECTORS = (
+    "search_auto",
+    "web_fetch",
+    "reddit",
+    "news_gdelt",
+    "open_data_ckan",
+    "wayback",
+)
+
+
 class DiscoveryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.3"
@@ -35,7 +46,7 @@ class DiscoveryConfig(BaseModel):
     finder_model: str = DEFAULT_MODEL
     validator_model: str = DEFAULT_MODEL
     judge_model: str = "kimi-k3:cloud"
-    connectors: list[str] = Field(default_factory=lambda: ["search_auto", "web_fetch"])
+    connectors: list[str] = Field(default_factory=lambda: list(DEFAULT_CONNECTORS))
     # 1.3: "origins" is the original two-origin rule; "typed" also requires an
     # independent demand source and offer-level competitor evidence.
     evidence_policy: Literal["origins", "typed"] = "origins"
@@ -279,15 +290,17 @@ class VerdictInput(Contract):
 
 
 class QualityMetrics(Contract):
-    """Deterministic evidence, independence, process and outcome measures (schema 1.1).
+    """Deterministic evidence, independence, process and outcome measures (schema 1.2).
 
     1.1 adds source-type, staleness, business-model-kind and evidence-policy
-    measures. Stored 1.0 quality runs are never rewritten. A metric that
+    measures; 1.2 adds the transaction-signal and specialist-connector
+    measures. Stored quality runs and reports are never rewritten: a stored 1.1
+    record still validates and reads the 1.2 fields as ``None``. A metric that
     cannot be computed is ``None`` with the reason in ``notes``.
     """
 
-    # Narrows the shared 1.0 literal; only this contract moved to 1.1.
-    schema_version: Literal["1.1"] = "1.1"  # type: ignore[assignment]
+    # Narrows the shared 1.0 literal; only this contract moved on.
+    schema_version: Literal["1.1", "1.2"] = "1.2"  # type: ignore[assignment]
     discovery_id: str
     cited_evidence_count: int | None
     cited_origin_count: int | None
@@ -301,6 +314,10 @@ class QualityMetrics(Contract):
     demand_independent_source_share: float | None
     competitor_offer_source_share: float | None
     stale_cited_share: float | None
+    # 1.2: any cited evidence typed job_post, tender or marketplace_listing.
+    transaction_signal_cited: bool | None = None
+    # 1.2: cited rows from connectors other than general search/fetch ÷ cited rows.
+    specialist_connector_share: float | None = None
     business_model_kind: str | None
     benchmark_focus_match: bool | None
     evidence_policy: str

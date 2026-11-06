@@ -10,7 +10,7 @@ Three sources of truth, all persisted and none needing a model call:
    recorded on a terminal discovery from the admin review page or
    `POST /api/v1/discoveries/<id>/verdict/`. Append-only; the newest is current.
 2. **Quality metrics.** `discovery/quality.py` computes `QualityMetrics`
-   (schema 1.1) from stored proposals, reviews, evidence and research
+   (schema 1.2) from stored proposals, reviews, evidence and research
    operations. A metric that cannot be computed is `None` with a reason in
    `notes`, never zero. Metrics observe; acceptance gates enforce.
 3. **Quality runs.** `score_discoveries` persists an append-only
@@ -101,6 +101,47 @@ Source types are assigned at capture time by the rules in
 `discovery/source_type_rules.json`. Discoveries captured before Phase 1 read
 as `unclassified` until `manage.py classify_evidence --apply` is run, which
 makes their 1.1 shares meaningful; run it before scoring a pre-Phase-1 tag.
+
+### Metrics 1.2 without a 1.1 counterpart
+
+Roadmap Phase 2 (sources that show buying) bumped the metrics schema to 1.2 with
+the exit-gate numbers for the new connectors. A comparison against a 1.1 run
+shows them without an earlier mean and lists them under the schema warning; a
+stored 1.1 record reads them as unknown:
+
+- `transaction_signal_cited` — whether any cited evidence is typed `job_post`,
+  `tender` or `marketplace_listing` (someone paying or offering a price);
+  unknown without a final proposal. Aggregated as a share of discoveries.
+- `specialist_connector_share` — cited rows from connectors other than general
+  search and fetch (`web_fetch`, `web_search`, `search_auto`, `duckduckgo`,
+  `bing`, `brave`) ÷ cited rows. A `wayback` snapshot counts as specialist.
+
+### Source comparison (roadmap Phase 2, step 9)
+
+Paid and human-authorized. It isolates the effect of the new default connectors
+(`search_auto,web_fetch,reddit,news_gdelt,open_data_ckan,wayback`) from the
+Phase 1 gate by keeping the baseline's evidence policy.
+
+1. Confirm the baseline row exists below and was scored under `origins`.
+2. Run the benchmark with the new default connectors and `evidence_policy`
+   `origins` (dry run first, then with spend authorization):
+
+   ```sh
+   python manage.py run_discovery_benchmark --tag phase2-sources-<yyyy-mm>
+   python manage.py run_discovery_benchmark --tag phase2-sources-<yyyy-mm> \
+       --authorize-spend --max-total-usd 120
+   ```
+
+3. Record human verdicts on all twelve, then score against the baseline:
+   `score_discoveries --tag phase2-sources-<yyyy-mm> --compare-to <baseline run id>`.
+4. Add a row with the deltas on `transaction_signal_cited`,
+   `specialist_connector_share`, `cited_source_type_counts`,
+   `demand_independent_source_share`, cost and the verdict split, and note which
+   connectors the roles actually called (`cited_connector_counts` and the
+   research ledger).
+5. Decide the Tier 2b order from use: if job and tender types are cited,
+   schedule `jobs_jooble`, `tenders_ted` and `tenders_sam`; if marketplace
+   evidence is missing for goods proposals, `mercadolibre` first.
 
 ### Evidence-policy comparison (roadmap Phase 1, step 7)
 
