@@ -108,6 +108,7 @@ General search is explicitly configured:
 | `github` | GitHub public research with `GITHUB_TOKEN` |
 | `stack_exchange` | Public Stack Exchange research; optional `STACKEXCHANGE_KEY` |
 | `local_corpus` | Read-only search of existing local cluster/item records |
+| `reddit` | Reddit posts and threads (public JSON; optional `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` OAuth); filters `subreddit`, `recency`, `sort`; cursor |
 
 New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
 Tavily remains available with `web_search,web_fetch` and `TAVILY_API_KEY`.
@@ -158,6 +159,18 @@ provider hosts only, an identified `User-Agent`, a 20-second timeout, no redirec
 error or timeout, 401/403, 404, 429 with `Retry-After`, redirect, other non-2xx,
 non-JSON or oversized body). It never fetches a role-chosen URL; `fetch_public_url`
 remains the only path for those.
+
+`reddit` searches `/search.json` (or `/r/<subreddit>/search.json` with `restrict_sr=1`)
+with `recency` → `t`, `sort` (`relevance`, `top`, `new`, `comments`) and the `after`
+cursor. A self post with a body is a `source_record` (typed `forum`); a link post is a
+`search_snippet` with `link_url` in metadata. Fetch takes a post ID or reddit.com
+permalink and returns the post with its top 40 top-level comments by score, each
+prefixed with author and score. Without credentials it calls `www.reddit.com` at most
+every 6 s; Reddit often denies cloud IPs, which is a visible `access_denied` telling the
+operator to configure OAuth. With both `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` set
+it obtains a client-credentials token (cached in the Django cache for its lifetime minus
+a minute, keyed by a hash of the client ID) and calls `oauth.reddit.com` at most every
+second. Setting only one of the two is a configuration error.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct

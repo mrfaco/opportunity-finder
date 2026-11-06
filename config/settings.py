@@ -353,6 +353,10 @@ DISCOVERY_LEASE_SECONDS = env.int("DISCOVERY_LEASE_SECONDS", default=180)
 DISCOVERY_CONNECTORS = env.list("DISCOVERY_CONNECTORS", default=["search_auto", "web_fetch"])
 DISCOVERY_CONNECTOR_CLASSES = env.list("DISCOVERY_CONNECTOR_CLASSES", default=[])
 DISCOVERY_TAVILY_SEARCH_COST_USD = env("DISCOVERY_TAVILY_SEARCH_COST_USD", default="0.01")
+# Phase 2 research sources. Keys are read by their connector only, never from
+# tool input; describe() reports whether they are configured, never the value.
+REDDIT_CLIENT_ID = env("REDDIT_CLIENT_ID", default="")
+REDDIT_CLIENT_SECRET = env("REDDIT_CLIENT_SECRET", default="")
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",

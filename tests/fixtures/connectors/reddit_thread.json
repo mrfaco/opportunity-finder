@@ -1,0 +1,89 @@
+{
+  "_comment": "Hand-written from Reddit's documented /comments/<id>.json response: a two-element array of Listings (the post, then its top-level comments, ending with a 'more' stub). No network access to capture a live response.",
+  "response": [
+    {
+      "kind": "Listing",
+      "data": {
+        "after": null,
+        "dist": 1,
+        "before": null,
+        "children": [
+          {
+            "kind": "t3",
+            "data": {
+              "subreddit": "smallbusiness",
+              "selftext": "We pay an accountant 45,000 ARS a month just to file monotributo and we still chase receipts by WhatsApp. Is there anyone doing this as a flat monthly service?",
+              "title": "Paying too much for monotributo bookkeeping?",
+              "name": "t3_1gx1a2b",
+              "score": 87,
+              "is_self": true,
+              "created_utc": 1767225600.0,
+              "id": "1gx1a2b",
+              "author": "panaderia_cba",
+              "num_comments": 41,
+              "permalink": "/r/smallbusiness/comments/1gx1a2b/paying_too_much_for_monotributo_bookkeeping/",
+              "url": "https://www.reddit.com/r/smallbusiness/comments/1gx1a2b/paying_too_much_for_monotributo_bookkeeping/"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "Listing",
+      "data": {
+        "after": null,
+        "dist": null,
+        "before": null,
+        "children": [
+          {
+            "kind": "t1",
+            "data": {
+              "id": "lq1",
+              "name": "t1_lq1",
+              "author": "contadora_ros",
+              "body": "I charge 30,000 a month flat for monotributistas, receipts through a shared folder.",
+              "score": 12,
+              "created_utc": 1767229200.0,
+              "parent_id": "t3_1gx1a2b"
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "lq2",
+              "name": "t1_lq2",
+              "author": "ferreteria_mdp",
+              "body": "Same problem here. I switched to an app and stopped paying the accountant.",
+              "score": 54,
+              "created_utc": 1767232800.0,
+              "parent_id": "t3_1gx1a2b"
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "lq3",
+              "name": "t1_lq3",
+              "author": "[deleted]",
+              "body": "[removed]",
+              "score": -3,
+              "created_utc": 1767236400.0,
+              "parent_id": "t3_1gx1a2b"
+            }
+          },
+          {
+            "kind": "more",
+            "data": {
+              "count": 38,
+              "name": "t1_lq4",
+              "id": "lq4",
+              "parent_id": "t3_1gx1a2b",
+              "depth": 0,
+              "children": ["lq4", "lq5"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

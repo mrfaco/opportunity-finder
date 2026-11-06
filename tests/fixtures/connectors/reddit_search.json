@@ -1,0 +1,57 @@
+{
+  "_comment": "Hand-written from Reddit's documented Listing response for /search.json (no network access to capture a live response). Only fields the connector reads plus a few real neighbours are kept.",
+  "response": {
+    "kind": "Listing",
+    "data": {
+      "after": "t3_1gx2b7k",
+      "dist": 2,
+      "modhash": "",
+      "geo_filter": "",
+      "before": null,
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "subreddit": "smallbusiness",
+            "selftext": "We pay an accountant 45,000 ARS a month just to file monotributo and we still chase receipts by WhatsApp. Is there anyone doing this as a flat monthly service?",
+            "author_fullname": "t2_8kq1x",
+            "title": "Paying too much for monotributo bookkeeping?",
+            "subreddit_name_prefixed": "r/smallbusiness",
+            "name": "t3_1gx1a2b",
+            "score": 87,
+            "is_self": true,
+            "created_utc": 1767225600.0,
+            "domain": "self.smallbusiness",
+            "id": "1gx1a2b",
+            "author": "panaderia_cba",
+            "num_comments": 41,
+            "permalink": "/r/smallbusiness/comments/1gx1a2b/paying_too_much_for_monotributo_bookkeeping/",
+            "url": "https://www.reddit.com/r/smallbusiness/comments/1gx1a2b/paying_too_much_for_monotributo_bookkeeping/",
+            "over_18": false
+          }
+        },
+        {
+          "kind": "t3",
+          "data": {
+            "subreddit": "argentina",
+            "selftext": "",
+            "author_fullname": "t2_3mm9z",
+            "title": "AFIP raises monotributo categories again",
+            "subreddit_name_prefixed": "r/argentina",
+            "name": "t3_1gx2b7k",
+            "score": 1204,
+            "is_self": false,
+            "created_utc": 1767312000.0,
+            "domain": "lanacion.com.ar",
+            "id": "1gx2b7k",
+            "author": "noticias_bot",
+            "num_comments": 233,
+            "permalink": "/r/argentina/comments/1gx2b7k/afip_raises_monotributo_categories_again/",
+            "url": "https://www.lanacion.com.ar/economia/monotributo-categorias-2026/",
+            "over_18": false
+          }
+        }
+      ]
+    }
+  }
+}
