@@ -32,7 +32,7 @@ def test_every_metric_on_an_evidenced_discovery():
     row, _ = fx.evidenced_discovery()
     record_verdict(row, "weak", "Thin demand", user=None, via="api")
     metrics = compute_quality(row)
-    assert metrics.schema_version == "1.2"
+    assert metrics.schema_version == "1.3"
     assert metrics.discovery_id == str(row.pk)
     assert metrics.cited_evidence_count == 4
     # d.example is an exact content copy of a.example and is not a second origin.
@@ -238,3 +238,17 @@ def test_stored_1_1_metrics_still_validate_with_unknown_1_2_fields():
     restored = QualityMetrics.model_validate(stored)
     assert restored.schema_version == "1.1"
     assert restored.transaction_signal_cited is None and restored.specialist_connector_share is None
+
+
+@pytest.mark.django_db
+def test_same_model_family_counts_two_variants_of_one_family():
+    row = fx.discovery(
+        config_snapshot={
+            **fx.CONFIG,
+            "validator_provider": "ollama",
+            "validator_model": "deepseek-v4.1-flash:cloud",
+        }
+    )
+    assert compute_quality(row).same_model_family is True
+    row = fx.discovery(config_snapshot={**fx.CONFIG, "validator_model": "qwen/qwen3-max"})
+    assert compute_quality(row).same_model_family is False

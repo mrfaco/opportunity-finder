@@ -15,7 +15,13 @@ from discovery.quality import (
     compute_quality,
     evidence_age_months,
 )
-from discovery.schemas import QualityMetrics, Report, evidence_settings
+from discovery.schemas import (
+    QualityMetrics,
+    Report,
+    evidence_settings,
+    role_model_family,
+    same_model_family,
+)
 from discovery.termination import evidence_gaps, proposal_kind, unresolved_objections
 
 OUTCOME_LABELS = {
@@ -198,14 +204,13 @@ def render_report(discovery: Discovery) -> tuple[str, dict[str, Any]]:
             "The latest candidate has not received Judge approval. "
             "Finder–Validator agreement alone is not final approval."
         )
-    if (
-        config.get("finder_model")
-        and config.get("finder_model") == config.get("validator_model")
-        and config.get("finder_provider") == config.get("validator_provider")
-    ):
+    if same_model_family(config):
         limitations.append(
-            "Finder and Validator used the same provider and model. Separate sessions do not "
-            "remove shared model blind spots; consider a different Validator model."
+            f"Finder ({config['finder_model']}) and Validator ({config['validator_model']}) "
+            "used models from the same family, "
+            f"{role_model_family(config, 'finder')}. "
+            "Separate sessions do not remove shared model blind spots; consider a Validator "
+            "from a different model family."
         )
     if any(
         op.response.get("cloud_charges_unverified")

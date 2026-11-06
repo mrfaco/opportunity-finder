@@ -11,6 +11,7 @@
 <p class="mb-4">Give Finder a direction. Validator will try to disprove its proposal and send back objections or promising alternatives. The agents can explore services, manufacturing, intelligence, physical products, software, B2B or B2C.</p>
 <p class="mb-4">Finder and Validator explore and challenge opportunities. When they agree, Judge assesses whether the opportunity is worth pursuing. A Judge no-go sends them to find a new opportunity and preserves the rejection reasons. All agent turns, including Judge reviews, share the 100-turn maximum, time limit and spending budget. Judge approval can finish earlier.</p>
 <p class="mb-4">All roles run in Claude Code. Choose OpenRouter, Anthropic or Ollama independently for each role and provide its exact model ID. A different model family for Validator helps reduce shared blind spots; Judge defaults to Ollama Kimi K3. Provider and model selections are frozen when the discovery starts; there is no automatic fallback.</p>
+{% if family_warning %}<p class="mb-4 font-semibold" role="alert">{{ family_warning }}</p>{% endif %}
 <form method="post" class="discovery-form">
   {% csrf_token %}
   {{ form.as_p }}

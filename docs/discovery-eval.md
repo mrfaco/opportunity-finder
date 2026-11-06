@@ -10,7 +10,7 @@ Three sources of truth, all persisted and none needing a model call:
    recorded on a terminal discovery from the admin review page or
    `POST /api/v1/discoveries/<id>/verdict/`. Append-only; the newest is current.
 2. **Quality metrics.** `discovery/quality.py` computes `QualityMetrics`
-   (schema 1.2) from stored proposals, reviews, evidence and research
+   (schema 1.3) from stored proposals, reviews, evidence and research
    operations. A metric that cannot be computed is `None` with a reason in
    `notes`, never zero. Metrics observe; acceptance gates enforce.
 3. **Quality runs.** `score_discoveries` persists an append-only
@@ -115,6 +115,20 @@ stored 1.1 record reads them as unknown:
 - `specialist_connector_share` — cited rows from connectors other than general
   search and fetch (`web_fetch`, `web_search`, `search_auto`, `duckduckgo`,
   `bing`, `brave`) ÷ cited rows. A `wayback` snapshot counts as specialist.
+
+### Metrics 1.3: model family
+
+Roadmap Phase 3 (reasoning quality) bumped the metrics schema to 1.3 with one
+semantic change and no new field. `same_model_family` now compares families
+from `discovery.schemas.model_family` instead of exact provider and model
+strings: the OpenRouter vendor prefix before `/`, `anthropic` for Anthropic,
+and the Ollama tag before the first `-`, `:` or digit. Two DeepSeek variants,
+such as OpenRouter `deepseek/deepseek-v4.1-flash` and Ollama
+`deepseek-v4.1-flash:cloud`, now count as one family. A comparison against a
+1.2 run warns about the schema change; read the `same_model_family` delta
+across it as a definition change, not a behaviour change. Configs from before
+per-role providers are read as OpenRouter. The report's limitation and the
+start form's non-blocking warning use the same rule.
 
 ### Source comparison (roadmap Phase 2, step 9)
 

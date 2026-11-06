@@ -40,7 +40,7 @@ def test_scores_terminal_discoveries_and_names_skipped_ones():
     output, _ = _score("--tag", "t1")
     run = DiscoveryQualityRun.objects.get()
     assert run.tag == "t1" and run.schema_version == "1.0"
-    assert run.metrics_schema_version == "1.2"
+    assert run.metrics_schema_version == "1.3"
     assert set(run.discovery_ids) == {str(evidenced.pk), str(bare.pk)}
     assert len(run.per_discovery) == 2
     assert run.config_snapshots_distinct == 1
@@ -92,7 +92,7 @@ def test_compare_flags_metrics_schema_and_config_differences():
     DiscoveryQualityRun.objects.filter(pk=first.pk).update(metrics_schema_version="0.9")
     fx.discovery(benchmark_tag="t3", config_snapshot={**fx.CONFIG, "max_turns": 20})
     output, _ = _score("--tag", "t3", "--compare-to", str(first.pk))
-    assert "WARNING: metrics schema changed (0.9 → 1.2)" in output
+    assert "WARNING: metrics schema changed (0.9 → 1.3)" in output
     assert "WARNING: discovery configurations differ" in output
 
 
@@ -140,7 +140,7 @@ def test_compare_lists_one_point_one_metrics_and_flags_mixed_policies():
     fx.typed_discovery("typed", benchmark_tag="p1")
     fx.typed_discovery("origins", benchmark_tag="p1")
     output, _ = _score("--tag", "p1", "--compare-to", str(earlier.pk))
-    assert "WARNING: metrics schema changed (1.0 → 1.2)" in output
+    assert "WARNING: metrics schema changed (1.0 → 1.3)" in output
     assert (
         "Metrics without an earlier counterpart: demand_independent_source_share, "
         "stale_cited_share." in output
@@ -164,10 +164,39 @@ def test_compare_to_a_1_1_run_warns_and_lists_the_1_2_metrics():
     )
     fx.typed_discovery("origins", benchmark_tag="q1")
     output, _ = _score("--tag", "q1", "--compare-to", str(earlier.pk))
-    assert "WARNING: metrics schema changed (1.1 → 1.2)" in output
+    assert "WARNING: metrics schema changed (1.1 → 1.3)" in output
     assert (
         "Metrics without an earlier counterpart: transaction_signal_cited, "
         "specialist_connector_share." in output
     )
     assert "| transaction_signal_cited | 0 | 0 | 0 | 0 | 0 | 1 | 0 |" in output
     assert "| transaction_signal_cited | — | 0 | — |" in output
+
+
+def test_compare_to_a_1_2_run_warns_that_same_model_family_changed_meaning():
+    fx.typed_discovery("origins", benchmark_tag="f0")
+    _score("--tag", "f0")
+    earlier = DiscoveryQualityRun.objects.get()
+    DiscoveryQualityRun.objects.filter(pk=earlier.pk).update(metrics_schema_version="1.2")
+    fx.typed_discovery("origins", benchmark_tag="f1")
+    output, _ = _score("--tag", "f1", "--compare-to", str(earlier.pk))
+    assert "WARNING: metrics schema changed (1.2 → 1.3)" in output
+
+
+def test_compare_across_a_procedural_only_change_warns_about_prompt_hashes():
+    _three(tag="p0", prompts=fx.PROMPTS_1_1)
+    _score("--tag", "p0")
+    earlier = DiscoveryQualityRun.objects.get()
+    # Same system part; only the procedural part, and so the effective hash, changed.
+    finder = fx.PROMPTS_1_1["finder"]
+    edited = {
+        **fx.PROMPTS_1_1,
+        "finder": {
+            **finder,
+            "hash": "finder-effective-hash-v2",
+            "parts": [finder["parts"][0], {**finder["parts"][1], "hash": "procedural-v2"}],
+        },
+    }
+    _three(tag="p2", prompts=edited)
+    output, _ = _score("--tag", "p2", "--compare-to", str(earlier.pk))
+    assert "WARNING: prompt hashes differ" in output

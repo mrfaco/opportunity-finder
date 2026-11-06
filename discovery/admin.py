@@ -32,10 +32,21 @@ from discovery.orchestrator import (
     start_discovery,
 )
 from discovery.quality import QUANTITATIVE_METRICS, compute_quality
-from discovery.schemas import DEFAULT_MODEL
+from discovery.schemas import DEFAULT_MODEL, role_model_family, same_model_family
 from discovery.verdicts import VerdictNotAllowed, record_verdict
 
 _FORM_ERRORS = (ValueError, DiscoveryConflict, ConnectorConfigurationError)
+
+
+def family_warning(config: dict) -> str | None:
+    """A non-blocking start-form warning when Finder and Validator share a model family."""
+    if not same_model_family(config):
+        return None
+    return (
+        f"Finder and Validator both use the {role_model_family(config, 'finder')} model "
+        "family. Separate sessions of one family can share blind spots; prefer a Validator "
+        "from a different family. This does not block the discovery."
+    )
 
 
 class DiscoveryStartForm(forms.Form):
@@ -266,8 +277,22 @@ class DiscoveryAdmin(ModelAdmin):
         if request.method not in {"GET", "POST"}:
             return HttpResponseNotAllowed(["GET", "POST"])
         form = DiscoveryStartForm(request.POST if request.method == "POST" else None)
+        warning = None
+        if request.method == "GET":
+            warning = family_warning(
+                {
+                    name: form.fields[name].initial
+                    for name in (
+                        "finder_provider",
+                        "finder_model",
+                        "validator_provider",
+                        "validator_model",
+                    )
+                }
+            )
         if request.method == "POST" and form.is_valid():
             try:
+                warning = family_warning(form.discovery_config())
                 discovery = start_discovery(
                     form.cleaned_data["objective"],
                     constraints=form.cleaned_data["constraints"],
@@ -279,6 +304,8 @@ class DiscoveryAdmin(ModelAdmin):
                 form.add_error(None, str(exc))
             else:
                 messages.success(request, "Discovery queued. Finder will research first.")
+                if warning:
+                    messages.warning(request, warning)
                 return HttpResponseRedirect(reverse("admin:discovery-review", args=[discovery.id]))
         return render(
             request,
@@ -288,6 +315,7 @@ class DiscoveryAdmin(ModelAdmin):
                 "title": "Start an opportunity discovery",
                 "opts": self.model._meta,
                 "form": form,
+                "family_warning": warning,
                 "connector_status": describe_connectors(),
             },
         )

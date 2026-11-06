@@ -25,7 +25,7 @@ def test_regenerated_report_is_1_2_with_metrics_and_null_verdict():
     report = regenerate_report(row.pk).report_json
     assert report["schema_version"] == "1.2"
     assert report["human_verdict"] is None
-    assert report["quality"]["schema_version"] == "1.2"
+    assert report["quality"]["schema_version"] == "1.3"
     assert report["quality"]["cited_origin_count"] == 3
     assert report["quality"]["validator_query_novelty_min"] == pytest.approx(2 / 11)
     text = Discovery.objects.get(pk=row.pk).report_markdown

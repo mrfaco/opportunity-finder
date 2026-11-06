@@ -14,11 +14,11 @@ from django.db.models import Q
 from discovery.eval.benchmark import load_benchmark
 from discovery.independence import novelty as query_novelty
 from discovery.models import Discovery, Evidence, ProposalRevision, ResearchOperation
-from discovery.schemas import QualityMetrics, evidence_settings
+from discovery.schemas import QualityMetrics, evidence_settings, same_model_family
 from discovery.source_types import INDEPENDENT_DEMAND_TYPES, OFFER_TYPES
 from discovery.termination import business_fingerprint, proposal_kind
 
-METRICS_SCHEMA_VERSION = "1.2"
+METRICS_SCHEMA_VERSION = "1.3"
 # Source types that show someone actually paying or offering a price.
 TRANSACTION_TYPES = frozenset({"job_post", "tender", "marketplace_listing"})
 # General search and page retrieval; every other connector is a specialist source.
@@ -437,11 +437,7 @@ def compute_quality(discovery: Discovery) -> QualityMetrics:
         finder_model=config.get("finder_model"),
         validator_model=config.get("validator_model"),
         judge_model=config.get("judge_model") if judge_required else None,
-        same_model_family=bool(
-            config.get("finder_model")
-            and config.get("finder_model") == config.get("validator_model")
-            and config.get("finder_provider") == config.get("validator_provider")
-        ),
+        same_model_family=same_model_family(config),
         prompt_hashes={
             role: str(snapshot["hash"])
             for role, snapshot in sorted(discovery.prompt_snapshot.items())

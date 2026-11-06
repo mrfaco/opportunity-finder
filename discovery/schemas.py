@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -126,6 +127,43 @@ class DiscoveryConfig(BaseModel):
         if len(value) != len(set(value)):
             raise ValueError("Connector IDs must be unique")
         return value
+
+
+_OLLAMA_FAMILY = re.compile(r"[^-:0-9]+")
+
+
+def model_family(provider: str, model: str) -> str:
+    """The vendor family of a role model, so two variants of one family compare equal.
+
+    OpenRouter: the vendor prefix before ``/``. Anthropic: ``anthropic``.
+    Ollama: the tag before the first ``-``, ``:`` or digit.
+    """
+    if provider == "anthropic":
+        return "anthropic"
+    if provider == "openrouter":
+        vendor, slash, _ = model.partition("/")
+        if not slash or not vendor:
+            raise ValueError(f"OpenRouter model {model!r} has no vendor prefix")
+        return vendor.lower()
+    if provider == "ollama":
+        match = _OLLAMA_FAMILY.match(model)
+        if match is None:
+            raise ValueError(f"Ollama tag {model!r} does not start with a family name")
+        return match.group(0).lower()
+    raise ValueError(f"Unknown provider {provider!r}")
+
+
+def role_model_family(config: dict[str, Any], role: Role) -> str:
+    """The family of one role's model in a config snapshot."""
+    # Configs from before per-role providers ran OpenRouter only.
+    return model_family(config.get(f"{role}_provider", "openrouter"), config[f"{role}_model"])
+
+
+def same_model_family(config: dict[str, Any]) -> bool:
+    """Whether a config snapshot's Finder and Validator models share a family."""
+    if not config.get("finder_model") or not config.get("validator_model"):
+        return False
+    return role_model_family(config, "finder") == role_model_family(config, "validator")
 
 
 class EvidenceSettings(BaseModel):
@@ -290,17 +328,19 @@ class VerdictInput(Contract):
 
 
 class QualityMetrics(Contract):
-    """Deterministic evidence, independence, process and outcome measures (schema 1.2).
+    """Deterministic evidence, independence, process and outcome measures (schema 1.3).
 
     1.1 adds source-type, staleness, business-model-kind and evidence-policy
     measures; 1.2 adds the transaction-signal and specialist-connector
-    measures. Stored quality runs and reports are never rewritten: a stored 1.1
-    record still validates and reads the 1.2 fields as ``None``. A metric that
-    cannot be computed is ``None`` with the reason in ``notes``.
+    measures; 1.3 computes ``same_model_family`` by ``model_family`` rather
+    than exact provider and model equality. Stored quality runs and reports are
+    never rewritten: a stored 1.1 record still validates and reads the 1.2
+    fields as ``None``. A metric that cannot be computed is ``None`` with the
+    reason in ``notes``.
     """
 
     # Narrows the shared 1.0 literal; only this contract moved on.
-    schema_version: Literal["1.1", "1.2"] = "1.2"  # type: ignore[assignment]
+    schema_version: Literal["1.1", "1.2", "1.3"] = "1.3"  # type: ignore[assignment]
     discovery_id: str
     cited_evidence_count: int | None
     cited_origin_count: int | None
