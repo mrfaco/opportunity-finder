@@ -1,0 +1,47 @@
+{
+  "_comment": "Hand-written from the Brave Search API documented WebSearchApiResponse (type, query, web.results with title/url/description/age/page_age). No network access or key to capture a live response. Descriptions keep Brave's <strong> highlighting; the second result has only a relative age, the third a non-HTTP URL.",
+  "response": {
+    "type": "search",
+    "query": {
+      "original": "contador monotributo precio",
+      "show_strict_warning": false,
+      "is_navigational": false,
+      "country": "ar",
+      "more_results_available": true
+    },
+    "mixed": {"type": "mixed", "main": [{"type": "web", "index": 0, "all": false}]},
+    "web": {
+      "type": "search",
+      "family_friendly": true,
+      "results": [
+        {
+          "type": "search_result",
+          "title": "Honorarios <strong>contador</strong> monotributo 2026",
+          "url": "https://www.consejo.org.ar/honorarios-minimos-sugeridos",
+          "is_source_local": false,
+          "is_source_both": false,
+          "description": "Tabla de honorarios mínimos sugeridos para la liquidación del <strong>monotributo</strong>.",
+          "page_age": "2026-10-30T14:00:00",
+          "age": "October 30, 2026",
+          "language": "es",
+          "profile": {"name": "Consejo Profesional", "url": "https://www.consejo.org.ar", "long_name": "consejo.org.ar"},
+          "meta_url": {"scheme": "https", "netloc": "consejo.org.ar", "hostname": "www.consejo.org.ar", "path": "› honorarios-minimos-sugeridos"}
+        },
+        {
+          "type": "search_result",
+          "title": "Contadores para monotributistas desde $25.000",
+          "url": "https://www.contaexpress.com/precios",
+          "description": "Plan mensual con recategorización incluida.",
+          "age": "2 days ago",
+          "language": "es"
+        },
+        {
+          "type": "search_result",
+          "title": "Broken",
+          "url": "mailto:someone@example.com",
+          "description": "x"
+        }
+      ]
+    }
+  }
+}

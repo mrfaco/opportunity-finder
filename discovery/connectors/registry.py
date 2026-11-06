@@ -8,6 +8,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 from discovery.connectors.base import Connector, ConnectorConfigurationError
+from discovery.connectors.brave import BraveSearchConnector
 from discovery.connectors.ckan import CkanConnector
 from discovery.connectors.gdelt import GdeltNewsConnector
 from discovery.connectors.reddit import RedditConnector
@@ -35,6 +36,7 @@ _BUILTINS: tuple[type[Connector], ...] = (
     GdeltNewsConnector,
     CkanConnector,
     WaybackConnector,
+    BraveSearchConnector,
 )
 
 

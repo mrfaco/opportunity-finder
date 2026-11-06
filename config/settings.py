@@ -357,6 +357,9 @@ DISCOVERY_TAVILY_SEARCH_COST_USD = env("DISCOVERY_TAVILY_SEARCH_COST_USD", defau
 # tool input; describe() reports whether they are configured, never the value.
 REDDIT_CLIENT_ID = env("REDDIT_CLIENT_ID", default="")
 REDDIT_CLIENT_SECRET = env("REDDIT_CLIENT_SECRET", default="")
+BRAVE_SEARCH_API_KEY = env("BRAVE_SEARCH_API_KEY", default="")
+# Recorded per brave search as an estimate; 0 is the free tier.
+DISCOVERY_BRAVE_SEARCH_COST_USD = env("DISCOVERY_BRAVE_SEARCH_COST_USD", default="0")
 # CKAN open-data portals (API base URLs) open_data_ckan may query; the national
 # portals of the benchmark regions that run CKAN.
 DISCOVERY_CKAN_PORTALS = env.list(

@@ -108,9 +108,9 @@ class DiscoveryConfig(BaseModel):
     @field_validator("connectors")
     @classmethod
     def require_search(cls, value: list[str]) -> list[str]:
-        if not {"web_search", "duckduckgo", "bing", "search_auto"} & set(value):
+        if not {"web_search", "brave", "duckduckgo", "bing", "search_auto"} & set(value):
             raise ValueError(
-                "Enable general web search: web_search, duckduckgo, bing or search_auto"
+                "Enable general web search: web_search, brave, duckduckgo, bing or search_auto"
             )
         if len(value) != len(set(value)):
             raise ValueError("Connector IDs must be unique")

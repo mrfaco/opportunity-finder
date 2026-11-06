@@ -100,6 +100,7 @@ General search is explicitly configured:
 | Connector | Configuration / purpose |
 |---|---|
 | `web_search` | Tavily general search; requires `TAVILY_API_KEY` |
+| `brave` | Brave Search API general search (opt-in); requires `BRAVE_SEARCH_API_KEY`; filters `country`, `language`, `recency`; cursor |
 | `web_fetch` | Bounded HTML/text and page-addressable PDF retrieval; Poppler required |
 | `duckduckgo` | DuckDuckGo HTML general search |
 | `bing` | Independent Bing RSS general search; no API key |
@@ -214,6 +215,18 @@ evidence row has the original's `origin` and `source_type` and counts as one ori
 the live page. A capture without a stated page date takes the capture time as
 `published_at` (`published_at_source: wayback_capture`). Interval 2 s; the archive's own
 rate limiting is a `rate_limited` outcome.
+
+`brave` is an explicit, keyed general search: it satisfies the "general web search"
+requirement of a discovery config, but `search_auto` stays DuckDuckGo → Bing, so no
+key-gated backend is ever reached by fallback. It calls
+`api.search.brave.com/res/v1/web/search` with the `X-Subscription-Token` header from
+`BRAVE_SEARCH_API_KEY`, `count` = limit, `offset` = cursor (Brave pages by whole result
+pages, 0–9), `country` upper-cased, `search_lang` (`pt` becomes `pt-br`, or `pt-pt`
+outside Brazil) and `freshness` from `recency` (`pd`, `pw`, `pm`, `py`). Results are
+`search_snippet`s dated from `page_age` (or an absolute `age`). Each search records
+`DISCOVERY_BRAVE_SEARCH_COST_USD` (default `0`, the free tier) as an estimated charge,
+like Tavily. Selecting `brave` without the key fails `start_discovery` preflight with
+the key named.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct
