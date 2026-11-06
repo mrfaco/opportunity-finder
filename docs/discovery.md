@@ -108,6 +108,7 @@ General search is explicitly configured:
 | `hacker_news` | Search/fetch public Hacker News material |
 | `github` | GitHub public research with `GITHUB_TOKEN` |
 | `stack_exchange` | Public Stack Exchange research; optional `STACKEXCHANGE_KEY` |
+| `jobs_adzuna` | Adzuna job adverts with salaries (opt-in); requires `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`; filters `country` (required), `location`, `recency`; cursor |
 | `local_corpus` | Read-only search of existing local cluster/item records |
 | `news_gdelt` | GDELT DOC 2.0 dated news (no key); filters `country`, `language`, `recency`; publisher URLs to fetch with `web_fetch` |
 | `open_data_ckan` | Government datasets from the `DISCOVERY_CKAN_PORTALS` allowlist (no key); filters `portal`, `format`; cursor |
@@ -227,6 +228,19 @@ outside Brazil) and `freshness` from `recency` (`pd`, `pw`, `pm`, `py`). Results
 `DISCOVERY_BRAVE_SEARCH_COST_USD` (default `0`, the free tier) as an estimated charge,
 like Tavily. Selecting `brave` without the key fails `start_discovery` preflight with
 the key named.
+
+`jobs_adzuna` calls `api.adzuna.com/v1/api/jobs/<country>/search/<page>` with
+`app_id`/`app_key` from settings, `what` = query, `where` = `location`,
+`results_per_page` = limit, `max_days_old` from `recency` (1, 7, 30, 365) and
+`sort_by=date`; the cursor is the page number. `country` is required and must be an
+Adzuna market (`at au be br ca ch de es fr gb in it mx nl nz pl sg us za`); `ar` is
+refused with a pointer to `jobs_jooble` (Tier 2b). Each advert is a `source_record`
+(typed `job_post` by the Adzuna host patterns) with the Adzuna redirect URL, the
+employer as author, the description (up to 3,000 characters), `created` as
+`published_at`, and company, location, `salary_min`, `salary_max`,
+`salary_is_predicted`, `currency` (the market's own; Adzuna does not return one),
+`contract_time`, `contract_type` and category in metadata. Keys travel only in the
+request; tool results, evidence and errors never carry them.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct

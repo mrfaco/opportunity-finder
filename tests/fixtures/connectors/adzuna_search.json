@@ -1,0 +1,51 @@
+{
+  "_comment": "Hand-written from the Adzuna API documented /jobs/{country}/search/{page} response (count, mean, results with id, title, description, created, redirect_url, company, location, salary_min/max, salary_is_predicted, contract_time/type, category). No network access or key to capture a live response. Adzuna highlights matches with <strong>; the third advert lacks a redirect_url.",
+  "response": {
+    "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+    "count": 48,
+    "mean": 18750.5,
+    "results": [
+      {
+        "__CLASS__": "Adzuna::API::Response::Job",
+        "id": "4912345678",
+        "adref": "eyJhbGciOiJIUzI1NiJ9",
+        "title": "<strong>Contador</strong> Público para despacho",
+        "description": "Despacho contable en Monterrey busca <strong>contador</strong> para llevar contabilidad de 40 clientes pyme, declaraciones mensuales y nómina.",
+        "created": "2026-10-30T08:12:44Z",
+        "redirect_url": "https://www.adzuna.com.mx/land/ad/4912345678?se=abc&utm_medium=api&v=1",
+        "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Despacho Garza y Asociados"},
+        "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Monterrey, Nuevo León", "area": ["México", "Nuevo León", "Monterrey"]},
+        "salary_min": 18000,
+        "salary_max": 25000,
+        "salary_is_predicted": "0",
+        "contract_time": "full_time",
+        "contract_type": "permanent",
+        "category": {"__CLASS__": "Adzuna::API::Response::Category", "tag": "accounting-finance-jobs", "label": "Empleos de Contabilidad y Finanzas"},
+        "latitude": 25.6866,
+        "longitude": -100.3161
+      },
+      {
+        "__CLASS__": "Adzuna::API::Response::Job",
+        "id": "4912349999",
+        "title": "Auxiliar contable medio tiempo",
+        "description": "Empresa de logística requiere auxiliar contable.",
+        "created": "2026-10-28T15:00:00Z",
+        "redirect_url": "https://www.adzuna.com.mx/land/ad/4912349999?se=def&v=1",
+        "company": {"display_name": "Logística del Norte"},
+        "location": {"display_name": "San Pedro Garza García, Nuevo León"},
+        "salary_min": 9000,
+        "salary_max": 9000,
+        "salary_is_predicted": "1",
+        "contract_time": "part_time",
+        "category": {"label": "Empleos de Contabilidad y Finanzas"}
+      },
+      {
+        "__CLASS__": "Adzuna::API::Response::Job",
+        "id": "4912340000",
+        "title": "Broken advert",
+        "description": "",
+        "created": "2026-10-27T00:00:00Z"
+      }
+    ]
+  }
+}

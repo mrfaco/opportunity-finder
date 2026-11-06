@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from django.conf import settings
 from django.utils.module_loading import import_string
 
+from discovery.connectors.adzuna import AdzunaJobsConnector
 from discovery.connectors.base import Connector, ConnectorConfigurationError
 from discovery.connectors.brave import BraveSearchConnector
 from discovery.connectors.ckan import CkanConnector
@@ -37,6 +38,7 @@ _BUILTINS: tuple[type[Connector], ...] = (
     CkanConnector,
     WaybackConnector,
     BraveSearchConnector,
+    AdzunaJobsConnector,
 )
 
 
