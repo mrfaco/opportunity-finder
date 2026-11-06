@@ -38,6 +38,11 @@ LOCMEM = {
         ("web_fetch", "fetched_page", "https://www.google.com/maps/place/x", "review", ""),
         ("web_fetch", "fetched_page", "https://www.linkedin.com/jobs/view/1", "job_post", ""),
         ("web_fetch", "fetched_page", "https://www.workana.com/job/x", "job_post", ""),
+        ("jobs_adzuna", "source_record", "https://www.adzuna.de/land/ad/1", "job_post", ""),
+        ("jobs_adzuna", "source_record", "https://www.adzuna.co.uk/land/ad/1", "job_post", ""),
+        ("jobs_adzuna", "source_record", "https://www.adzuna.com.mx/land/ad/1", "job_post", ""),
+        ("web_fetch", "fetched_page", "https://jooble.org/desc/1", "job_post", "domain:"),
+        ("wayback", "source_record", "https://web.archive.org/web/2020/x", "unclassified", ""),
         ("web_fetch", "fetched_page", "https://comprar.gob.ar/proceso/1", "tender", ""),
         ("web_fetch", "fetched_page", "https://ted.europa.eu/notice/1", "tender", ""),
         ("web_fetch", "fetched_page", "https://sam.gov/opp/1", "tender", ""),
@@ -166,3 +171,50 @@ def test_research_path_stamps_type_and_metadata_and_shows_them_to_roles():
     assert by_url["https://acme.com/pricing"]["source_type"] == "vendor"
     assert by_url["https://acme.com/pricing"]["origin"] == "acme.com"
     assert by_url["https://acme.com/pricing"]["published_at"] is None
+
+
+def test_rules_1_1_host_patterns_are_anchored_to_the_adzuna_label():
+    assert load_rules().rules_version == "1.1.0"
+    assert classify("web_fetch", "fetched_page", "https://www.adzuna.com/x").rule == (
+        "host_pattern:adzuna.*"
+    )
+    for host in ("adzuna.attacker.example", "notadzuna.com", "adzuna.example.co.uk"):
+        assert classify("web_fetch", "fetched_page", f"https://{host}/x").source_type != (
+            "job_post"
+        )
+
+
+@pytest.mark.django_db
+@override_settings(CACHES=LOCMEM)
+def test_canonical_url_types_and_counts_a_proxied_capture_as_the_original_page():
+    task = research_task()
+    snapshot = "https://web.archive.org/web/20200101000000id_/https://www.trustpilot.com/review/x"
+    page = ResearchPage(
+        documents=[
+            ResearchDocument(
+                connector="web_fetch",
+                external_id=snapshot,
+                url=snapshot,
+                text="Archived reviews",
+                kind="fetched_page",
+                metadata={"canonical_url": "https://www.trustpilot.com/review/x"},
+            ),
+            ResearchDocument(
+                connector="web_fetch",
+                external_id="plain",
+                url="https://www.trustpilot.com/review/y",
+                text="Live reviews",
+                kind="fetched_page",
+            ),
+        ]
+    )
+    with patch("discovery.connectors.web.fetch_public_url", return_value=page):
+        perform_research(
+            task, "fetch", {"connector": "web_fetch", "action": "fetch", "target": snapshot}
+        )
+    archived = task.discovery.evidence.get(url=snapshot)
+    assert archived.source_type == "review"
+    assert archived.metadata["source_type_rule"] == "domain:trustpilot.com"
+    assert archived.origin == "www.trustpilot.com"
+    live = task.discovery.evidence.get(url="https://www.trustpilot.com/review/y")
+    assert live.source_type == "review" and live.origin == archived.origin

@@ -55,3 +55,24 @@ def test_backfill_dry_run_then_apply_is_idempotent():
     assert about.schema_version == "1.0"
 
     assert "0 row(s) classified under other rules; 0 changed type" in _run("--apply")
+
+
+@pytest.mark.django_db
+def test_rules_version_change_reclassifies_job_boards_and_respects_canonical_url():
+    step = turn(discovery(), 1, "finder")
+    old = {"source_type_rule": "default", "source_type_rules_version": "1.0.0"}
+    adzuna = evidence(step, "www.adzuna.com.mx", url="https://www.adzuna.com.mx/land/ad/9")
+    snapshot = evidence(
+        step,
+        "www.indeed.com",
+        url="https://web.archive.org/web/2020id_/https://www.indeed.com/jobs",
+        connector="wayback",
+    )
+    for row, extra in ((adzuna, {}), (snapshot, {"canonical_url": "https://www.indeed.com/jobs"})):
+        row.metadata = {**old, **extra}
+        row.save()
+    output = _run()
+    assert "rules 1.1.0; 2 row(s) classified under other rules; 2 would change type" in output
+    assert "unclassified -> job_post: 2" in output
+    _run("--apply")
+    assert set(Evidence.objects.values_list("source_type", flat=True)) == {"job_post"}

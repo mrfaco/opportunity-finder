@@ -146,6 +146,19 @@ HTML/text keeps the 200 KB bound. A source 429 gets a bounded cooldown (numeric
 Retry-After is honored), scoped to its host, so a datospublicos limit cannot block
 unrelated government/regulator sites.
 
+`web_fetch` connector version 1.2 also reads CSV (`text/csv`, `application/csv`, or a
+`.csv` path served as `application/octet-stream`) under the same 200 KB bound, so an
+open-data resource is readable evidence. The capture's metadata carries
+`format: "csv"` and `columns` from the header row; a larger file is truncated and
+flagged like any other text capture. Other octet-stream bodies are still refused.
+
+API connectors share `discovery/connectors/http.py` (`get_json`/`post_json`): fixed
+provider hosts only, an identified `User-Agent`, a 20-second timeout, no redirects, a
+2 MB response cap, and a typed `ResearchPage` for every provider failure (transport
+error or timeout, 401/403, 404, 429 with `Retry-After`, redirect, other non-2xx,
+non-JSON or oversized body). It never fetches a role-chosen URL; `fetch_public_url`
+remains the only path for those.
+
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct
 source origins, with independent Validator research. Cached material retains
@@ -161,7 +174,12 @@ statistics office is not a regulator). `vendor` is URL-path only (`/pricing`,
 `/precios`, `/products`, …); a seller's home page stays `unclassified`. The rule
 and rules version are in the row's metadata, and new rows carry evidence schema
 1.1. Tool results, role context, the admin evidence list and the report's Source
-register show `source_type`, `origin` and `published_at`. After editing the
+register show `source_type`, `origin` and `published_at`. A connector that returns a proxied capture
+(a web-archive snapshot) sets `metadata["canonical_url"]` to the archived original;
+the row is then typed by that URL and its `origin` is that URL's host, and
+`metadata["original_source_origin"]` makes the snapshot and the live page count as
+one origin. Rules 1.1.0 add Adzuna (`adzuna.*`, `adzuna.co.*`, `adzuna.com.*` host
+patterns) and `jooble.org` as job posts. After editing the
 rules file, bump `rules_version` and run `manage.py classify_evidence` (dry run)
 then `manage.py classify_evidence --apply` to reclassify history; the command
 only touches rows classified under a different rules version and is idempotent.

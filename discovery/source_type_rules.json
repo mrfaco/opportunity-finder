@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "rules_version": "1.0.0",
+  "rules_version": "1.1.0",
   "types": {
     "search_snippet": {
       "purpose": "Search-result excerpts are leads, never a source in their own right; decided by document kind alone.",
@@ -44,7 +44,7 @@
       ]
     },
     "job_post": {
-      "purpose": "A company paying for this work: job boards and freelance marketplaces for work requests.",
+      "purpose": "A company paying for this work: job boards and freelance marketplaces for work requests. Adzuna runs one site per country, under a bare, co.* or com.* suffix.",
       "domains": [
         "bumeran.com.ar",
         "bumeran.com.mx",
@@ -53,6 +53,7 @@
         "glassdoor.com",
         "indeed.com",
         "infojobs.net",
+        "jooble.org",
         "naukri.com",
         "occ.com.mx",
         "stepstone.de",
@@ -61,7 +62,8 @@
       ],
       "host_paths": [
         {"domain": "linkedin.com", "path_prefix": "/jobs"}
-      ]
+      ],
+      "host_patterns": ["adzuna.*", "adzuna.co.*", "adzuna.com.*"]
     },
     "tender": {
       "purpose": "Public procurement notices with prices and named buyers.",

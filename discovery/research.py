@@ -328,14 +328,17 @@ def _perform_research(
         check_lease(task.pk, lease_token(task))
         documents = []
         for document in page.documents:
-            typed = classify(document.connector, document.kind, document.url)
+            # A proxied capture (a web archive snapshot) names the page it stands
+            # for; it is typed and counted as that page, not as the proxy host.
+            typed_url = str(document.metadata.get("canonical_url") or document.url)
+            typed = classify(document.connector, document.kind, typed_url)
             metadata = {
                 **document.metadata,
                 "author": document.author,
                 "source_type_rule": typed.rule,
                 "source_type_rules_version": typed.rules_version,
             }
-            origin = str(metadata.get("origin") or urlsplit(document.url).hostname or "")
+            origin = str(metadata.get("origin") or urlsplit(typed_url).hostname or "")
             evidence = Evidence.objects.create(
                 schema_version="1.1",
                 discovery_id=task.discovery_id,

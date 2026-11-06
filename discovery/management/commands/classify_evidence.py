@@ -32,7 +32,9 @@ class Command(BaseCommand):
             with transaction.atomic():
                 for row in stale.select_for_update().iterator():
                     examined += 1
-                    result = classify(row.connector, row.kind, row.url)
+                    result = classify(
+                        row.connector, row.kind, row.metadata.get("canonical_url") or row.url
+                    )
                     if result.source_type != row.source_type:
                         changes[(row.source_type, result.source_type)] += 1
                     # Backfilled rows keep their schema_version; the metadata records
@@ -48,7 +50,9 @@ class Command(BaseCommand):
             # A dry run reads without row locks so it never blocks live research writes.
             for row in stale.iterator():
                 examined += 1
-                result = classify(row.connector, row.kind, row.url)
+                result = classify(
+                    row.connector, row.kind, row.metadata.get("canonical_url") or row.url
+                )
                 if result.source_type != row.source_type:
                     changes[(row.source_type, result.source_type)] += 1
         mode = "Applied" if options["apply"] else "Dry run (nothing written)"

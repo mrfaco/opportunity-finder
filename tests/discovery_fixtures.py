@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import json
+from collections.abc import Callable
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
+import httpx
 from django.utils import timezone
 
+from discovery.connectors.base import ResearchPage
+from discovery.connectors.http import MAX_RESPONSE_BYTES
 from discovery.models import (
     Discovery,
     DiscoveryTask,
@@ -334,3 +342,65 @@ def pdf_bytes(pages: list[str], info: dict[str, str] | None = None) -> bytes:
         + f"trailer\n<< /Size {len(offsets)} /Root 1 0 R{info_ref} >>\n".encode()
         + f"startxref\n{xref}\n%%EOF".encode()
     )
+
+
+CONNECTOR_FIXTURES = Path(__file__).with_name("fixtures") / "connectors"
+
+
+def provider_fixture(name: str) -> Any:
+    """The provider response body kept in tests/fixtures/connectors/<name>.json."""
+    wrapped = json.loads((CONNECTOR_FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    return wrapped["response"]
+
+
+class ProviderStub:
+    """Stands in for ``httpx.stream`` behind the connector HTTP helper; records each request.
+
+    Replies are served in order: an ``httpx.Response`` is returned, an exception raised.
+    """
+
+    def __init__(self, *replies: httpx.Response | Exception) -> None:
+        self.replies = list(replies)
+        self.requests: list[dict[str, Any]] = []
+
+    def __call__(self, method: str, url: str, **kwargs: Any) -> contextlib.AbstractContextManager:
+        self.requests.append({"method": method, "url": url, **kwargs})
+        reply = self.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return contextlib.nullcontext(reply)
+
+    def patch(self) -> Any:
+        return patch("discovery.connectors.http.httpx.stream", side_effect=self)
+
+
+def json_reply(
+    body: Any, status: int = 200, headers: dict[str, str] | None = None
+) -> httpx.Response:
+    return httpx.Response(status, content=json.dumps(body).encode(), headers=headers)
+
+
+# Every provider behaviour the HTTP helper types, with the status it must yield.
+TYPED_FAILURES: list[tuple[str, httpx.Response | Exception, str]] = [
+    ("transport", httpx.ConnectError("refused"), "error"),
+    ("timeout", httpx.ReadTimeout("slow"), "timeout"),
+    ("unauthorized", httpx.Response(401), "access_denied"),
+    ("forbidden", httpx.Response(403), "access_denied"),
+    ("not_found", httpx.Response(404), "not_found"),
+    ("rate_limited", httpx.Response(429, headers={"Retry-After": "30"}), "rate_limited"),
+    ("server_error", httpx.Response(503), "error"),
+    ("redirect", httpx.Response(302, headers={"Location": "https://elsewhere.example/"}), "error"),
+    ("non_json", httpx.Response(200, text="<html>Service unavailable</html>"), "error"),
+    ("oversized", httpx.Response(200, content=b" " * (MAX_RESPONSE_BYTES + 1)), "error"),
+]
+
+
+def assert_typed_failures(call: Callable[[], ResearchPage]) -> None:
+    """Each provider failure is a typed page from ``call``, never an exception."""
+    for name, reply, status in TYPED_FAILURES:
+        with ProviderStub(reply).patch():
+            page = call()
+        assert page.status == status, (name, page)
+        assert page.documents == [] and page.error_reason, name
+        if name == "rate_limited":
+            assert page.retry_after_seconds == 30

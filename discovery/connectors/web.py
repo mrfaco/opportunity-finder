@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import http.client
+import io
 import ipaddress
 import json
 import re
@@ -160,6 +162,15 @@ def _status_page(status_code: int, retry_after: str | None = None) -> ResearchPa
     return None
 
 
+_CSV_TYPES = ("text/csv", "application/csv")
+
+
+def _csv_columns(text: str) -> list[str]:
+    """Header-row column names of a CSV capture."""
+    header = next(csv.reader(io.StringIO(text.removeprefix("\ufeff"))), [])
+    return [name.strip() for name in header]
+
+
 def public_url_address(url: str) -> tuple[str, str, int, str]:
     """Resolve once, reject every non-public answer, then return a pinned address."""
     parsed = urlsplit(url)
@@ -230,11 +241,20 @@ def fetch_public_url(url: str) -> ResearchPage:
                 raise ConnectorError(f"Web source returned HTTP {response.status}")
             content_type = (response.getheader("Content-Type") or "").lower()
             is_pdf = "application/pdf" in content_type or parsed.path.lower().endswith(".pdf")
-            if not is_pdf and not any(
-                value in content_type
-                for value in ("text/html", "text/plain", "xhtml", "application/octet-stream")
+            # Open-data portals often serve CSV files as octet-stream; the .csv
+            # path is the only signal accepted for that.
+            is_csv = any(value in content_type for value in _CSV_TYPES) or (
+                "application/octet-stream" in content_type and parsed.path.lower().endswith(".csv")
+            )
+            if (
+                not is_pdf
+                and not is_csv
+                and not any(
+                    value in content_type
+                    for value in ("text/html", "text/plain", "xhtml", "application/octet-stream")
+                )
             ):
-                raise ConnectorError("Web source is not supported HTML, plain text or PDF")
+                raise ConnectorError("Web source is not supported HTML, plain text, CSV or PDF")
             encoding = (response.getheader("Content-Encoding") or "identity").lower()
             if encoding != "identity":
                 raise ConnectorError("Web source ignored the uncompressed response requirement")
@@ -246,13 +266,13 @@ def fetch_public_url(url: str) -> ResearchPage:
                 if len(raw) > PDF_MAX_BYTES:
                     raise ConnectorError("PDF exceeds the 20 MB download limit")
                 return extract_pdf(raw, current, content_type)
-            if "octet-stream" in content_type:
-                raise ConnectorError("Binary source is not a PDF")
+            if "octet-stream" in content_type and not is_csv:
+                raise ConnectorError("Binary source is not a PDF or CSV file")
             truncated = len(raw) > _MAX_BYTES
             charset_match = re.search(r"charset=[\"']?([\w-]+)", content_type)
             charset = charset_match[1] if charset_match else "utf-8"
             text = raw[:_MAX_BYTES].decode(charset, errors="replace")
-            title = _TITLE.search(text)
+            title = _TITLE.search(text) if not is_csv else None
             title_text = html_to_text(title[1]) if title else current
             body = html_to_text(text) if "html" in content_type else text
             links = _PdfLinks(current)
@@ -266,7 +286,7 @@ def fetch_public_url(url: str) -> ResearchPage:
                 documents=[
                     ResearchDocument(
                         connector="web_fetch",
-                        connector_version="1.1",
+                        connector_version=WebFetchConnector.version,
                         external_id=current,
                         url=current,
                         title=title_text,
@@ -278,6 +298,7 @@ def fetch_public_url(url: str) -> ResearchPage:
                             "content_type": content_type,
                             "pdf_links": links.links,
                             **({"published_at_source": stated[1]} if stated else {}),
+                            **({"format": "csv", "columns": _csv_columns(text)} if is_csv else {}),
                         },
                     )
                 ],
@@ -290,16 +311,17 @@ def fetch_public_url(url: str) -> ResearchPage:
 
 class WebFetchConnector(Connector):
     id = "web_fetch"
-    version = "1.1"
+    version = "1.2"
 
     def describe(self) -> ConnectorDescription:
         return ConnectorDescription(
             id=self.id,
             version=self.version,
-            name="Public web pages and PDFs",
+            name="Public web pages, CSV files and PDFs",
             capabilities=["fetch"],
             access_limitations=(
-                "HTML/text 200 KB; PDF 20 MB, 10 pages per fetch, 120k text; "
+                "HTML/text/CSV 200 KB (larger CSV files are truncated; columns from the "
+                "header row); PDF 20 MB, 10 pages per fetch, 120k text; "
                 "use #page=N or #page=N-M for later pages; scanned PDFs require OCR; "
                 "public ports 80/443; five redirects"
             ),
