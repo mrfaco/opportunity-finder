@@ -3,26 +3,34 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from decimal import Decimal
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
+from typing import get_args
 from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 
 from agents.prompts import canonicalize, load_prompt
 from discovery import loop
 from discovery.claude_runtime import build_launch
+from discovery.connectors.registry import list_connectors
 from discovery.orchestrator import claim_task, start_discovery
 from discovery.prompts import role_prompt
 from discovery.quality import compute_quality
-from discovery.schemas import DiscoveryConfig
+from discovery.schemas import BusinessModelKind, DiscoveryConfig
+from discovery.source_types import SourceType
+from scripts.validate_prompts import _check as validate_prompt_file
 from tests import discovery_fixtures as fx
 
 ROLES = ("finder", "validator", "judge")
+KINDS = sorted(kind for kind in get_args(BusinessModelKind) if kind != "other")
+SOURCE_TYPES = set(get_args(SourceType))
 # Effective prompts are read on every turn of every role. Raising this is a
 # deliberate change with its reason in the commit body.
 WORD_BUDGET = 2400
@@ -38,6 +46,44 @@ def _write(directory: Path, name: str, body: str) -> None:
     (directory / name).write_text(
         f'---\nschema_version: "1.0"\ndescription: Synthetic\n---\n{body}', encoding="utf-8"
     )
+
+
+def _kind_rows(body: str) -> dict[str, list[str]]:
+    """Per-kind table rows: first cell to the remaining cells; header and rule skipped."""
+    rows: dict[str, list[str]] = {}
+    for line in body.splitlines():
+        line = line.strip()
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if cells[0] == "Kind":
+            continue
+        assert cells[0] not in rows, f"duplicate row for {cells[0]}"
+        rows[cells[0]] = cells[1:]
+    return rows
+
+
+def _assert_symmetric_table(body: str, columns: int) -> dict[str, list[str]]:
+    rows = _kind_rows(body)
+    assert sorted(rows) == KINDS
+    for kind, cells in rows.items():
+        assert len(cells) == columns and all(cells), f"{kind} row is incomplete"
+    return rows
+
+
+def _assert_known_names(body: str, fields: set[str]) -> None:
+    """Every code-formatted name is a real connector, source type, kind or listed field."""
+    known = {connector.id for connector in list_connectors()} | SOURCE_TYPES | set(KINDS)
+    unknown = set(re.findall(r"`([^`]+)`", body)) - known - fields
+    assert not unknown, f"names that do not exist in this repo: {sorted(unknown)}"
+
+
+def _procedure(role: str) -> str:
+    path = Path(settings.BASE_DIR) / "prompts" / role / "procedural.md"
+    assert validate_prompt_file(path) == []
+    assert load_prompt(role, "procedural").frontmatter["schema_version"] == "1.0"
+    assert [part.kind for part in role_prompt(role).parts] == ["system", "procedural"]
+    return load_prompt(role, "procedural").content
 
 
 @pytest.fixture
@@ -180,3 +226,24 @@ def test_effective_prompt_is_within_the_word_budget(role):
 def test_budget_check_rejects_an_oversized_prompt():
     with pytest.raises(AssertionError, match="budget is 2400"):
         _within_budget("word " * (WORD_BUDGET + 1))
+
+
+def test_finder_procedure_covers_every_kind_with_real_sources():
+    body = _procedure("finder")
+    rows = _assert_symmetric_table(body, columns=3)
+    for kind, (demand, competition, _) in rows.items():
+        for cell in (demand, competition):
+            assert set(re.findall(r"`([^`]+)`", cell)) & SOURCE_TYPES, f"{kind}: {cell}"
+    _assert_known_names(
+        body,
+        {
+            "country",
+            "language",
+            "summary",
+            "fact",
+            "inference",
+            "hypothesis",
+            "business_model_kind",
+            "submit_proposal",
+        },
+    )
