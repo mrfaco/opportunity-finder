@@ -108,6 +108,7 @@ General search is explicitly configured:
 | `github` | GitHub public research with `GITHUB_TOKEN` |
 | `stack_exchange` | Public Stack Exchange research; optional `STACKEXCHANGE_KEY` |
 | `local_corpus` | Read-only search of existing local cluster/item records |
+| `news_gdelt` | GDELT DOC 2.0 dated news (no key); filters `country`, `language`, `recency`; publisher URLs to fetch with `web_fetch` |
 | `reddit` | Reddit posts and threads (public JSON; optional `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` OAuth); filters `subreddit`, `recency`, `sort`; cursor |
 
 New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
@@ -171,6 +172,16 @@ operator to configure OAuth. With both `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SEC
 it obtains a client-credentials token (cached in the Django cache for its lifetime minus
 a minute, keyed by a hash of the client ID) and calls `oauth.reddit.com` at most every
 second. Setting only one of the two is a configuration error.
+
+`news_gdelt` queries the GDELT DOC 2.0 API (`mode=artlist`, `format=json`,
+`maxrecords` = limit) at most every 5 s. `country` becomes `sourcecountry:<FIPS code>`
+(GDELT uses FIPS 10-4, so Germany is `GM` and Spain `SP`; only countries in the
+connector's table are accepted), `language` becomes `sourcelang:<ISO 639-3>` for
+`de en es fr hi it nl pl pt`, and `recency` becomes `timespan` (`1d`, `1w`, `1m`, `1y`;
+default `3m`). Each article is a `search_snippet` whose URL is the publisher's and whose
+`published_at` is GDELT's `seendate`; the role fetches the article with `web_fetch`, so
+the evidence record is typed by the publisher domain. No key; GDELT lags about 15
+minutes and covers small non-English outlets thinly.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct

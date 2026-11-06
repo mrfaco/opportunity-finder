@@ -1,0 +1,47 @@
+{
+  "_comment": "Hand-written from the GDELT DOC 2.0 API's documented mode=artlist&format=json response (no network access to capture a live one). The third article has an unparseable seendate and the fourth a non-HTTP URL, as malformed rows the parser must tolerate.",
+  "response": {
+    "articles": [
+      {
+        "url": "https://www.lanacion.com.ar/economia/monotributo-recategorizacion-2026-nid01112026/",
+        "url_mobile": "",
+        "title": "Monotributo: cuánto cobran los contadores por la recategorización",
+        "seendate": "20261101T121500Z",
+        "socialimage": "https://www.lanacion.com.ar/resizer/monotributo.jpg",
+        "domain": "lanacion.com.ar",
+        "language": "Spanish",
+        "sourcecountry": "Argentina"
+      },
+      {
+        "url": "https://www.infobae.com/economia/2026/10/28/estudios-contables-pymes-honorarios/",
+        "url_mobile": "https://www.infobae.com/amp/economia/2026/10/28/estudios-contables-pymes-honorarios/",
+        "title": "Los estudios contables suben honorarios para pymes",
+        "seendate": "20261028T083000Z",
+        "socialimage": "",
+        "domain": "infobae.com",
+        "language": "Spanish",
+        "sourcecountry": "Argentina"
+      },
+      {
+        "url": "https://www.cronista.com/finanzas/contadores-demanda/",
+        "url_mobile": "",
+        "title": "Crece la demanda de contadores independientes",
+        "seendate": "2026-10-20",
+        "socialimage": "",
+        "domain": "cronista.com",
+        "language": "Spanish",
+        "sourcecountry": "Argentina"
+      },
+      {
+        "url": "javascript:void(0)",
+        "url_mobile": "",
+        "title": "Broken row",
+        "seendate": "20261019T000000Z",
+        "socialimage": "",
+        "domain": "example.invalid",
+        "language": "Spanish",
+        "sourcecountry": "Argentina"
+      }
+    ]
+  }
+}

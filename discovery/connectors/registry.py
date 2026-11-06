@@ -8,6 +8,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 from discovery.connectors.base import Connector, ConnectorConfigurationError
+from discovery.connectors.gdelt import GdeltNewsConnector
 from discovery.connectors.reddit import RedditConnector
 from discovery.connectors.search import AutoSearchConnector, BingConnector
 from discovery.connectors.sources import (
@@ -29,6 +30,7 @@ _BUILTINS: tuple[type[Connector], ...] = (
     StackExchangeConnector,
     LocalCorpusConnector,
     RedditConnector,
+    GdeltNewsConnector,
 )
 
 
