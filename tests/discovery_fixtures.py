@@ -34,6 +34,30 @@ PROMPTS = {
     role: {"content": f"{role} prompt", "hash": f"{role}-hash", "path": f"prompts/{role}.md"}
     for role in ("finder", "validator", "judge")
 }
+# Schema 1.1 entries as start_discovery freezes them; PROMPTS stays the stored 1.0 shape.
+PROMPTS_1_1 = {
+    role: {
+        "schema_version": "1.1",
+        "content": f"{role} prompt\n\n{role} procedure",
+        "hash": f"{role}-effective-hash",
+        "path": f"prompts/{role}/system.md",
+        "parts": [
+            {
+                "kind": "system",
+                "path": f"prompts/{role}/system.md",
+                "hash": f"{role}-hash",
+                "schema_version": "1.0",
+            },
+            {
+                "kind": "procedural",
+                "path": f"prompts/{role}/procedural.md",
+                "hash": f"{role}-procedural-hash",
+                "schema_version": "1.0",
+            },
+        ],
+    }
+    for role in ("finder", "validator", "judge")
+}
 CONFIG = {
     "schema_version": "1.2",
     "runtime": "claude_code",

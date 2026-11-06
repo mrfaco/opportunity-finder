@@ -10,11 +10,11 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
-from agents.prompts import load_prompt
 from discovery.connectors.base import ConnectorConfigurationError
 from discovery.eval.benchmark import load_benchmark
 from discovery.models import Discovery
 from discovery.orchestrator import DiscoveryError, resolve_config, start_discovery
+from discovery.prompts import role_prompt
 
 _TAG = re.compile(r"^[a-z0-9-]{1,64}$")
 
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         self.stdout.write(json.dumps(config.model_dump(mode="json"), indent=2, sort_keys=True))
         self.stdout.write("Prompt hashes:")
         for role in roles:
-            self.stdout.write(f"  {role}: {load_prompt(role, 'system').hash}")
+            self.stdout.write(f"  {role}: {role_prompt(role).hash}")
         self.stdout.write(f"Ceiling: {len(objectives)} × USD {config.max_cost_usd} = USD {ceiling}")
         existing = {
             row.idempotency_key: row

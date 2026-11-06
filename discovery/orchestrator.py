@@ -14,7 +14,6 @@ from django.db import transaction
 from django.utils import timezone
 from pydantic import ValidationError
 
-from agents.prompts import load_prompt
 from discovery.mail import send_message
 from discovery.models import (
     Discovery,
@@ -25,6 +24,7 @@ from discovery.models import (
     ProposalRevision,
     ValidationRevision,
 )
+from discovery.prompts import role_prompt
 from discovery.reporting import render_report
 from discovery.schemas import Contract, DiscoveryConfig, Judgment, Proposal, Validation
 from discovery.termination import (
@@ -130,8 +130,7 @@ def start_discovery(
     runtime_snapshot = check_configuration(cfg)
     prompts = {}
     for role in ("finder", "validator", "judge") if cfg.judge_enabled else ("finder", "validator"):
-        prompt = load_prompt(role, "system")
-        prompts[role] = {"content": prompt.content, "hash": prompt.hash, "path": prompt.path}
+        prompts[role] = role_prompt(role).snapshot()
     with transaction.atomic():
         discovery, created = (
             Discovery.objects.get_or_create(
