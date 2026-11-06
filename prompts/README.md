@@ -15,9 +15,18 @@ prompts/
     └── classifier.md   # Binary opportunity classifier prompt
 ```
 
-Discovery prompts live in `finder/system.md`, `validator/system.md` and
-`judge/system.md`. Judge is the commercial-merit gate after Finder/Validator
-agreement; a no-go sends the agents to find a new opportunity.
+Discovery prompts live in `finder/`, `validator/` and `judge/`. Judge is the
+commercial-merit gate after Finder/Validator agreement; a no-go sends the
+agents to find a new opportunity. Each role has a `system.md` and may have a
+`procedural.md` (Finder's research procedure, Validator's falsification
+checklist, Judge's review procedure). `discovery.prompts.role_prompt` appends
+the procedural body to the system body after a blank line; that effective
+prompt is what the model sees, and its hash (the canonicalization below,
+applied to the combined content) is the one every discovery snapshot, turn and
+quality comparison records. Without `procedural.md` the effective hash equals
+the system hash. Each effective prompt is capped at 2,400 words by
+`tests/test_role_prompts.py`, and every per-kind table has one row per
+business-model kind except `other`.
 
 The directory name is the `agent_name`. The filename (without extension) is the
 `kind`. The loader (`agents.prompts.load_prompt`) reads
@@ -50,6 +59,10 @@ for hashing, so that cosmetic changes that don't affect model behavior don't
 invalidate eval-set / run identity.
 
 ## What does the database store?
+
+Per discovery, `prompt_snapshot[role]` captures the effective prompt's
+`{schema_version, content, hash, path, parts}` (schema 1.1; stored 1.0 entries
+have `content`, `hash` and `path` only).
 
 Per `AgentRun`, the `config_snapshot.prompts` field captures `{content, hash, path}`
 for every prompt used in that run. This means a run remains fully reproducible

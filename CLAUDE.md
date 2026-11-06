@@ -21,7 +21,10 @@ services, manufacturing, intelligence, B2B, B2C and software without SaaS bias.
 Judge defaults to Ollama `kimi-k3:cloud`. Explicit schema-1.0/1.1 configurations
 retain two-role execution; new schema 1.2 enables Judge by default.
 Discovery quality (human verdicts, metrics, benchmark, scoring) is in
-`docs/discovery-eval.md`.
+`docs/discovery-eval.md`. Each discovery role's effective prompt is its
+`system.md` plus optional `procedural.md` under one hash (`discovery/prompts.py`;
+see `docs/discovery.md` "Role prompts" and the prompt-change discipline in
+`docs/discovery-eval.md`).
 The user explicitly deferred extensive coverage until a working prototype;
 use focused smoke checks first, then complete the hardening backlog.
 

@@ -133,6 +133,8 @@ anti-bot walls or of job boards, review sites or marketplaces.
 - All prompt content lives under `prompts/`.
 - Editing a prompt = a commit. There is no admin UI for it.
 - See `prompts/README.md` for the canonicalization + hashing rules.
+- A prompt edit bumps that file's `schema_version` and its commit body names
+  the benchmark metric it expects to move (`docs/discovery-eval.md`).
 - Every `prompts/**/*.md` file must have YAML frontmatter declaring
   `schema_version` and `description`, plus a non-empty body. The
   pre-commit hook (`scripts/validate_prompts.py`) enforces this.

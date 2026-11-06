@@ -74,6 +74,27 @@ When every benchmark discovery is terminal:
   slot at read time, so turns recorded before roadmap Phase 1 are recounted
   under the new rule when inspected; that can only lower their count.
 
+### Prompt changes
+
+A prompt edit is its own commit. It bumps the edited file's `schema_version`
+(a new file starts at 1.0), passes `scripts/validate_prompts.py`, the 2,400-word
+budget test in `tests/test_role_prompts.py` and both offline smoke scripts, and
+its body names the benchmark metric it expects to move. The effective hash
+covers the system and procedural files, so `score_discoveries --compare-to`
+warns about prompt hashes after a procedural-only edit, as it should.
+
+Roadmap Phase 3 measures its two changes separately, each against the
+previous comparison with the same connectors and evidence policy:
+
+1. After the procedural prompts: tag `phase3-prompts-<yyyy-mm>`, verdicts,
+   `score_discoveries --compare-to` the latest comparison run; record the row
+   in Results.
+2. After the Validator default moves to a different model family: tag
+   `phase3-diversity-<yyyy-mm>`, compared with the prompts run in the same way.
+
+If a metric regresses, the follow-up is a prompt edit with its own row, not a
+revert of the whole phase.
+
 ### Metrics 1.1 without a 1.0 counterpart
 
 Roadmap Phase 1 (evidence substance) bumped the metrics schema to 1.1. These

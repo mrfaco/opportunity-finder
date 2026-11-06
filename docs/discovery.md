@@ -65,8 +65,13 @@ Finder and Validator:
 
 Prefer a different model family for Validator to reduce shared blind spots.
 Providers and models can be selected independently. Separate sessions of the same
-model do not supply model diversity; reports flag identical selections. Existing
-run snapshots retain the original choices.
+model, or of two variants of one family, do not supply model diversity.
+`discovery.schemas.model_family` names the family: the OpenRouter vendor prefix
+before `/`, `anthropic` for Anthropic, and the Ollama tag before the first `-`,
+`:` or digit (`kimi-k3:cloud` is `kimi`). The start form warns, without
+blocking, when Finder and Validator share a family; the report flags it and the
+`same_model_family` metric counts it. Existing run snapshots retain the original
+choices.
 
 All three choices use Claude Code; this is not three different reasoning loops.
 The default for new discoveries is OpenRouter with interactive DeepSeek V4.1
@@ -296,6 +301,28 @@ earlier Finder search, computed by `discovery/independence.py`, the same helper
 as the quality metric; 0.0 keeps the earlier rule that any non-identical query
 counts, and the refusal reports the best novelty achieved. Explicit 1.0–1.2
 configs read as `origins` and 0.0 and cannot set other values.
+
+## Role prompts
+
+Each role's prompt is `prompts/<role>/system.md` followed, after a blank line,
+by `prompts/<role>/procedural.md` when that file exists:
+`discovery.prompts.role_prompt(role)` assembles this effective prompt and hashes
+it once with the canonicalization in `prompts/README.md`. The procedures say how
+to work, not what to conclude: Finder's research order and sources by
+business-model kind, Validator's independent-search rule and nine-item
+falsification checklist with economics by kind, and Judge's observed-transaction
+table by kind and economics template. Every per-kind table has one row per
+`business_model_kind` except `other`.
+
+`start_discovery` freezes the effective prompt in `prompt_snapshot[role]` at
+schema 1.1 (`content`, `hash`, `path` of the system file, and `parts`: kind,
+path, hash and `schema_version` of each file). The Claude Code prompt file, the
+batch runtime's first system message, every turn's `prompt_hash`, the quality
+metrics' `prompt_hashes` and the benchmark command's printed hashes all use the
+effective prompt, so a procedural-only edit changes the hash every comparison
+reads. Stored 1.0 entries (`content`, `hash`, `path`) are never rewritten and
+still drive both runtimes and scoring. A test caps each effective prompt at
+2,400 words; raising it is a deliberate change with its reason in the commit.
 
 ## Role context
 
