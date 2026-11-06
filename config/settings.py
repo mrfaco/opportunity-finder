@@ -357,6 +357,19 @@ DISCOVERY_TAVILY_SEARCH_COST_USD = env("DISCOVERY_TAVILY_SEARCH_COST_USD", defau
 # tool input; describe() reports whether they are configured, never the value.
 REDDIT_CLIENT_ID = env("REDDIT_CLIENT_ID", default="")
 REDDIT_CLIENT_SECRET = env("REDDIT_CLIENT_SECRET", default="")
+# CKAN open-data portals (API base URLs) open_data_ckan may query; the national
+# portals of the benchmark regions that run CKAN.
+DISCOVERY_CKAN_PORTALS = env.list(
+    "DISCOVERY_CKAN_PORTALS",
+    default=[
+        "https://datos.gob.ar",
+        "https://datos.gob.mx",
+        "https://dados.gov.br",
+        "https://datos.gob.es",
+        "https://www.govdata.de/ckan",
+        "https://catalog.data.gov",
+    ],
+)
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",

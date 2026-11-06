@@ -109,6 +109,7 @@ General search is explicitly configured:
 | `stack_exchange` | Public Stack Exchange research; optional `STACKEXCHANGE_KEY` |
 | `local_corpus` | Read-only search of existing local cluster/item records |
 | `news_gdelt` | GDELT DOC 2.0 dated news (no key); filters `country`, `language`, `recency`; publisher URLs to fetch with `web_fetch` |
+| `open_data_ckan` | Government datasets from the `DISCOVERY_CKAN_PORTALS` allowlist (no key); filters `portal`, `format`; cursor |
 | `reddit` | Reddit posts and threads (public JSON; optional `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` OAuth); filters `subreddit`, `recency`, `sort`; cursor |
 
 New runs default to `DISCOVERY_CONNECTORS=search_auto,web_fetch` (no search API key).
@@ -182,6 +183,20 @@ default `3m`). Each article is a `search_snippet` whose URL is the publisher's a
 `published_at` is GDELT's `seendate`; the role fetches the article with `web_fetch`, so
 the evidence record is typed by the publisher domain. No key; GDELT lags about 15
 minutes and covers small non-English outlets thinly.
+
+`open_data_ckan` searches one CKAN portal from `DISCOVERY_CKAN_PORTALS` (API base URLs;
+default `datos.gob.ar`, `datos.gob.mx`, `dados.gov.br`, `datos.gob.es`,
+`www.govdata.de/ckan`, `catalog.data.gov`) through `/api/3/action/package_search`
+(`q`, `rows` = limit, `start` = cursor, `fq=res_format:<FORMAT>` for `format` `CSV`,
+`JSON`, `XLSX` or `PDF`). The `portal` filter is the portal host without `www.` and is
+required when more than one portal is configured, so a search never fans out across
+governments silently. Each dataset is a `source_record`: notes (up to 4,000
+characters) as text, `metadata_modified` as `published_at`, organization, tags and up to
+ten resources (`name`, `format`, `url`, `size`) in `metadata["resources"]`, so the role
+can `web_fetch` a CSV or PDF directly. Fetch takes `<portal>:<dataset id>` or a
+configured portal's `/dataset/<id>` URL and returns all resources via `package_show`.
+A malformed allowlist entry makes the connector unconfigured (a preflight failure);
+portal outages are typed errors naming the portal.
 
 Search excerpts are leads. Decisive claims must cite captured page/source
 material, and acceptance requires demand and competitor evidence from distinct

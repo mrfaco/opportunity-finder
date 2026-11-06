@@ -1,0 +1,29 @@
+{
+  "_comment": "Hand-written from the CKAN Action API 3 documented package_show response (result is one package). No network access to capture a live response. Eleven valid resources: fetch returns all of them, unlike search's ten.",
+  "response": {
+    "help": "https://datos.gob.ar/api/3/action/help_show?name=package_show",
+    "success": true,
+    "result": {
+      "id": "9d2e7a40-11aa-4c1b-8c55-6d7f3b0c9e02",
+      "name": "compras-contrataciones-servicios-contables",
+      "title": "Contrataciones de servicios contables del Estado",
+      "notes": "Órdenes de compra por servicios de contabilidad y auditoría, con montos adjudicados.",
+      "metadata_modified": "2026-09-18T16:45:12.500000",
+      "organization": {"id": "o2", "name": "onc", "title": "Oficina Nacional de Contrataciones"},
+      "tags": [{"id": "t9", "name": "compras", "display_name": "compras"}],
+      "resources": [
+        {"id": "c1", "name": "2016", "format": "CSV", "url": "https://datos.gob.ar/c/2016.csv", "size": 1000},
+        {"id": "c2", "name": "2017", "format": "CSV", "url": "https://datos.gob.ar/c/2017.csv", "size": 1000},
+        {"id": "c3", "name": "2018", "format": "CSV", "url": "https://datos.gob.ar/c/2018.csv", "size": 1000},
+        {"id": "c4", "name": "2019", "format": "CSV", "url": "https://datos.gob.ar/c/2019.csv", "size": 1000},
+        {"id": "c5", "name": "2020", "format": "CSV", "url": "https://datos.gob.ar/c/2020.csv", "size": 1000},
+        {"id": "c6", "name": "2021", "format": "CSV", "url": "https://datos.gob.ar/c/2021.csv", "size": 1000},
+        {"id": "c7", "name": "2022", "format": "CSV", "url": "https://datos.gob.ar/c/2022.csv", "size": 1000},
+        {"id": "c8", "name": "2023", "format": "CSV", "url": "https://datos.gob.ar/c/2023.csv", "size": 1000},
+        {"id": "c9", "name": "2024", "format": "CSV", "url": "https://datos.gob.ar/c/2024.csv", "size": 1000},
+        {"id": "c10", "name": "2025", "format": "CSV", "url": "https://datos.gob.ar/c/2025.csv", "size": 1000},
+        {"id": "c11", "name": "2026", "format": "XLSX", "url": "https://datos.gob.ar/c/2026.xlsx", "size": 2000}
+      ]
+    }
+  }
+}

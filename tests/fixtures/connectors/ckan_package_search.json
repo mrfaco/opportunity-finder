@@ -1,0 +1,74 @@
+{
+  "_comment": "Hand-written from the CKAN Action API 3 documented package_search response (help/success/result{count,results}); field names follow CKAN's package schema. No network access to capture a live datos.gob.ar response. The second dataset has twelve resources (one with a non-HTTP URL) to exercise the ten-resource cap.",
+  "response": {
+    "help": "https://datos.gob.ar/api/3/action/help_show?name=package_search",
+    "success": true,
+    "result": {
+      "count": 7,
+      "sort": "score desc, metadata_modified desc",
+      "facets": {},
+      "results": [
+        {
+          "id": "3f6b1c2e-6f1a-4a43-9b8e-2a1c0e9d1f01",
+          "name": "produccion-padron-monotributistas",
+          "title": "Padrón de monotributistas por actividad",
+          "notes": "Cantidad de contribuyentes adheridos al Régimen Simplificado por actividad económica y provincia, actualizado mensualmente.",
+          "metadata_created": "2019-03-12T14:02:11.120000",
+          "metadata_modified": "2026-10-05T09:30:00.000000",
+          "license_title": "Creative Commons Attribution 4.0",
+          "num_resources": 2,
+          "organization": {
+            "id": "a1b2c3",
+            "name": "afip",
+            "title": "Administración Federal de Ingresos Públicos"
+          },
+          "tags": [
+            {"id": "t1", "name": "monotributo", "display_name": "monotributo"},
+            {"id": "t2", "name": "impuestos", "display_name": "impuestos"}
+          ],
+          "resources": [
+            {
+              "id": "r1",
+              "name": "Padrón mensual (CSV)",
+              "format": "CSV",
+              "url": "https://datos.gob.ar/dataset/3f6b1c2e/resource/r1/download/padron.csv",
+              "size": 184320,
+              "last_modified": "2026-10-05T09:30:00"
+            },
+            {
+              "id": "r2",
+              "name": "Metodología",
+              "format": "pdf",
+              "url": "https://datos.gob.ar/dataset/3f6b1c2e/resource/r2/download/metodologia.pdf",
+              "size": null
+            }
+          ]
+        },
+        {
+          "id": "9d2e7a40-11aa-4c1b-8c55-6d7f3b0c9e02",
+          "name": "compras-contrataciones-servicios-contables",
+          "title": "Contrataciones de servicios contables del Estado",
+          "notes": "",
+          "metadata_modified": "2026-09-18T16:45:12.500000",
+          "num_resources": 12,
+          "organization": {"id": "o2", "name": "onc", "title": "Oficina Nacional de Contrataciones"},
+          "tags": [],
+          "resources": [
+            {"id": "c0", "name": "broken", "format": "CSV", "url": "ftp://datos.gob.ar/c0.csv", "size": 1},
+            {"id": "c1", "name": "2016", "format": "CSV", "url": "https://datos.gob.ar/c/2016.csv", "size": 1000},
+            {"id": "c2", "name": "2017", "format": "CSV", "url": "https://datos.gob.ar/c/2017.csv", "size": 1000},
+            {"id": "c3", "name": "2018", "format": "CSV", "url": "https://datos.gob.ar/c/2018.csv", "size": 1000},
+            {"id": "c4", "name": "2019", "format": "CSV", "url": "https://datos.gob.ar/c/2019.csv", "size": 1000},
+            {"id": "c5", "name": "2020", "format": "CSV", "url": "https://datos.gob.ar/c/2020.csv", "size": 1000},
+            {"id": "c6", "name": "2021", "format": "CSV", "url": "https://datos.gob.ar/c/2021.csv", "size": 1000},
+            {"id": "c7", "name": "2022", "format": "CSV", "url": "https://datos.gob.ar/c/2022.csv", "size": 1000},
+            {"id": "c8", "name": "2023", "format": "CSV", "url": "https://datos.gob.ar/c/2023.csv", "size": 1000},
+            {"id": "c9", "name": "2024", "format": "CSV", "url": "https://datos.gob.ar/c/2024.csv", "size": 1000},
+            {"id": "c10", "name": "2025", "format": "CSV", "url": "https://datos.gob.ar/c/2025.csv", "size": 1000},
+            {"id": "c11", "name": "2026", "format": "CSV", "url": "https://datos.gob.ar/c/2026.csv", "size": 1000}
+          ]
+        }
+      ]
+    }
+  }
+}
