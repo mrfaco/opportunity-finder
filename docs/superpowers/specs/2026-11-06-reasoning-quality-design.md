@@ -193,7 +193,9 @@ to the roles.
 `model_family(provider, model) -> str` in `discovery/schemas.py`: for
 `openrouter`, the vendor prefix before `/` (`deepseek`, `qwen`, `google`,
 …); for `anthropic`, `anthropic`; for `ollama`, the tag before the first
-`-`, `:` or digit (`kimi`, `qwen`, `llama`). `same_model_family` in
+`-`, `:` or digit (`kimi`, `qwen`, `llama`). An ID no rule covers is its
+own family (`provider:model`), never an error, because the helper runs
+inside report rendering and metrics on stored snapshots. `same_model_family` in
 `QualityMetrics` compares families, not exact strings, so two DeepSeek
 variants count as the same family (metrics schema `1.2 → 1.3`, additive
 semantics change noted in the eval doc). The report's existing flag and a

@@ -136,21 +136,22 @@ def model_family(provider: str, model: str) -> str:
     """The vendor family of a role model, so two variants of one family compare equal.
 
     OpenRouter: the vendor prefix before ``/``. Anthropic: ``anthropic``.
-    Ollama: the tag before the first ``-``, ``:`` or digit.
+    Ollama: the tag before the first ``-``, ``:`` or digit. An ID no rule
+    covers is its own family (``provider:model``), never an error: this runs
+    inside report rendering and metrics, which must not fail on a stored
+    snapshot's shape, and two identical odd IDs still compare equal.
     """
     if provider == "anthropic":
         return "anthropic"
     if provider == "openrouter":
         vendor, slash, _ = model.partition("/")
-        if not slash or not vendor:
-            raise ValueError(f"OpenRouter model {model!r} has no vendor prefix")
-        return vendor.lower()
+        if slash and vendor:
+            return vendor.lower()
     if provider == "ollama":
         match = _OLLAMA_FAMILY.match(model)
-        if match is None:
-            raise ValueError(f"Ollama tag {model!r} does not start with a family name")
-        return match.group(0).lower()
-    raise ValueError(f"Unknown provider {provider!r}")
+        if match is not None:
+            return match.group(0).lower()
+    return f"{provider}:{model}".lower()
 
 
 def role_model_family(config: dict[str, Any], role: Role) -> str:

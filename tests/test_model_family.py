@@ -47,12 +47,25 @@ def test_family_rule_per_provider(provider, model, family):
 
 
 @pytest.mark.parametrize(
-    "provider,model",
-    [("openrouter", "deepseek-v4.1-flash"), ("ollama", "3b-model"), ("bedrock", "x")],
+    "provider,model,family",
+    [
+        ("openrouter", "deepseek-v4.1-flash", "openrouter:deepseek-v4.1-flash"),
+        ("ollama", "3b-model", "ollama:3b-model"),
+        ("bedrock", "X", "bedrock:x"),
+    ],
 )
-def test_unclassifiable_models_fail_loudly(provider, model):
-    with pytest.raises(ValueError):
-        model_family(provider, model)
+def test_unclassifiable_models_are_their_own_family(provider, model, family):
+    # Report rendering and metrics call this on stored snapshots; an odd ID
+    # must compare, not raise. Two identical odd IDs are still one family.
+    assert model_family(provider, model) == family
+    assert same_model_family(
+        {
+            "finder_provider": provider,
+            "finder_model": model,
+            "validator_provider": provider,
+            "validator_model": model,
+        }
+    )
 
 
 def test_same_family_compares_families_not_strings():
